@@ -10,6 +10,7 @@
   const t = (k) => I18N.t(k);
   const icon = (n, c, f) => UI.icon(n, c, f);
 
+  const TAB_IDS = { home: 1, explorer: 1, activities: 1, wallet: 1, profile: 1 };
   const TABS = [
     { id: "home", label: "nav_home", icon: "home" },
     { id: "explorer", label: "nav_explorer", icon: "explore" },
@@ -99,10 +100,11 @@
           <div class="flex items-center gap-2">${searchBtn}${cityBtn}${bell}</div>
         </div></header>`;
     }
+    const showBack = o.back && !(o.nav && TAB_IDS[o.nav]);
     return `<header class="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-line/70">
       <div class="max-w-content mx-auto px-4 lg:px-10 h-[60px] lg:h-[76px] flex items-center justify-between gap-3">
         <div class="flex items-center gap-2.5 min-w-0">
-          ${o.back ? `<button type="button" onclick="${o.back === true ? "App.back()" : o.back}" class="icon-btn flex-shrink-0" aria-label="${t("back")}">${icon("arrow_back")}</button>` : ""}
+          ${showBack ? `<button type="button" onclick="${o.back === true ? "App.back()" : o.back}" class="icon-btn flex-shrink-0" aria-label="${t("back")}">${icon("arrow_back")}</button>` : ""}
           <div class="min-w-0">
             <h1 class="t-h3 lg:t-h2 truncate">${o.title || ""}</h1>
             ${o.subtitle ? `<p class="t-small text-ink-2 truncate">${o.subtitle}</p>` : ""}
@@ -139,7 +141,7 @@
     } else {
       const wrap = o.fill
         ? `<main id="main" class="flex-1 min-h-0 flex flex-col relative screen-enter">${o.body}</main>`
-        : `<main id="main" class="flex-1 min-h-0 overflow-y-auto screen-enter"><div class="${o.narrow ? "max-w-narrow" : "max-w-content"} mx-auto px-5 lg:px-10 py-5 lg:py-8 space-y-6 lg:space-y-8 pb-10">${o.body}</div></main>`;
+        : `<main id="main" class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden screen-enter"><div class="${o.narrow ? "max-w-narrow" : "max-w-content"} mx-auto w-full min-w-0 max-w-full px-5 lg:px-10 py-5 lg:py-8 space-y-6 lg:space-y-8 pb-10">${o.body}</div></main>`;
       container.innerHTML = `<div class="lg:flex min-h-dvh">
         ${sidebar(active)}
         <div class="flex-1 min-w-0 flex flex-col h-dvh">

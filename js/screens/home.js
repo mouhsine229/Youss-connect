@@ -97,7 +97,7 @@
             <span class="t-caption text-gold">${I18N.t("wallet")}</span>
             <span class="block t-h1 mt-1">${ACStore.fmtFCFA(ACState.wallet.balance)}</span>
             <span class="block t-small text-white/70 mt-1">${I18N.t("balance")} · ${esc(ACState.user.fullName)}</span>
-            <span class="mt-4 flex gap-2">${[["north_east", "Envoyer", "walletSend"], ["qr_code_scanner", "QR Pay", "walletQrPay"], ["add", "Recharger", "walletTopup"]].map((a) => `<span onclick="event.stopPropagation();App.nav('${a[2]}')" class="flex-1 h-10 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center gap-1.5 t-small font-semibold">${icon(a[0], "text-[18px]")}${a[1]}</span>`).join("")}</span>
+            <span class="mt-4 wallet-quick-grid">${[["north_east", "Envoyer", "walletSend"], ["qr_code_scanner", "QR Pay", "walletQrPay"], ["add", "Recharger", "walletTopup"]].map((a) => `<span role="button" tabindex="0" onclick="event.stopPropagation();App.nav('${a[2]}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();App.nav('${a[2]}')}" class="wallet-quick-btn">${icon(a[0])}<span class="truncate max-w-full">${a[1]}</span></span>`).join("")}</span>
           </button>
           <button type="button" onclick="App.nav('rewards')" class="w-full card p-4 text-left flex items-center gap-3">
             <span class="w-11 h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("workspace_premium", "text-[24px]", true)}</span>

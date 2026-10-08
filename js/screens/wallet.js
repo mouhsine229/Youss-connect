@@ -8,15 +8,18 @@
   const STATUS = { success: ["Réussi", "success"], pending: ["En attente", "warn"], failed: ["Échoué", "danger"] };
   function txRow(t) {
     const st = STATUS[t.status || "success"];
-    return `<button type="button" onclick="${go("walletTxnDetail", { id: t.id })}" class="w-full flex items-center justify-between gap-3 p-3.5 text-left hover:bg-surface-low transition-colors">
-      <span class="flex items-center gap-3 min-w-0"><span class="w-10 h-10 rounded-full ${t.type === "credit" ? "bg-success-soft text-success" : t.status === "failed" ? "bg-danger-soft text-danger" : "bg-surface-low text-ink"} flex items-center justify-center flex-shrink-0">${icon(t.type === "credit" ? "south_west" : ACStore.iconForService(t.service), "text-[20px]")}</span>
-        <span class="min-w-0"><span class="block t-title truncate">${esc(t.label)}</span><span class="block t-small text-ink-2">${esc(t.date)}${t.status !== "success" ? " · " + UI.badge(st[0], st[1]) : ""}</span></span></span>
-      <span class="t-title font-extrabold whitespace-nowrap ${t.type === "credit" ? "text-success" : t.status === "failed" ? "text-ink-3 line-through" : ""}">${t.type === "credit" ? "+" : "−"}${ACStore.fmtFCFA(Math.abs(t.amount))}</span></button>`;
+    return `<button type="button" onclick="${go("walletTxnDetail", { id: t.id })}" class="w-full max-w-full min-w-0 flex items-center justify-between gap-2 sm:gap-3 p-3.5 text-left hover:bg-surface-low transition-colors overflow-hidden">
+      <span class="flex items-center gap-3 min-w-0 flex-1 overflow-hidden"><span class="w-10 h-10 rounded-full ${t.type === "credit" ? "bg-success-soft text-success" : t.status === "failed" ? "bg-danger-soft text-danger" : "bg-surface-low text-ink"} flex items-center justify-center flex-shrink-0">${icon(t.type === "credit" ? "south_west" : ACStore.iconForService(t.service), "text-[20px]")}</span>
+        <span class="min-w-0 flex-1"><span class="block t-title truncate">${esc(t.label)}</span><span class="block t-small text-ink-2 min-w-0"><span class="truncate block">${esc(t.date)}</span>${t.status !== "success" ? `<span class="inline-block mt-0.5">${UI.badge(st[0], st[1])}</span>` : ""}</span></span></span>
+      <span class="t-small sm:t-title font-extrabold whitespace-nowrap flex-shrink-0 text-right tabular-nums ${t.type === "credit" ? "text-success" : t.status === "failed" ? "text-ink-3 line-through" : ""}">${t.type === "credit" ? "+" : "−"}${ACStore.fmtFCFA(Math.abs(t.amount))}</span></button>`;
   }
   function monthly() {
     const tx = ACState.wallet.transactions.filter((t) => t.status !== "failed");
     const inn = tx.filter((t) => t.type === "credit").reduce((s, t) => s + t.amount, 0), out = tx.filter((t) => t.type === "debit").reduce((s, t) => s + Math.abs(t.amount), 0);
     return { inn, out };
+  }
+  function walletActionBtn(a) {
+    return `<button type="button" onclick="App.nav('${a[2]}')" class="wallet-action-btn" aria-label="${esc(a[1])}"><span class="wallet-action-btn__icon">${icon(a[0], "text-[22px]")}</span><span class="wallet-action-btn__label">${a[1]}</span></button>`;
   }
 
   Screens.wallet = function (container) {
@@ -24,25 +27,25 @@
     const m = monthly();
     const actions = [["north_east", I18N.t("send"), "walletSend"], ["south_west", I18N.t("receive"), "walletReceive"], ["payments", I18N.t("pay"), "walletPay"], ["add", I18N.t("topup"), "walletTopup"], ["account_balance", I18N.t("withdraw"), "walletWithdraw"], ["qr_code_scanner", I18N.t("qrpay"), "walletQrPay"]];
     const body = `
-      <div class="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8 items-start">
-        <div class="space-y-4 lg:sticky lg:top-24">
-          <section class="card-dark p-6 relative overflow-hidden">
-            <span class="absolute -right-14 -top-14 w-56 h-56 rounded-full bg-gold/20 blur-3xl"></span><span class="absolute right-6 bottom-6 opacity-20">${icon("contactless", "text-[64px]")}</span>
-            <div class="flex items-center justify-between"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white" aria-label="Masquer le solde">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
-            <p class="t-display mt-2">${wf.masked ? "•••••• FCFA" : ACStore.fmtFCFA(ACState.wallet.balance)}</p>
-            <p class="t-small text-white/70 mt-1">${esc(ACState.user.fullName)} · ${esc(ACState.user.phone)}</p>
-            <div class="grid grid-cols-2 gap-3 mt-5"><div class="rounded-xl bg-white/10 p-3"><p class="t-caption text-white/60">Entrées</p><p class="t-title text-success">+${ACStore.fmtFCFA(m.inn)}</p></div><div class="rounded-xl bg-white/10 p-3"><p class="t-caption text-white/60">Sorties</p><p class="t-title">−${ACStore.fmtFCFA(m.out)}</p></div></div>
+      <div class="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8 items-start min-w-0 max-w-full">
+        <div class="space-y-4 lg:sticky lg:top-24 min-w-0 max-w-full">
+          <section class="card-dark p-5 sm:p-6 relative overflow-hidden min-w-0">
+            <span class="absolute -right-14 -top-14 w-56 h-56 rounded-full bg-gold/20 blur-3xl"></span><span class="absolute right-4 sm:right-6 bottom-4 sm:bottom-6 opacity-20 pointer-events-none">${icon("contactless", "text-[48px] sm:text-[64px]")}</span>
+            <div class="flex items-center justify-between gap-2 relative"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white flex-shrink-0" aria-label="Masquer le solde">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
+            <p class="t-h1 sm:t-display mt-2 break-words leading-tight relative">${wf.masked ? "•••••• FCFA" : ACStore.fmtFCFA(ACState.wallet.balance)}</p>
+            <p class="t-small text-white/70 mt-1 truncate relative">${esc(ACState.user.fullName)} · ${esc(ACState.user.phone)}</p>
+            <div class="wallet-kpi-grid mt-5 relative"><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Entrées</p><p class="t-small sm:t-title text-success truncate tabular-nums">+${ACStore.fmtFCFA(m.inn)}</p></div><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Sorties</p><p class="t-small sm:t-title truncate tabular-nums">−${ACStore.fmtFCFA(m.out)}</p></div></div>
           </section>
-          <section class="grid grid-cols-3 gap-2">${actions.map((a) => `<button type="button" onclick="App.nav('${a[2]}')" class="card card-press p-3 flex flex-col items-center gap-2"><span class="w-12 h-12 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon(a[0], "text-[24px]")}</span><span class="t-small font-semibold">${a[1]}</span></button>`).join("")}</section>
-          <p class="t-small text-ink-3 flex gap-2">${icon("info", "text-[16px] flex-shrink-0")}<span>${I18N.t("conceptual")} Aucun partenaire financier n'est engagé.</span></p>
+          <section class="wallet-action-grid" aria-label="Actions Wallet">${actions.map(walletActionBtn).join("")}</section>
+          <p class="t-small text-ink-3 flex gap-2 min-w-0">${icon("info", "text-[16px] flex-shrink-0 mt-0.5")}<span class="min-w-0">${I18N.t("conceptual")} Aucun partenaire financier n'est engagé.</span></p>
         </div>
-        <section>
+        <section class="min-w-0 max-w-full">
           ${UI.sectionTitle(I18N.t("recent"), "Relevé", "UI.toast('Relevé PDF envoyé par e-mail (démo).','success')")}
-          <div class="hscroll mb-3">${[["all", "Tout"], ["in", "Entrées"], ["out", "Sorties"], ["pending", "En attente"]].map((x) => UI.chip(x[1], `Screens._wFilter('${x[0]}')`, wf.filter === x[0])).join("")}</div>
+          <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-0.5 -mx-1 px-1 sm:mx-0 sm:px-0">${[["all", "Tout"], ["in", "Entrées"], ["out", "Sorties"], ["pending", "En attente"]].map((x) => UI.chip(x[1], `Screens._wFilter('${x[0]}')`, wf.filter === x[0])).join("")}</div>
           ${tx.length ? `<div class="card divide-y divide-line">${tx.slice(0, 20).map(txRow).join("")}</div>` : UI.emptyState({ icon: "receipt_long", title: "Aucune transaction", body: "Vos opérations apparaîtront ici." })}
         </section>
       </div>`;
-    Shell.render(container, { title: I18N.t("wallet"), subtitle: "Portefeuille de l'écosystème · conceptuel", back: "App.nav('home')", body, nav: "wallet" });
+    Shell.render(container, { title: I18N.t("wallet"), subtitle: "Portefeuille de l'écosystème · conceptuel", body, nav: "wallet" });
   };
   Screens._wMask = () => { wf.masked = !wf.masked; App.replace("wallet"); };
   Screens._wFilter = (f) => { wf.filter = f; App.replace("wallet"); };
@@ -69,7 +72,7 @@
     const amounts = [2000, 5000, 10000, 25000, 50000, 100000];
     const methods = [["mobile", "smartphone", "Paiement mobile", "Opérateur à définir · conceptuel"], ["card", "credit_card", "Carte bancaire", "Visa / Mastercard · conceptuel"], ["agent", "store", "Agent YOUSS CONNECT", "Dépôt en espèces chez un agent"]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="card p-5"><p class="t-caption text-ink-3 mb-2">Montant</p><div class="grid grid-cols-3 gap-2">${amounts.map((a) => `<button type="button" onclick="Screens._topupPick(${a})" class="chip justify-center h-12 ${tp.amount === a ? "on" : ""}">${a.toLocaleString("fr-FR")}</button>`).join("")}</div>
+      <div class="card p-5"><p class="t-caption text-ink-3 mb-2">Montant</p><div class="amount-pick-grid">${amounts.map((a) => `<button type="button" onclick="Screens._topupPick(${a})" class="chip justify-center h-12 min-w-0 ${tp.amount === a ? "on" : ""}">${a.toLocaleString("fr-FR")}</button>`).join("")}</div>
         <label class="block mt-3"><span class="label">Ou montant personnalisé (FCFA)</span><input id="topup-amount" type="number" inputmode="numeric" min="500" step="500" value="${tp.amount || ""}" placeholder="Ex. 15 000" class="input input-lg text-xl font-bold" oninput="Screens._topupCustom(this.value)"/></label></div>
       <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Méthode</p>${methods.map((m) => `<button type="button" onclick="Screens._topupMethod('${m[0]}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${tp.method === m[0] ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[1])}</span><span class="flex-1"><span class="block t-title">${m[2]}</span><span class="block t-small text-ink-2">${m[3]}</span></span>${tp.method === m[0] ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>
       ${UI.primaryButton("Recharger" + (tp.amount ? " · " + ACStore.fmtFCFA(tp.amount) : ""), "Screens._doTopup()", { size: "lg", icon: "add" })}
