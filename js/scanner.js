@@ -12,8 +12,8 @@
 (function () {
   "use strict";
 
-  const JSQR_URL = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
-  const QRGEN_URL = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js";
+  const JSQR_URL = "./vendor/jsQR.js";
+  const QRGEN_URL = "./vendor/qrcode.js";
 
   let stream = null;
   let video = null;
@@ -218,6 +218,9 @@
     let m = raw.match(/^youss:(?:\/\/)?site[:/]([a-z0-9_-]+)$/i);
     if (m) return { type: "site", id: m[1].toLowerCase(), raw };
 
+    m = raw.match(/^youss:(?:\/\/)?ticket[:/]([a-z0-9_-]+)$/i);
+    if (m) return { type: "ticket", number: m[1].toUpperCase(), raw };
+
     m = raw.match(/^youss:(?:\/\/)?pay(?:\?(.*))?$/i);
     if (m) {
       const q = new URLSearchParams(m[1] || "");
@@ -269,7 +272,7 @@
     } catch (e) {
       src = "https://api.qrserver.com/v1/create-qr-code/?size=" + size + "x" + size + "&data=" + encodeURIComponent(text);
     }
-    el.innerHTML = `<img src="${src}" width="${size}" height="${size}" alt="QR code" class="block rounded-lg" style="image-rendering:pixelated"/>`;
+    el.innerHTML = `<img src="${src}" width="${size}" height="${size}" alt="QR code" class="block rounded-lg" style="image-rendering:pixelated;max-width:100%;height:auto"/>`;
   }
 
   /* Arrêt automatique de la caméra dès qu'on quitte un écran scanner. */

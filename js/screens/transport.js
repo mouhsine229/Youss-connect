@@ -1,1360 +1,485 @@
+/* Transport — carte, destination, véhicule, confirmation, chauffeur, suivi, fin de course */
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
+  const { icon, esc, go } = UI;
+  const M = () => window.YCMap;
 
-  /* Points d'intérêt réels du Bénin */
-  const POIS = [
-    { id: "haie-vive", name: "Haie Vive", lat: 6.3570, lng: 2.3910 },
-    { id: "aeroport", name: "Aéroport de Cotonou (Gantin)", lat: 6.3572, lng: 2.3844 },
-    { id: "dantokpa", name: "Marché Dantokpa", lat: 6.3705, lng: 2.4335 },
-    { id: "amazone", name: "Place de l'Amazone", lat: 6.3654, lng: 2.4183 },
-    { id: "ganvie", name: "Ganvié", lat: 6.4667, lng: 2.4167 },
-    { id: "ouidah", name: "Ouidah · Porte du Non-Retour", lat: 6.3167, lng: 2.0833 },
-    { id: "abomey", name: "Abomey · Palais royaux", lat: 7.1829, lng: 1.9912 },
-    { id: "porto-novo", name: "Porto-Novo", lat: 6.4969, lng: 2.6283 },
-    { id: "parakou", name: "Parakou", lat: 9.3372, lng: 2.6303 }
-  ];
-
-  /* Villes affichées sur la vue pays */
-  const CITIES = [
-    { name: "Cotonou", lat: 6.3703, lng: 2.3912 },
-    { name: "Porto-Novo", lat: 6.4969, lng: 2.6283 },
-    { name: "Ouidah", lat: 6.3667, lng: 2.0833 },
-    { name: "Abomey", lat: 7.1829, lng: 1.9912 },
-    { name: "Bohicon", lat: 7.1782, lng: 2.0667 },
-    { name: "Lokossa", lat: 6.6383, lng: 1.7167 },
-    { name: "Savalou", lat: 7.9281, lng: 1.9756 },
-    { name: "Parakou", lat: 9.3372, lng: 2.6303 },
-    { name: "Djougou", lat: 9.7085, lng: 1.6660 },
-    { name: "Natitingou", lat: 10.3042, lng: 1.3796 },
-    { name: "Kandi", lat: 11.1342, lng: 2.9386 },
-    { name: "Malanville", lat: 11.8681, lng: 3.3833 }
-  ];
-
-  /* Frontière du Bénin (simplifiée, source OpenStreetMap/Nominatim) */
-  const BENIN_BORDER = [[10.377,0.777],[9.995,1.355],[9.647,1.374],[9.542,1.338],[9.486,1.361],[9.488,1.391],[9.321,1.417],[9.17,1.567],[9.015,1.625],[8.548,1.625],[8.492,1.661],[8.369,1.613],[8.358,1.635],[7.532,1.656],[6.996,1.642],[6.997,1.559],[6.905,1.606],[6.799,1.594],[6.761,1.625],[6.688,1.575],[6.651,1.616],[6.613,1.610],[6.555,1.698],[6.504,1.694],[6.475,1.753],[6.289,1.809],[6.242,1.630],[6.040,1.673],[6.133,2.172],[6.178,2.738],[6.512,2.705],[6.570,2.751],[6.637,2.729],[6.748,2.792],[6.784,2.735],[6.926,2.742],[6.951,2.713],[7.043,2.761],[7.105,2.740],[7.133,2.773],[7.424,2.745],[7.438,2.796],[7.497,2.792],[7.546,2.737],[7.612,2.717],[7.767,2.734],[7.882,2.677],[8.188,2.755],[8.321,2.693],[8.422,2.708],[8.449,2.750],[8.524,2.769],[8.784,2.729],[8.812,2.766],[9.067,2.780],[9.102,3.088],[9.284,3.158],[9.441,3.133],[9.659,3.267],[9.659,3.314],[9.703,3.358],[9.806,3.332],[9.871,3.463],[9.862,3.520],[9.957,3.598],[10.079,3.614],[10.114,3.663],[10.177,3.679],[10.212,3.608],[10.272,3.577],[10.412,3.602],[10.462,3.683],[10.408,3.782],[10.433,3.802],[10.594,3.845],[10.686,3.837],[10.817,3.746],[10.924,3.770],[11.027,3.725],[11.133,3.725],[11.129,3.694],[11.438,3.476],[11.575,3.525],[11.694,3.609],[11.729,3.552],[11.775,3.565],[11.787,3.522],[11.858,3.485],[11.89,3.312],[12.016,3.269],[12.406,2.840],[12.351,2.762],[12.363,2.734],[12.279,2.685],[12.306,2.669],[12.303,2.598],[12.254,2.388],[12.112,2.391],[11.980,2.465],[11.931,2.392],[11.875,2.404],[11.791,2.376],[11.734,2.305],[11.680,2.315],[11.419,1.997],[11.408,1.917],[11.450,1.847],[11.393,1.624],[11.478,1.554],[11.451,1.531],[11.481,1.448],[11.444,1.388],[11.389,1.382],[11.367,1.327],[11.293,1.333],[11.327,1.269],[11.250,1.263],[11.279,1.146],[11.248,1.130],[11.170,1.165],[11.177,1.117],[11.132,1.050],[11.121,1.087],[11.032,1.115],[11.094,0.987],[11.035,0.945],[10.992,0.978],[10.996,0.912],[10.800,0.879],[10.714,0.802],[10.377,0.777]];
-
-  const COTONOU = { lat: 6.3703, lng: 2.3912, zoom: 12 };
-  const BENIN = { lat: 9.3, lng: 2.3, zoom: 7 };
-
-  /* Tarification (démo) : base + prix au km routier */
   const FARE = { base: 1500, perKm: 350, min: 2000 };
   const VEHICLES = [
-    { id: "moto", label: "Moto", icon: "two_wheeler", mult: 0.65, etaMult: 0.7, avail: "2 min" },
-    { id: "car", label: "Voiture", icon: "directions_car", mult: 1, etaMult: 1, avail: "5 min" },
-    { id: "premium", label: "Premium", icon: "airport_shuttle", mult: 1.55, etaMult: 0.95, avail: "8 min" }
+    { id: "moto", label: "Moto", sub: "Zémidjan · 1 passager", icon: "two_wheeler", mult: 0.65, etaMult: 0.7, avail: "2 min", seats: 1 },
+    { id: "car", label: "Voiture", sub: "Confort · 4 places", icon: "directions_car", mult: 1, etaMult: 1, avail: "5 min", seats: 4 },
+    { id: "premium", label: "Premium", sub: "Berline climatisée · 4 places", icon: "airport_shuttle", mult: 1.55, etaMult: 0.95, avail: "8 min", seats: 4 }
   ];
-  const URBAN_SPEED_KMH = 27;
 
-  const trip = {
-    from: POIS[0].name,
-    to: POIS[1].name,
-    fromLat: POIS[0].lat,
-    fromLng: POIS[0].lng,
-    toLat: POIS[1].lat,
-    toLng: POIS[1].lng,
-    km: 0,
-    vehicle: "car",
-    sec: 0,
-    route: null,       /* { key, coords:[[lat,lng]], km, sec, real } */
-    pickMode: "from",
-    price: 3800,
-    driver: null
-  };
+  /* État du trajet (persisté légèrement dans ACState.trip) */
+  const trip = { from: null, to: null, vehicle: "car", route: null, km: 0, sec: 0, price: 0, driver: null, method: "wallet", pickMode: "to", status: "idle", rating: 5, comment: "", startedAt: null };
+  if (ACState.trip && ACState.trip.from) Object.assign(trip, ACState.trip, { route: null });
+  function syncTrip() { ACState.trip = { from: trip.from, to: trip.to, vehicle: trip.vehicle, km: trip.km, sec: trip.sec, price: trip.price, driver: trip.driver, method: trip.method, status: trip.status, startedAt: trip.startedAt }; }
 
-  let mapInst = null;
-  let fromMarker = null;
-  let toMarker = null;
-  let routeLine = null;
-  let doneLine = null;
-  let userMarker = null;
-  let carMarker = null;
-  let beninLayer = null;
-  let cityLayer = null;
-  let mapInteractive = true;
-  let animRaf = null;
-  let phaseTimer = null;
-  let geoWatchId = null;
-  let routeReqId = 0;
-  let routeInflight = null;
-  const routeCache = {};
-  const userPos = { lat: null, lng: null, ok: false };
+  let map = null, suggestTimer = null, suggestReq = 0, lastSuggestions = [], suggestRole = "to", blurTimer = null, routeReq = 0;
 
-  /* ---------- Itinéraire routier réel (OSRM, sans clé) ---------- */
-  function routeKeyFor(aLat, aLng, bLat, bLng) {
-    return [aLat, aLng, bLat, bLng].map((v) => Number(v).toFixed(5)).join("|");
-  }
-
-  function straightRoute(aLat, aLng, bLat, bLng) {
-    const km = haversineKm(aLat, aLng, bLat, bLng) * 1.3; /* détour routier moyen */
-    return { coords: [[aLat, aLng], [bLat, bLng]], km, sec: (km / URBAN_SPEED_KMH) * 3600, real: false };
-  }
-
-  function fetchRoute(aLat, aLng, bLat, bLng) {
-    const key = routeKeyFor(aLat, aLng, bLat, bLng);
-    if (routeCache[key]) return Promise.resolve(routeCache[key]);
-    if (!navigator.onLine) return Promise.resolve(Object.assign({ key }, straightRoute(aLat, aLng, bLat, bLng)));
-    const url = "https://router.project-osrm.org/route/v1/driving/" +
-      aLng + "," + aLat + ";" + bLng + "," + bLat + "?overview=full&geometries=geojson&alternatives=false&steps=false";
-    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(() => ctrl.abort(), 7000) : null;
-    return fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
-      .then((r) => r.json())
-      .then((j) => {
-        if (!j || j.code !== "Ok" || !j.routes || !j.routes.length) throw new Error("no route");
-        const r = j.routes[0];
-        const res = {
-          key,
-          coords: r.geometry.coordinates.map((c) => [c[1], c[0]]),
-          km: r.distance / 1000,
-          sec: r.duration * 1.15, /* trafic urbain */
-          real: true
-        };
-        routeCache[key] = res;
-        return res;
-      })
-      .catch(() => Object.assign({ key }, straightRoute(aLat, aLng, bLat, bLng)))
-      .finally(() => { if (timer) clearTimeout(timer); });
-  }
-
-  function pathCumulative(coords) {
-    const cum = [0];
-    for (let i = 1; i < coords.length; i++) {
-      cum.push(cum[i - 1] + haversineKm(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1]));
-    }
-    return cum;
-  }
-
-  /* Position + cap à une fraction t (0..1) du tracé */
-  function pointAlong(coords, cum, t) {
-    const total = cum[cum.length - 1] || 0;
-    if (coords.length < 2 || total === 0) {
-      const p = coords[coords.length - 1] || [0, 0];
-      return { lat: p[0], lng: p[1], bearing: 0, index: coords.length - 1 };
-    }
-    const target = Math.min(total, Math.max(0, t * total));
-    let i = 1;
-    while (i < cum.length - 1 && cum[i] < target) i++;
-    const segLen = cum[i] - cum[i - 1] || 1e-9;
-    const f = (target - cum[i - 1]) / segLen;
-    const a = coords[i - 1];
-    const b = coords[i];
-    return {
-      lat: lerp(a[0], b[0], f),
-      lng: lerp(a[1], b[1], f),
-      bearing: bearingDeg(a[0], a[1], b[0], b[1]),
-      index: i
-    };
-  }
-
-  /* Point situé à `km` d'un lieu selon un cap (pour positionner le chauffeur) */
-  function destinationPoint(lat, lng, bearing, km) {
-    const R = 6371;
-    const toRad = (d) => (d * Math.PI) / 180;
-    const toDeg = (r) => (r * 180) / Math.PI;
-    const br = toRad(bearing);
-    const la1 = toRad(lat);
-    const lo1 = toRad(lng);
-    const d = km / R;
-    const la2 = Math.asin(Math.sin(la1) * Math.cos(d) + Math.cos(la1) * Math.sin(d) * Math.cos(br));
-    const lo2 = lo1 + Math.atan2(Math.sin(br) * Math.sin(d) * Math.cos(la1), Math.cos(d) - Math.sin(la1) * Math.sin(la2));
-    return { lat: toDeg(la2), lng: toDeg(lo2) };
-  }
-
-  function haversineKm(lat1, lng1, lat2, lng2) {
-    const R = 6371;
-    const toRad = (d) => (d * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lng2 - lng1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  function currentRouteKey() {
-    if (trip.fromLat == null || trip.toLat == null) return null;
-    return routeKeyFor(trip.fromLat, trip.fromLng, trip.toLat, trip.toLng);
-  }
-
-  /* Distance du trajet : routière si l'itinéraire est connu, sinon estimation */
-  function updateTripDistance() {
-    if (trip.fromLat == null || trip.toLat == null) {
-      trip.km = 0;
-      trip.sec = 0;
-      return 0;
-    }
-    const key = currentRouteKey();
-    if (trip.route && trip.route.key === key) {
-      trip.km = Math.round(trip.route.km * 10) / 10;
-      trip.sec = trip.route.sec;
-    } else {
-      const est = straightRoute(trip.fromLat, trip.fromLng, trip.toLat, trip.toLng);
-      trip.km = Math.round(est.km * 10) / 10;
-      trip.sec = est.sec;
-    }
-    return trip.km;
-  }
-
-  function vehicleOf() {
-    return VEHICLES.find(function (v) { return v.id === trip.vehicle; }) || VEHICLES[1];
-  }
-
-  function priceFromDistance() {
-    const km = updateTripDistance() || 5;
-    const v = vehicleOf();
-    const base = Math.max(FARE.min, Math.round((FARE.base + km * FARE.perKm) / 100) * 100);
+  const vehicleOf = () => VEHICLES.find((v) => v.id === trip.vehicle) || VEHICLES[1];
+  function priceFor(v, km) {
+    const base = Math.max(FARE.min, Math.round((FARE.base + (km || 0) * FARE.perKm) / 100) * 100);
     return Math.round((base * v.mult) / 100) * 100;
   }
-
-  function fmtKm(km) {
-    return (Math.round((km || 0) * 10) / 10).toFixed(1).replace(".", ",") + " km";
+  function etaSec(km) { return trip.sec && trip.km ? Math.max(60, Math.round(trip.sec)) : Math.max(60, Math.round(((km || 1) / M().URBAN_SPEED_KMH) * 3600)); }
+  function updateDistance() {
+    if (!trip.from || !trip.to) { trip.km = 0; trip.sec = 0; return; }
+    if (trip.route && trip.route.key === routeKey()) { trip.km = Math.round(trip.route.km * 10) / 10; trip.sec = trip.route.sec; }
+    else { const est = M().straightRoute(trip.from, trip.to); trip.km = Math.round(est.km * 10) / 10; trip.sec = est.sec; }
+    trip.price = priceFor(vehicleOf(), trip.km);
   }
-
-  function destroyMap() {
-    stopRideAnimation();
-    stopGeoWatch();
-    if (mapInst) {
-      try { mapInst.stop(); } catch (e) { /* no-op */ }
-      mapInst.off();
-      try { mapInst.remove(); } catch (e) { /* déjà détaché du DOM */ }
-      mapInst = null;
-    }
-    fromMarker = null;
-    toMarker = null;
-    routeLine = null;
-    doneLine = null;
-    userMarker = null;
-    carMarker = null;
-    beninLayer = null;
-    cityLayer = null;
-  }
-
-  function stopRideAnimation() {
-    if (animRaf) {
-      cancelAnimationFrame(animRaf);
-      animRaf = null;
-    }
-    if (phaseTimer) {
-      clearTimeout(phaseTimer);
-      phaseTimer = null;
-    }
-  }
-
-  function stopGeoWatch() {
-    if (geoWatchId != null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(geoWatchId);
-      geoWatchId = null;
-    }
-  }
-
-  function pinIcon(role) {
-    const isFrom = role === "from";
-    const cls = isFrom ? "yc-map-pin--from" : "yc-map-pin--to";
-    const letter = isFrom ? "A" : "B";
-    return L.divIcon({
-      className: "",
-      html: `<div class="yc-map-pin ${cls}" aria-label="${isFrom ? "Départ" : "Destination"}">
-        <span class="yc-map-pin__head">${letter}</span>
-        <span class="yc-map-pin__tip"></span>
-        <span class="yc-map-pin__pulse"></span>
-      </div>`,
-      iconSize: [40, 52],
-      iconAnchor: [20, 50],
-      popupAnchor: [0, -44]
-    });
-  }
-
-  function userIcon() {
-    return L.divIcon({
-      className: "",
-      html: `<span class="yc-map-user"></span>`,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11]
-    });
-  }
-
-  /* Voiture vue du dessus (SVG), orientée selon le cap */
-  function carIcon(bearing) {
-    const rot = Math.round(bearing || 0);
-    return L.divIcon({
-      className: "",
-      html: `<div class="yc-car-icon" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;transform:rotate(${rot}deg)">
-        <svg width="26" height="44" viewBox="0 0 26 44" style="filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))">
-          <rect x="3" y="2" width="20" height="40" rx="7" fill="#0A0A0A"/>
-          <rect x="4.5" y="3.5" width="17" height="37" rx="6" fill="#171717"/>
-          <rect x="6" y="10" width="14" height="9" rx="2.5" fill="#F4E4B3" opacity=".95"/>
-          <rect x="6" y="26" width="14" height="7" rx="2.5" fill="#C9A227" opacity=".85"/>
-          <rect x="7" y="4" width="4" height="3" rx="1" fill="#F4E4B3"/>
-          <rect x="15" y="4" width="4" height="3" rx="1" fill="#F4E4B3"/>
-          <rect x="7" y="38" width="4" height="2.5" rx="1" fill="#52525B"/>
-          <rect x="15" y="38" width="4" height="2.5" rx="1" fill="#52525B"/>
-        </svg>
-      </div>`,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22]
-    });
-  }
-
-  function driverStartIcon() {
-    return L.divIcon({
-      className: "",
-      html: `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #C9A227;box-shadow:0 1px 4px rgba(0,0,0,.3)"></span>`,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
-  }
-
-  function bearingDeg(lat1, lng1, lat2, lng2) {
-    const toRad = (d) => (d * Math.PI) / 180;
-    const toDeg = (r) => (r * 180) / Math.PI;
-    const y = Math.sin(toRad(lng2 - lng1)) * Math.cos(toRad(lat2));
-    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
-      Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lng2 - lng1));
-    return (toDeg(Math.atan2(y, x)) + 360) % 360;
-  }
-
-  function lerp(a, b, t) {
-    return a + (b - a) * t;
-  }
-
-  /* Temps restant en minutes (comme Google Maps / Uber) */
-  function formatEta(totalSec) {
-    const s = Math.max(0, Math.round(totalSec));
-    if (s < 60) return "< 1 min";
-    const m = Math.ceil(s / 60);
-    if (m >= 60) {
-      const h = Math.floor(m / 60);
-      const r = m % 60;
-      return h + " h" + (r ? " " + String(r).padStart(2, "0") : "");
-    }
-    return m + " min";
-  }
-
-  function arrivalClock(remainSec) {
-    const d = new Date(Date.now() + Math.max(0, remainSec) * 1000);
-    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-  }
-
-  function etaSecondsFromKm(km) {
-    if (trip.sec && trip.km) return Math.max(60, Math.round(trip.sec));
-    const hours = (km || 1) / URBAN_SPEED_KMH;
-    return Math.max(60, Math.round(hours * 3600));
-  }
-
-  function updateUserMarker() {
-    if (!mapInst || userPos.lat == null) return;
-    if (userMarker) userMarker.setLatLng([userPos.lat, userPos.lng]);
-    else {
-      userMarker = L.marker([userPos.lat, userPos.lng], { icon: userIcon(), zIndexOffset: 400 })
-        .addTo(mapInst)
-        .bindPopup("<b>Ma position</b>");
-    }
-  }
-
-  function startGeoWatch(onUpdate) {
-    stopGeoWatch();
-    if (!navigator.geolocation) {
-      /* Fallback démo près de Haie Vive si GPS indisponible */
-      userPos.lat = 6.3585;
-      userPos.lng = 2.3930;
-      userPos.ok = false;
-      if (onUpdate) onUpdate();
-      return;
-    }
-    geoWatchId = navigator.geolocation.watchPosition(
-      function (pos) {
-        userPos.lat = pos.coords.latitude;
-        userPos.lng = pos.coords.longitude;
-        userPos.ok = true;
-        if (onUpdate) onUpdate();
-      },
-      function () {
-        if (userPos.lat == null) {
-          userPos.lat = 6.3585;
-          userPos.lng = 2.3930;
-          userPos.ok = false;
-          if (onUpdate) onUpdate();
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 8000, timeout: 10000 }
-    );
-  }
-
-  function syncInputs() {
-    const fromEl = document.getElementById("from-input");
-    const destEl = document.getElementById("dest-input");
-    /* Ne pas écraser le texte pendant la saisie */
-    if (fromEl && document.activeElement !== fromEl) fromEl.value = trip.from;
-    if (destEl && document.activeElement !== destEl) destEl.value = trip.to;
-    updateTripDistance();
-    const hasRoute = !!(trip.route && trip.route.key === currentRouteKey());
-    const kmEl = document.getElementById("trip-km");
-    if (kmEl) {
-      kmEl.textContent = trip.km
-        ? fmtKm(trip.km) + (hasRoute ? (trip.route.real ? " par la route" : " estimés") : " · calcul de l'itinéraire…")
-        : "Choisissez départ et destination";
-    }
-    const etaEl = document.getElementById("trip-eta");
-    if (etaEl) {
-      etaEl.textContent = trip.km ? "≈ " + formatEta(etaSecondsFromKm(trip.km)) : "—";
-    }
-    const price = priceFromDistance();
-    const priceEl = document.getElementById("trip-price");
-    if (priceEl) priceEl.textContent = trip.km ? ACStore.fmtFCFA(price) : "—";
-    const formula = document.getElementById("price-formula");
-    if (formula) {
-      formula.textContent = trip.km
-        ? FARE.base.toLocaleString("fr-FR") + " + " + FARE.perKm + " FCFA/km × " + fmtKm(trip.km)
-        : "Tarif : " + ACStore.fmtFCFA(FARE.base) + " + " + ACStore.fmtFCFA(FARE.perKm) + " par km";
-    }
-    const btn = document.getElementById("request-btn");
-    if (btn) btn.textContent = "Confirmer la course" + (trip.km ? " · " + ACStore.fmtFCFA(price) : "");
-    const hint = document.getElementById("pick-hint");
-    if (hint) {
-      const isFrom = trip.pickMode === "from";
-      hint.className = "yc-pick-hint pointer-events-none" + (isFrom ? "" : " yc-pick-hint--to");
-      hint.innerHTML = `<span class="yc-pick-hint__dot"></span><span>${isFrom
-        ? "Touchez la carte pour placer le départ"
-        : "Touchez la carte pour placer la destination"}</span>`;
-    }
-  }
-
-  /* ---------- Saisie d'adresse + suggestions (lieux locaux + géocodage Bénin) ---------- */
-  function escAttr(s) {
-    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-  }
-  function escHtml(s) {
-    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  const normTxt = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-  let suggestTimer = null;
-  let suggestReq = 0;
-  let lastSuggestions = [];
-  let suggestRole = "from";
-  let blurTimer = null;
-  const geocodeCache = {};
-
-  function localPlaces(q) {
-    const n = normTxt(q).trim();
-    const all = POIS.map((p) => ({ name: p.name, detail: "Lieu populaire · Bénin", lat: p.lat, lng: p.lng, icon: "star" }))
-      .concat(CITIES.map((c) => ({ name: c.name, detail: "Ville · Bénin", lat: c.lat, lng: c.lng, icon: "location_city" })));
-    if (!n) return all.slice(0, 6);
-    return all.filter((p) => normTxt(p.name).includes(n)).slice(0, 4);
-  }
-
-  function geocodeBenin(q) {
-    const key = normTxt(q).trim();
-    if (geocodeCache[key]) return Promise.resolve(geocodeCache[key]);
-    const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) +
-      "&lat=" + COTONOU.lat + "&lon=" + COTONOU.lng + "&limit=8&lang=fr";
-    return fetch(url).then((r) => r.json()).then((j) => {
-      const seen = {};
-      const out = [];
-      (j.features || []).forEach((f) => {
-        const p = f.properties || {};
-        if (p.countrycode && p.countrycode !== "BJ") return;
-        const name = p.name || [p.housenumber, p.street].filter(Boolean).join(" ") || p.city || p.county;
-        if (!name) return;
-        const detail = [p.street && p.street !== name ? p.street : null, p.district, p.city && p.city !== name ? p.city : null, p.state]
-          .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ") || "Bénin";
-        const k = normTxt(name + "|" + detail);
-        if (seen[k]) return;
-        seen[k] = true;
-        out.push({ name, detail, lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], icon: p.osm_value === "city" || p.osm_value === "town" ? "location_city" : "place" });
-      });
-      geocodeCache[key] = out.slice(0, 6);
-      return geocodeCache[key];
-    }).catch(() => []);
-  }
-
-  function renderSuggestions(list, opts) {
-    const box = document.getElementById("place-suggestions");
-    if (!box) return;
-    lastSuggestions = list;
-    if (!list.length && !(opts && opts.loading)) {
-      box.innerHTML = `<div class="px-4 py-4 flex items-start gap-3">
-        <span class="w-9 h-9 rounded-full bg-zinc-100 text-zinc-500 flex items-center justify-center flex-shrink-0">${UI.icon("search", "text-[18px]")}</span>
-        <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed pt-1">${opts && opts.query ? "Aucun lieu trouvé pour « " + escHtml(opts.query) + " »" : "Saisissez une adresse, un quartier ou une ville"}</p>
-      </div>`;
-      box.classList.remove("hidden");
-      return;
-    }
-    box.innerHTML = list.map((s, i) => `
-      <button type="button" onmousedown="event.preventDefault()" onclick="Screens._pickSuggestion(${i})"
-        class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-zinc-50 active:bg-[#F4E4B3]/40 border-b border-zinc-100 last:border-0">
-        <span class="w-9 h-9 rounded-full bg-zinc-100 text-zinc-700 flex items-center justify-center flex-shrink-0">${UI.icon(s.icon || "place", "text-[18px]")}</span>
-        <span class="min-w-0 flex-1">
-          <span class="block font-label-md text-label-md font-semibold text-on-surface truncate">${escHtml(s.name)}</span>
-          <span class="block font-label-sm text-label-sm text-zinc-500 truncate mt-0.5">${escHtml(s.detail)}</span>
-        </span>
-        ${UI.icon("north_west", "text-[16px] text-zinc-400 flex-shrink-0")}
-      </button>`).join("") + (opts && opts.loading ? `<p class="px-4 py-2.5 font-label-sm text-label-sm text-zinc-500 flex items-center gap-2 border-t border-zinc-100"><span class="w-3.5 h-3.5 rounded-full border-2 border-secondary/30 border-t-secondary animate-spin"></span>Recherche en cours…</p>` : "");
-    box.classList.remove("hidden");
-  }
-
-  function hideSuggestions() {
-    const box = document.getElementById("place-suggestions");
-    if (box) box.classList.add("hidden");
-  }
-
-  Screens._placeFocus = function (role) {
-    clearTimeout(blurTimer);
-    suggestRole = role;
-    trip.pickMode = role;
-    const el = document.getElementById(role === "from" ? "from-input" : "dest-input");
-    /* Champ vidé au focus : le placeholder apparaît tout de suite.
-       Si rien n'est confirmé, _placeBlur restaure le dernier lieu validé. */
-    if (el) el.value = "";
-    syncInputs();
-    renderSuggestions(localPlaces(""));
-  };
-
-  Screens._placeInput = function (role, value) {
-    suggestRole = role;
-    trip.pickMode = role;
-    clearTimeout(suggestTimer);
-    const q = (value || "").trim();
-    const local = localPlaces(q);
-    if (q.length < 2) { renderSuggestions(local); return; }
-    renderSuggestions(local, { loading: true, query: q });
-    const reqId = ++suggestReq;
-    suggestTimer = setTimeout(() => {
-      geocodeBenin(q).then((remote) => {
-        if (reqId !== suggestReq) return;
-        const names = {};
-        const merged = local.concat(remote).filter((s) => { const k = normTxt(s.name); if (names[k]) return false; names[k] = true; return true; });
-        renderSuggestions(merged.slice(0, 7), { query: q });
-      });
-    }, 380);
-  };
-
-  Screens._placeKey = function (ev, role) {
-    if (ev.key === "Enter") {
-      ev.preventDefault();
-      if (lastSuggestions.length) Screens._pickSuggestion(0);
-      else UI.toast("Choisissez un lieu dans la liste.", "info");
-    } else if (ev.key === "Escape") {
-      hideSuggestions();
-      ev.target.blur();
-    }
-  };
-
-  Screens._placeBlur = function () {
-    clearTimeout(blurTimer);
-    blurTimer = setTimeout(() => {
-      hideSuggestions();
-      syncInputs(); /* remet le dernier lieu validé si la saisie n'a pas été confirmée */
-    }, 180);
-  };
-
-  Screens._pickSuggestion = function (i) {
-    const s = lastSuggestions[i];
-    if (!s) return;
-    hideSuggestions();
-    const role = suggestRole;
-    const el = document.getElementById(role === "from" ? "from-input" : "dest-input");
-    if (el) el.blur();
-    Screens._setTripPoint(role, { name: s.name + (s.detail && s.detail !== "Bénin" && !/Lieu populaire|Ville/.test(s.detail) ? " · " + s.detail.split(",")[0] : ""), lat: s.lat, lng: s.lng }, false);
-    /* Enchaîner sur la destination si le départ vient d'être saisi */
-    if (role === "from" && (trip.toLat == null || !trip.to)) {
-      const dest = document.getElementById("dest-input");
-      if (dest) setTimeout(() => dest.focus(), 50);
-    }
-  };
-
-  function refreshMarkers() {
-    if (!mapInst) return;
-    if (trip.fromLat != null) {
-      if (fromMarker) {
-        fromMarker.setLatLng([trip.fromLat, trip.fromLng]);
-        fromMarker.setIcon(pinIcon("from"));
-      } else {
-        fromMarker = L.marker([trip.fromLat, trip.fromLng], { icon: pinIcon("from"), zIndexOffset: 500 }).addTo(mapInst);
-      }
-      fromMarker.bindPopup("<b style='font-family:Plus Jakarta Sans,sans-serif'>Départ</b><br><span style='color:#52525B'>" + escHtml(trip.from) + "</span>");
-    }
-    if (trip.toLat != null) {
-      if (toMarker) {
-        toMarker.setLatLng([trip.toLat, trip.toLng]);
-        toMarker.setIcon(pinIcon("to"));
-      } else {
-        toMarker = L.marker([trip.toLat, trip.toLng], { icon: pinIcon("to"), zIndexOffset: 520 }).addTo(mapInst);
-      }
-      toMarker.bindPopup("<b style='font-family:Plus Jakarta Sans,sans-serif'>Destination</b><br><span style='color:#52525B'>" + escHtml(trip.to) + "</span>");
-    }
-    drawRouteLine();
-    syncInputs();
-    loadTripRoute();
-  }
-
-  /* Trace l'itinéraire : routier si connu, sinon ligne d'attente pointillée */
-  function drawRouteLine() {
-    if (!mapInst) return;
-    if (routeLine) {
-      mapInst.removeLayer(routeLine);
-      routeLine = null;
-    }
-    if (trip.fromLat == null || trip.toLat == null) return;
-    const key = currentRouteKey();
-    if (trip.route && trip.route.key === key) {
-      routeLine = L.polyline(trip.route.coords, { color: "#0A0A0A", weight: 5, opacity: 0.9, lineJoin: "round", lineCap: "round" }).addTo(mapInst);
-    } else {
-      routeLine = L.polyline(
-        [[trip.fromLat, trip.fromLng], [trip.toLat, trip.toLng]],
-        { color: "#C9A227", weight: 4, opacity: 0.65, dashArray: "8 10" }
-      ).addTo(mapInst);
-    }
-  }
-
-  /* Charge l'itinéraire routier réel et met à jour tracé, distance, prix */
-  function loadTripRoute() {
-    const key = currentRouteKey();
+  function routeKey() { return trip.from && trip.to ? [trip.from.lat, trip.from.lng, trip.to.lat, trip.to.lng].map((v) => Number(v).toFixed(5)).join("|") : null; }
+  function loadRoute() {
+    const key = routeKey();
     if (!key) return Promise.resolve(null);
     if (trip.route && trip.route.key === key) return Promise.resolve(trip.route);
-    if (routeInflight && routeInflight.key === key) return routeInflight.promise;
-    const reqId = ++routeReqId;
-    const promise = fetchRoute(trip.fromLat, trip.fromLng, trip.toLat, trip.toLng).then((route) => {
-      if (routeInflight && routeInflight.key === key) routeInflight = null;
-      if (reqId !== routeReqId || key !== currentRouteKey()) return trip.route;
-      trip.route = route;
-      updateTripDistance();
-      if (mapInst && mapInteractive) {
-        drawRouteLine();
-        fitTripBounds();
-      }
-      syncInputs();
+    const req = ++routeReq;
+    return M().fetchRoute(trip.from, trip.to).then((route) => {
+      if (req !== routeReq || key !== routeKey()) return trip.route;
+      trip.route = route; updateDistance(); syncTrip();
+      if (map && App.current && App.current.id === "transport") { map.drawRoute(route.coords); map.fit(route.coords, fitPad()); }
+      refreshPanel();
       return route;
     });
-    routeInflight = { key, promise };
-    return promise;
+  }
+  function fitPad() {
+    const desktop = window.matchMedia("(min-width: 1024px)").matches;
+    const sheet = document.getElementById("tr-sheet");
+    return desktop ? { paddingTopLeft: [60, 60], paddingBottomRight: [60, 60] } : { paddingTopLeft: [40, 80], paddingBottomRight: [40, (sheet ? sheet.offsetHeight : 260) + 24] };
   }
 
-  /* Hauteur de la feuille inférieure → marge pour que le tracé reste visible */
-  function sheetPad() {
-    const sheet = document.querySelector(".yc-gmap-sheet");
-    return (sheet ? sheet.offsetHeight : 260) + 24;
-  }
+  /* Préréglage utilisé par le mode démo et les ponts (« Y aller ») */
+  Screens._transportPreset = function (o) {
+    o = o || {};
+    const city = YCData.cityOf(ACState.user.city);
+    const find = (name) => { if (!name) return null; const n = YCData.norm(name); return city.poi.find((p) => YCData.norm(p.name).includes(n) || n.includes(YCData.norm(p.name).split(" (")[0])) || null; };
+    if (o.fromLatLng) trip.from = o.fromLatLng; else if (o.from) { const p = find(o.from); if (p) trip.from = { name: p.name, lat: p.lat, lng: p.lng }; }
+    if (o.toLatLng) trip.to = o.toLatLng; else if (o.to) { const p = find(o.to); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; } else if (o.toName) { const p = find(o.toName); trip.to = p ? { name: p.name, lat: p.lat, lng: p.lng } : { name: o.toName, lat: city.lat + 0.01, lng: city.lng + 0.01 }; }
+    if (!trip.from) { const home = ACState.addresses[0]; trip.from = home && home.lat ? { name: home.label + " · " + home.detail.split(",")[0], lat: home.lat, lng: home.lng } : { name: city.poi[0].name, lat: city.poi[0].lat, lng: city.poi[0].lng }; }
+    if (o.vehicle) trip.vehicle = o.vehicle;
+    trip.route = null; trip.status = "idle"; trip.driver = null; updateDistance(); syncTrip();
+  };
 
-  function routeBounds() {
-    if (trip.route && trip.route.key === currentRouteKey() && trip.route.coords.length > 1) {
-      return L.latLngBounds(trip.route.coords);
-    }
-    return L.latLngBounds([trip.fromLat, trip.fromLng], [trip.toLat, trip.toLng]);
-  }
-
-  function fitTripBounds() {
-    if (!mapInst) return;
-    if (trip.fromLat != null && trip.toLat != null) {
-      mapInst.fitBounds(routeBounds(), { paddingTopLeft: [40, 130], paddingBottomRight: [40, sheetPad()], maxZoom: 16, animate: false });
-    } else if (trip.fromLat != null) {
-      mapInst.setView([trip.fromLat, trip.fromLng], 13);
-    } else if (trip.toLat != null) {
-      mapInst.setView([trip.toLat, trip.toLng], 13);
-    }
-  }
-
-  /* ---------- Vue pays : frontière + villes ---------- */
-  function addBeninLayers() {
-    if (!mapInst) return;
-    beninLayer = L.polygon(BENIN_BORDER, {
-      color: "#0A0A0A", weight: 2, opacity: 0.7, fillColor: "#C9A227", fillOpacity: 0.05, interactive: false
-    }).addTo(mapInst);
-
-    cityLayer = L.layerGroup();
-    CITIES.forEach((c) => {
-      const m = L.circleMarker([c.lat, c.lng], {
-        radius: c.name === "Cotonou" ? 7 : 5, color: "#fff", weight: 2, fillColor: "#0A0A0A", fillOpacity: 1
-      }).bindTooltip(c.name, { permanent: true, direction: "right", offset: [8, 0], className: "yc-city-label" });
-      if (mapInteractive) {
-        m.on("click", function () {
-          Screens._setTripPoint(trip.pickMode, { name: c.name, lat: c.lat, lng: c.lng }, false);
-        });
-      }
-      cityLayer.addLayer(m);
-    });
-    syncCountryLayers();
-    mapInst.on("zoomend", syncCountryLayers);
-  }
-
-  function syncCountryLayers() {
-    if (!mapInst || !cityLayer) return;
-    const z = mapInst.getZoom();
-    const show = z <= 9;
-    if (show && !mapInst.hasLayer(cityLayer)) cityLayer.addTo(mapInst);
-    if (!show && mapInst.hasLayer(cityLayer)) mapInst.removeLayer(cityLayer);
-    if (beninLayer) {
-      /* Frontière visible uniquement sur la vue pays/région */
-      const visible = z <= 11;
-      if (visible && !mapInst.hasLayer(beninLayer)) beninLayer.addTo(mapInst);
-      if (!visible && mapInst.hasLayer(beninLayer)) mapInst.removeLayer(beninLayer);
-      beninLayer.setStyle({ weight: z <= 8 ? 2.5 : 1.5, fillOpacity: z <= 8 ? 0.07 : 0.02 });
-    }
-  }
-
-  function initTransportMap(elId, opts) {
-    opts = opts || {};
-    mapInteractive = opts.interactive !== false;
-    const showUser = opts.showUser !== false;
-    const animateCar = !!opts.animateCar;
-    destroyMap();
-    const el = document.getElementById(elId);
-    if (!el || typeof L === "undefined") return;
-
-    mapInst = L.map(elId, {
-      zoomControl: false,
-      attributionControl: true,
-      dragging: true,
-      scrollWheelZoom: true,
-      tapTolerance: 15
-    }).setView([COTONOU.lat, COTONOU.lng], COTONOU.zoom);
-
-    L.control.zoom({ position: "bottomright" }).addTo(mapInst);
-
-    /* Tuiles gratuites sans clé. OSM bloque souvent les webviews intégrées
-       (403 / "access blocked") : on bascule alors sur le miroir OSM-FR,
-       puis sur HOT. tileerror ne se déclenche qu'en cas d'échec réseau réel. */
-    const tileProviders = [
-      { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
-      { url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", attr: '&copy; OpenStreetMap France' },
-      { url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", attr: '&copy; OpenStreetMap, HOT' }
-    ];
-    let tileIdx = 0;
-    function mountTiles() {
-      const p = tileProviders[Math.min(tileIdx, tileProviders.length - 1)];
-      const layer = L.tileLayer(p.url, { maxZoom: 19, attribution: p.attr, subdomains: "abc" });
-      let failed = 0;
-      layer.on("tileerror", function () {
-        failed++;
-        if (failed >= 3 && tileIdx < tileProviders.length - 1 && mapInst && mapInst.hasLayer(layer)) {
-          mapInst.removeLayer(layer);
-          tileIdx++;
-          mountTiles();
-        }
-      });
-      layer.addTo(mapInst);
-    }
-    mountTiles();
-
-    addBeninLayers();
-    refreshMarkers();
-    fitTripBounds();
-
-    if (mapInteractive) {
-      mapInst.on("click", function (e) {
-        const place = {
-          name: "Point sur la carte (" + e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4) + ")",
-          lat: e.latlng.lat,
-          lng: e.latlng.lng
-        };
-        Screens._setTripPoint(trip.pickMode, place, false);
-      });
-    }
-
-    if (showUser) {
-      startGeoWatch(function () {
-        updateUserMarker();
-      });
-    }
-
-    if (animateCar) {
-      startRideAnimation();
-    }
-
-    setTimeout(function () {
-      if (mapInst) {
-        mapInst.invalidateSize();
-        fitTripBounds();
-      }
-    }, 80);
-  }
-
-  /* ---------- Animation du trajet en 2 phases ----------
-     1. Le chauffeur s'approche du point de départ (itinéraire réel)
-     2. Course jusqu'à la destination (itinéraire réel)
-     Le temps affiché est le temps réel estimé ; l'animation est accélérée. */
-  function setRideUI(o) {
-    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = v; };
-    set("ride-phase-label", o.label);
-    set("ride-eta-title", o.title);
-    set("ride-eta-meta", o.meta);
-    set("ride-arrival", o.arrival);
-    const bar = document.getElementById("ride-progress");
-    if (bar && o.progress != null) bar.style.width = Math.round(o.progress * 100) + "%";
-    if (bar && o.color) bar.style.background = o.color;
-    const chip = document.getElementById("ride-status-chip");
-    if (chip && o.chip) chip.textContent = o.chip;
-  }
-
-  function panToFollow(latlng) {
-    if (!mapInst) return;
-    const inner = mapInst.getBounds().pad(-0.25);
-    if (!inner.contains(latlng)) mapInst.panTo(latlng, { animate: true, duration: 0.6 });
-  }
-
-  function animateAlong(coords, opts) {
-    /* opts: { visualSec, realSec, totalKm, color, onTick(t, remainKm, remainSec), onDone } */
-    const cum = pathCumulative(coords);
-    const totalKm = opts.totalKm || cum[cum.length - 1] || 0.5;
-    const start = performance.now();
-    let lastBearing = null;
-
-    if (!carMarker) {
-      const p0 = pointAlong(coords, cum, 0);
-      carMarker = L.marker([p0.lat, p0.lng], { icon: carIcon(p0.bearing), zIndexOffset: 600 }).addTo(mapInst);
-    }
-
-    function tick(now) {
-      if (!mapInst || !carMarker) return;
-      const t = Math.min(1, (now - start) / (opts.visualSec * 1000));
-      const p = pointAlong(coords, cum, t);
-      carMarker.setLatLng([p.lat, p.lng]);
-      if (lastBearing == null || Math.abs(p.bearing - lastBearing) > 2) {
-        carMarker.setIcon(carIcon(p.bearing));
-        lastBearing = p.bearing;
-      }
-
-      /* Portion parcourue */
-      if (doneLine) { mapInst.removeLayer(doneLine); doneLine = null; }
-      const done = coords.slice(0, p.index).concat([[p.lat, p.lng]]);
-      if (done.length > 1) {
-        doneLine = L.polyline(done, { color: opts.color || "#C9A227", weight: 6, opacity: 0.95, lineJoin: "round", lineCap: "round" }).addTo(mapInst);
-      }
-      /* Portion restante (ligne principale) */
-      if (routeLine) {
-        const remain = [[p.lat, p.lng]].concat(coords.slice(p.index));
-        routeLine.setLatLngs(remain.length > 1 ? remain : [[p.lat, p.lng], [p.lat, p.lng]]);
-      }
-
-      panToFollow(L.latLng(p.lat, p.lng));
-
-      const remainKm = Math.max(0, totalKm * (1 - t));
-      const remainSec = Math.max(0, opts.realSec * (1 - t));
-      if (opts.onTick) opts.onTick(t, remainKm, remainSec);
-
-      if (t < 1) {
-        animRaf = requestAnimationFrame(tick);
-      } else {
-        animRaf = null;
-        if (opts.onDone) opts.onDone();
-      }
-    }
-    animRaf = requestAnimationFrame(tick);
-  }
-
-  function startRideAnimation() {
-    stopRideAnimation();
-    if (!mapInst || trip.fromLat == null || trip.toLat == null) return;
-    const driverName = (trip.driver && trip.driver.name.split(" ")[0]) || "Le chauffeur";
-
-    /* Le chauffeur démarre à ~1,2 km du point de départ, à l'opposé de la destination */
-    const brgToDest = bearingDeg(trip.fromLat, trip.fromLng, trip.toLat, trip.toLng);
-    const driverStart = destinationPoint(trip.fromLat, trip.fromLng, (brgToDest + 150) % 360, 1.2);
-    const startDot = L.marker([driverStart.lat, driverStart.lng], { icon: driverStartIcon(), zIndexOffset: 300 }).addTo(mapInst);
-
-    setRideUI({
-      label: driverName + " arrive",
-      title: "…",
-      meta: "Calcul de l'itinéraire du chauffeur…",
-      arrival: "",
-      progress: 0,
-      color: "#C9A227",
-      chip: "Chauffeur en route"
-    });
-
-    /* Phase 1 : approche */
-    Promise.all([
-      fetchRoute(driverStart.lat, driverStart.lng, trip.fromLat, trip.fromLng),
-      loadTripRoute()
-    ]).then(([approach]) => {
-      if (!mapInst || !App.current || App.current.id !== "transportInRide") return;
-
-      /* Approche or + course prévue en pointillé noir */
-      if (routeLine) { mapInst.removeLayer(routeLine); routeLine = null; }
-      const rideCoords = (trip.route && trip.route.coords) || [[trip.fromLat, trip.fromLng], [trip.toLat, trip.toLng]];
-      const ridePreview = L.polyline(rideCoords, { color: "#0A0A0A", weight: 5, opacity: 0.35, dashArray: "6 10" }).addTo(mapInst);
-      routeLine = L.polyline(approach.coords, { color: "#C9A227", weight: 5, opacity: 0.95, dashArray: "1 8", lineCap: "round" }).addTo(mapInst);
-
-      mapInst.fitBounds(L.latLngBounds(approach.coords).extend([trip.fromLat, trip.fromLng]), {
-        paddingTopLeft: [40, 80], paddingBottomRight: [40, sheetPad()], maxZoom: 16, animate: false
-      });
-
-      const approachReal = Math.max(90, approach.sec);
-      animateAlong(approach.coords, {
-        visualSec: 22,
-        realSec: approachReal,
-        totalKm: approach.km,
-        color: "#C9A227",
-        onTick: function (t, remainKm, remainSec) {
-          setRideUI({
-            title: formatEta(remainSec),
-            meta: driverName + " est à " + fmtKm(remainKm) + " · " + (trip.driver ? trip.driver.car + " · " + trip.driver.plate : ""),
-            arrival: "Prise en charge " + arrivalClock(remainSec),
-            progress: t
-          });
-        },
-        onDone: function () {
-          if (!mapInst) return;
-          mapInst.removeLayer(startDot);
-          if (routeLine) { mapInst.removeLayer(routeLine); routeLine = null; }
-          if (doneLine) { mapInst.removeLayer(doneLine); doneLine = null; }
-          mapInst.removeLayer(ridePreview);
-          UI.toast(driverName + " est arrivé au point de départ", "success");
-          if (navigator.vibrate) { try { navigator.vibrate([40, 60, 40]); } catch (e) { /* no-op */ } }
-          setRideUI({
-            label: "Chauffeur sur place",
-            title: "Départ imminent",
-            meta: "Installez-vous, la course démarre…",
-            arrival: "",
-            progress: 1,
-            chip: "Prise en charge"
-          });
-          phaseTimer = setTimeout(startTripPhase, 2200);
-        }
-      });
-    });
-
-    /* Phase 2 : course */
-    function startTripPhase() {
-      phaseTimer = null;
-      if (!mapInst || !App.current || App.current.id !== "transportInRide") return;
-      updateTripDistance();
-      const coords = (trip.route && trip.route.coords) || [[trip.fromLat, trip.fromLng], [trip.toLat, trip.toLng]];
-      const totalKm = trip.km || 1;
-      const realEtaSec = etaSecondsFromKm(totalKm);
-      const visualSec = Math.min(90, Math.max(35, totalKm * 8));
-
-      routeLine = L.polyline(coords, { color: "#0A0A0A", weight: 6, opacity: 0.95, lineJoin: "round", lineCap: "round" }).addTo(mapInst);
-      mapInst.fitBounds(L.latLngBounds(coords), { paddingTopLeft: [40, 80], paddingBottomRight: [40, sheetPad()], maxZoom: 16, animate: true });
-
-      setRideUI({ label: "Temps restant", color: "#C9A227", chip: "En course", progress: 0 });
-
-      animateAlong(coords, {
-        visualSec: visualSec,
-        realSec: realEtaSec,
-        totalKm: totalKm,
-        color: "#C9A227",
-        onTick: function (t, remainKm, remainSec) {
-          setRideUI({
-            title: t >= 1 ? "Arrivé" : formatEta(remainSec),
-            meta: t >= 1 ? "Destination atteinte · " + trip.to.split("·")[0].trim() : fmtKm(remainKm) + " restants · " + trip.to.split("·")[0].trim(),
-            arrival: t >= 1 ? "" : "Arrivée prévue " + arrivalClock(remainSec),
-            progress: t
-          });
-        },
-        onDone: function () {
-          setRideUI({ label: "Course terminée", chip: "Arrivé" });
-          UI.toast("Vous êtes arrivé à destination", "success");
-          if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) { /* no-op */ } }
-        }
-      });
-    }
-  }
-
-  /* Écran 3 — Transport (format type Google Maps) */
+  /* ---------- Écran principal ---------- */
   Screens.transport = function (container) {
-    updateTripDistance();
+    const city = YCData.cityOf(ACState.user.city);
+    if (!trip.from) Screens._transportPreset({});
+    updateDistance();
+    const chips = city.poi.slice(0, 6).map((p) => `<button type="button" onclick="Screens._pickPoi(${UI.js(p)})" class="chip">${icon(p.kind === "aeroport" ? "flight" : "place", "text-[15px]")}${esc(p.name.split("(")[0].trim())}</button>`).join("");
+    const panel = `
+      <div class="p-4 lg:p-6 space-y-4">
+        <p class="hidden lg:block t-small text-ink-2">${esc(city.name)} · itinéraire routier réel, prix fixe au kilomètre</p>
+        <div class="card p-1 relative">
+          <div class="flex items-center gap-3 h-12 px-3">
+            <span class="w-2.5 h-2.5 rounded-full bg-gold flex-shrink-0"></span>
+            <input id="from-input" value="${esc(trip.from ? trip.from.name : "")}" placeholder="Point de départ" autocomplete="off" spellcheck="false" enterkeyhint="next" onfocus="Screens._placeFocus('from')" oninput="Screens._placeInput('from', this.value)" onkeydown="Screens._placeKey(event)" onblur="Screens._placeBlur()" class="flex-1 bg-transparent t-title outline-none min-w-0"/>
+            <button type="button" onclick="Screens._useMyPosition()" class="text-ink-3 hover:text-ink flex-shrink-0" title="Ma position" aria-label="Utiliser ma position">${icon("my_location", "text-[20px]")}</button>
+          </div>
+          <div class="h-px bg-line ml-8 mr-3"></div>
+          <div class="flex items-center gap-3 h-12 px-3">
+            <span class="w-2.5 h-2.5 rounded-sm bg-ink flex-shrink-0"></span>
+            <input id="dest-input" value="${esc(trip.to ? trip.to.name : "")}" placeholder="Où allez-vous ?" autocomplete="off" spellcheck="false" enterkeyhint="search" onfocus="Screens._placeFocus('to')" oninput="Screens._placeInput('to', this.value)" onkeydown="Screens._placeKey(event)" onblur="Screens._placeBlur()" class="flex-1 bg-transparent t-title outline-none min-w-0"/>
+            <button type="button" onclick="Screens._swapTripPoints()" class="text-ink-3 hover:text-ink flex-shrink-0" title="Inverser" aria-label="Inverser départ et destination">${icon("swap_vert", "text-[20px]")}</button>
+          </div>
+          <div id="place-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 card overflow-hidden z-20 max-h-[280px] overflow-y-auto shadow-float"></div>
+        </div>
+        <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0 lg:flex-wrap">${chips}</div>
+        <p id="pick-hint" class="t-small text-ink-2 flex items-center gap-2">${icon("touch_app", "text-[16px] text-gold")}Touchez la carte pour placer ${trip.pickMode === "from" ? "le départ" : "la destination"}</p>
+        <div id="tr-summary" class="flex items-center justify-between gap-3"></div>
+        <div id="tr-vehicles" class="space-y-2"></div>
+        <p class="t-small text-ink-3">Tarif : ${ACStore.fmtFCFA(FARE.base)} + ${ACStore.fmtFCFA(FARE.perKm)}/km · minimum ${ACStore.fmtFCFA(FARE.min)} · estimation hors trafic exceptionnel</p>
+        <button type="button" id="request-btn" onclick="Screens._transportContinue()" class="btn btn-lg btn-dark btn-block">${I18N.t("continue")}</button>
+      </div>`;
     const body = `
-    <div class="yc-gmap-wrap">
-      <div id="yc-transport-map" class="yc-gmap-canvas"></div>
-
-      <div class="absolute top-0 left-0 right-0 z-[600] p-3 space-y-2 pointer-events-none">
-        <div class="flex items-start gap-2 pointer-events-auto">
-          <button type="button" onclick="App.nav('home')"
-            class="w-11 h-11 mt-1 rounded-full bg-white border border-black/5 shadow-[0_6px_18px_rgba(0,0,0,.12)] flex items-center justify-center text-on-surface flex-shrink-0">
-            ${UI.icon("arrow_back")}
-          </button>
-          <div class="yc-gmap-card flex-1 relative px-3 py-1">
-            <div id="place-row-from" class="flex items-center gap-3 h-11">
-              <span class="w-2.5 h-2.5 rounded-full bg-secondary flex-shrink-0"></span>
-              <input id="from-input" value="${escAttr(trip.from)}" placeholder="Point de départ" autocomplete="off" spellcheck="false" enterkeyhint="next"
-                onfocus="Screens._placeFocus('from')" oninput="Screens._placeInput('from', this.value)"
-                onkeydown="Screens._placeKey(event, 'from')" onblur="Screens._placeBlur()"
-                class="yc-gmap-input truncate"/>
-            </div>
-            <div class="h-px bg-zinc-200 ml-5"></div>
-            <div id="place-row-to" class="flex items-center gap-3 h-11">
-              <span class="w-2.5 h-2.5 rounded-sm bg-black flex-shrink-0"></span>
-              <input id="dest-input" value="${escAttr(trip.to)}" placeholder="Où allez-vous ?" autocomplete="off" spellcheck="false" enterkeyhint="search"
-                onfocus="Screens._placeFocus('to')" oninput="Screens._placeInput('to', this.value)"
-                onkeydown="Screens._placeKey(event, 'to')" onblur="Screens._placeBlur()"
-                class="yc-gmap-input truncate"/>
-              <button type="button" onclick="Screens._swapTripPoints()" class="text-zinc-400 flex-shrink-0" title="Inverser">${UI.icon("swap_vert", "text-[20px]")}</button>
-            </div>
+      <div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
+        <aside id="tr-sheet" class="absolute bottom-0 inset-x-0 z-20 max-h-[58%] overflow-y-auto bg-card rounded-t-3xl shadow-float lg:static lg:max-h-none lg:rounded-none lg:shadow-none lg:border-r lg:border-line lg:overflow-y-auto lg:h-full">
+          <div class="w-10 h-1.5 bg-line rounded-full mx-auto mt-2 lg:hidden"></div>${panel}
+        </aside>
+        <div class="absolute inset-0 lg:static lg:h-full">
+          <div id="tr-map" class="absolute inset-0 lg:relative lg:h-full w-full"></div>
+          <div class="absolute top-3 right-3 z-10 flex flex-col gap-2">
+            <button type="button" onclick="Screens._useMyPosition()" class="icon-btn shadow-md" title="Ma position" aria-label="Ma position">${icon("my_location")}</button>
+            <button type="button" onclick="Shell.openCityPicker()" class="icon-btn shadow-md" title="Changer de ville" aria-label="Changer de ville">${icon("public")}</button>
           </div>
         </div>
-        <div id="place-suggestions" class="hidden yc-gmap-card overflow-hidden pointer-events-auto max-h-[280px] overflow-y-auto" style="margin-left:52px"></div>
-        <div class="flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto" style="padding-left:52px">
-          ${POIS.slice(0, 6).map((p) => `
-            <button type="button" onclick="Screens._pickPoi('${p.id}')" class="yc-place-chip">
-              ${p.name.split("·")[0].trim()}
-            </button>`).join("")}
-        </div>
-        <div id="pick-hint" class="yc-pick-hint pointer-events-none ${trip.pickMode === "to" ? "yc-pick-hint--to" : ""}" style="margin-left:52px">
-          <span class="yc-pick-hint__dot"></span>
-          <span>${trip.pickMode === "from" ? "Touchez la carte pour placer le départ" : "Touchez la carte pour placer la destination"}</span>
-        </div>
-      </div>
-
-      <div class="absolute right-3 z-[600] flex flex-col gap-2" style="bottom: calc(42% + 16px)">
-        <button type="button" onclick="Screens._useMyPosition()" class="yc-map-fab" title="Ma position">${UI.icon("my_location")}</button>
-        <button type="button" onclick="Screens._mapZoomCotonou()" class="yc-map-fab" title="Cotonou">${UI.icon("near_me")}</button>
-        <button type="button" onclick="Screens._mapZoomBenin()" class="yc-map-fab" title="Bénin">${UI.icon("public")}</button>
-      </div>
-
-      <div class="absolute bottom-0 left-0 right-0 z-[600] yc-gmap-sheet p-4 space-y-3 max-h-[46%] overflow-y-auto">
-        <div class="w-10 h-1 rounded-full bg-outline-variant/50 mx-auto"></div>
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="font-title-md text-title-md font-bold">Votre course</p>
-            <p class="font-label-sm text-label-sm text-on-surface-variant truncate" id="trip-km">${trip.km ? fmtKm(trip.km) + " · calcul de l'itinéraire…" : "Indiquez départ et destination"}</p>
-          </div>
-          <div class="text-right flex-shrink-0">
-            <p class="font-headline-sm text-headline-sm font-bold text-secondary leading-none" id="trip-eta">${trip.km ? "≈ " + formatEta(etaSecondsFromKm(trip.km)) : "—"}</p>
-            <p class="font-label-sm text-label-sm text-on-surface-variant">durée estimée</p>
-          </div>
-        </div>
-        <div class="space-y-2">
-          ${VEHICLES.map(function (v) {
-            const sel = trip.vehicle === v.id;
-            const p = Math.round((Math.max(FARE.min, Math.round((FARE.base + (trip.km || 5) * FARE.perKm) / 100) * 100) * v.mult) / 100) * 100;
-            return `<button type="button" onclick="Screens._pickVehicle('${v.id}')" class="w-full rounded-2xl border p-3 flex items-center justify-between ${sel ? "border-secondary bg-secondary/10" : "border-outline-variant/30 bg-white"}">
-              <div class="flex items-center gap-3 min-w-0">
-                ${UI.icon(v.icon, "text-[22px]")}
-                <div class="text-left min-w-0">
-                  <p class="font-label-md text-label-md font-bold">${v.label}</p>
-                  <p class="font-label-sm text-label-sm text-on-surface-variant">${v.avail} · ${trip.km ? formatEta(Math.round(etaSecondsFromKm(trip.km) * v.etaMult)) : "—"}</p>
-                </div>
-              </div>
-              <p class="font-title-md text-title-md font-extrabold">${trip.km ? ACStore.fmtFCFA(p) : "—"}</p>
-            </button>`;
-          }).join("")}
-        </div>
-        <p class="font-label-sm text-label-sm text-on-surface-variant truncate" id="price-formula">Tarif de base : ${ACStore.fmtFCFA(FARE.base)} + ${ACStore.fmtFCFA(FARE.perKm)}/km</p>
-        <p class="hidden" id="trip-price">${trip.km ? ACStore.fmtFCFA(priceFromDistance()) : "—"}</p>
-        <button type="button" id="request-btn" onclick="Screens._transportRequest()"
-          class="w-full h-12 rounded-full bg-black text-white font-label-lg text-label-lg font-bold shadow-md active:scale-[0.99]">
-          Confirmer la course${trip.km ? " · " + ACStore.fmtFCFA(priceFromDistance()) : ""}
-        </button>
-      </div>
-    </div>`;
-    Shell.render(container, { topbar: "", body, nav: false, fill: true });
-    initTransportMap("yc-transport-map", { interactive: true, showUser: true });
+      </div>`;
+    Shell.render(container, { title: "Transport", subtitle: "Où allez-vous ?", back: "App.nav('home')", body, nav: false, fill: true, onMount: initMainMap });
   };
 
+  function initMainMap() {
+    map = M().create("tr-map", { interactive: true, zoomPosition: "bottomright" });
+    if (!map) return;
+    refreshMarkers();
+    map.onClick((p) => Screens._setTripPoint(trip.pickMode, { name: "Point sur la carte (" + p.lat.toFixed(4) + ", " + p.lng.toFixed(4) + ")", lat: p.lat, lng: p.lng }));
+    M().locate((pos) => { if (map) map.setUser([pos.lat, pos.lng]); });
+    refreshPanel();
+    loadRoute();
+  }
+  function refreshMarkers() {
+    if (!map) return;
+    map.setPin("from", trip.from ? [trip.from.lat, trip.from.lng] : null, trip.from && trip.from.name);
+    map.setPin("to", trip.to ? [trip.to.lat, trip.to.lng] : null, trip.to && trip.to.name);
+    if (trip.from && trip.to) {
+      if (trip.route && trip.route.key === routeKey()) { map.drawRoute(trip.route.coords); map.fit(trip.route.coords, fitPad()); }
+      else { map.drawPending(trip.from, trip.to); map.fit([[trip.from.lat, trip.from.lng], [trip.to.lat, trip.to.lng]], fitPad()); }
+    } else if (trip.from) map.setView(trip.from.lat, trip.from.lng, 14);
+  }
+  function refreshPanel() {
+    updateDistance();
+    const sum = document.getElementById("tr-summary"), veh = document.getElementById("tr-vehicles"), btn = document.getElementById("request-btn"), hint = document.getElementById("pick-hint");
+    const hasRoute = trip.route && trip.route.key === routeKey();
+    if (sum) sum.innerHTML = trip.km ? `<div><p class="t-title">Votre course</p><p class="t-small text-ink-2">${M().fmtKm(trip.km)} ${hasRoute ? (trip.route.real ? "par la route" : "estimés") : "· calcul de l'itinéraire…"}</p></div><div class="text-right"><p class="t-h3 text-gold-deep dark:text-gold leading-none">≈ ${M().fmtEta(etaSec(trip.km))}</p><p class="t-small text-ink-2">durée estimée</p></div>`
+      : `<p class="t-small text-ink-2">Indiquez un départ et une destination pour voir les prix.</p>`;
+    if (veh) veh.innerHTML = VEHICLES.map((v) => {
+      const sel = trip.vehicle === v.id; const p = priceFor(v, trip.km);
+      return `<button type="button" onclick="Screens._pickVehicle('${v.id}')" class="w-full rounded-2xl border p-3 flex items-center justify-between gap-3 text-left transition-colors ${sel ? "border-gold bg-gold/10" : "border-line bg-card hover:bg-surface-low"}" aria-pressed="${sel}">
+        <span class="flex items-center gap-3 min-w-0"><span class="w-11 h-11 rounded-xl ${sel ? "bg-gold text-[#0A0A0A]" : "bg-surface-low text-ink"} flex items-center justify-center flex-shrink-0">${icon(v.icon, "text-[24px]")}</span>
+          <span class="min-w-0"><span class="block t-title">${v.label} <span class="t-small text-ink-3 font-normal">· ${v.sub}</span></span><span class="block t-small text-ink-2">${icon("schedule", "text-[13px]")} ${v.avail} · ${trip.km ? M().fmtEta(Math.round(etaSec(trip.km) * v.etaMult)) : "—"} · <span class="text-success font-semibold">Disponible</span></span></span></span>
+        <span class="t-title font-extrabold whitespace-nowrap">${trip.km ? ACStore.fmtFCFA(p) : "—"}</span></button>`;
+    }).join("");
+    if (btn) btn.innerHTML = `${I18N.t("continue")}${trip.km ? " · " + ACStore.fmtFCFA(trip.price) : ""}${icon("arrow_forward", "text-[20px]")}`;
+    if (hint) hint.innerHTML = `${icon("touch_app", "text-[16px] text-gold")}Touchez la carte pour placer ${trip.pickMode === "from" ? "le départ" : "la destination"}`;
+    const fi = document.getElementById("from-input"), di = document.getElementById("dest-input");
+    if (fi && document.activeElement !== fi) fi.value = trip.from ? trip.from.name : "";
+    if (di && document.activeElement !== di) di.value = trip.to ? trip.to.name : "";
+  }
+
+  /* ---------- Saisie et suggestions ---------- */
+  function renderSuggestions(list, opts) {
+    const box = document.getElementById("place-suggestions"); if (!box) return;
+    lastSuggestions = list;
+    if (!list.length && !(opts && opts.loading)) {
+      box.innerHTML = `<p class="px-4 py-4 t-small text-ink-2">${opts && opts.query ? "Aucun lieu trouvé pour « " + esc(opts.query) + " »" : "Saisissez une adresse, un quartier ou un lieu"}</p>`;
+    } else {
+      box.innerHTML = list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._pickSuggestion(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0">
+        <span class="w-9 h-9 rounded-full bg-surface-low text-ink flex items-center justify-center flex-shrink-0">${icon(s.icon || "place", "text-[18px]")}</span>
+        <span class="min-w-0 flex-1"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span>${icon("north_west", "text-[16px] text-ink-3")}
+      </button>`).join("") + (opts && opts.loading ? `<p class="px-4 py-2.5 t-small text-ink-3 flex items-center gap-2 border-t border-line">${UI.spinner("!w-4 !h-4 !border-2")}Recherche en cours…</p>` : "");
+    }
+    box.classList.remove("hidden");
+  }
+  const hideSuggestions = () => { const b = document.getElementById("place-suggestions"); if (b) b.classList.add("hidden"); };
+  Screens._placeFocus = function (role) { clearTimeout(blurTimer); suggestRole = role; trip.pickMode = role; const el = document.getElementById(role === "from" ? "from-input" : "dest-input"); if (el) el.select(); renderSuggestions(M().localPlaces("", ACState.user.city)); const h = document.getElementById("pick-hint"); if (h) h.innerHTML = `${icon("touch_app", "text-[16px] text-gold")}Touchez la carte pour placer ${role === "from" ? "le départ" : "la destination"}`; };
+  Screens._placeInput = function (role, value) {
+    suggestRole = role; clearTimeout(suggestTimer);
+    const q = (value || "").trim(); const local = M().localPlaces(q, ACState.user.city);
+    if (q.length < 2) { renderSuggestions(local); return; }
+    renderSuggestions(local, { loading: true, query: q });
+    const req = ++suggestReq;
+    suggestTimer = setTimeout(() => M().geocode(q, ACState.user.city).then((remote) => {
+      if (req !== suggestReq) return;
+      const names = {}; const merged = local.concat(remote).filter((s) => { const k = YCData.norm(s.name); if (names[k]) return false; names[k] = true; return true; });
+      renderSuggestions(merged.slice(0, 7), { query: q });
+    }), 350);
+  };
+  Screens._placeKey = function (ev) { if (ev.key === "Enter") { ev.preventDefault(); if (lastSuggestions.length) Screens._pickSuggestion(0); } else if (ev.key === "Escape") { hideSuggestions(); ev.target.blur(); } };
+  Screens._placeBlur = function () { clearTimeout(blurTimer); blurTimer = setTimeout(() => { hideSuggestions(); refreshPanel(); }, 180); };
+  Screens._pickSuggestion = function (i) {
+    const s = lastSuggestions[i]; if (!s) return; hideSuggestions();
+    const role = suggestRole; const el = document.getElementById(role === "from" ? "from-input" : "dest-input"); if (el) el.blur();
+    Screens._setTripPoint(role, { name: s.name, lat: s.lat, lng: s.lng });
+    if (role === "from" && !trip.to) { const d = document.getElementById("dest-input"); if (d) setTimeout(() => d.focus(), 60); }
+  };
+  Screens._setTripPoint = function (role, place) {
+    if (role === "from") { trip.from = place; if (trip.pickMode === "from") trip.pickMode = "to"; } else trip.to = place;
+    trip.route = null; updateDistance(); syncTrip(); refreshMarkers(); refreshPanel(); loadRoute();
+  };
+  Screens._pickPoi = function (p) { Screens._setTripPoint(trip.pickMode, { name: p.name, lat: p.lat, lng: p.lng }); UI.toast((trip.pickMode === "to" && trip.to && trip.to.name === p.name ? "Destination : " : "Départ : ") + p.name.split("(")[0].trim(), "info"); };
+  Screens._swapTripPoints = function () { const f = trip.from; trip.from = trip.to; trip.to = f; trip.route = null; updateDistance(); syncTrip(); refreshMarkers(); refreshPanel(); loadRoute(); };
+  Screens._pickVehicle = function (id) { trip.vehicle = id; updateDistance(); syncTrip(); refreshPanel(); };
   Screens._useMyPosition = function () {
-    function apply() {
-      if (userPos.lat == null) {
-        UI.toast("Position indisponible. Autorisez la localisation.", "error");
-        return;
-      }
-      Screens._setTripPoint("from", {
-        name: userPos.ok ? "Ma position actuelle" : "Ma position (estimée)",
-        lat: userPos.lat,
-        lng: userPos.lng
-      }, false);
-      trip.pickMode = "to";
-      syncInputs();
-      if (mapInst) mapInst.setView([userPos.lat, userPos.lng], 14);
-      UI.toast("Départ = votre position", "success");
-    }
-    if (userPos.lat != null) {
-      apply();
-      return;
-    }
-    let applied = false;
     UI.toast("Localisation en cours…", "info");
-    startGeoWatch(function () {
-      updateUserMarker();
-      if (!applied && userPos.lat != null) {
-        applied = true;
-        apply();
-      }
+    M().locate((pos) => {
+      Screens._setTripPoint("from", { name: pos.ok ? "Ma position actuelle" : "Ma position (estimée)", lat: pos.lat, lng: pos.lng });
+      trip.pickMode = "to"; if (map) { map.setUser([pos.lat, pos.lng]); map.setView(pos.lat, pos.lng, 14); }
+      UI.toast("Départ = votre position", "success");
     });
   };
 
-  Screens._mapZoomBenin = function () {
-    if (!mapInst) return;
-    mapInst.fitBounds(L.latLngBounds(BENIN_BORDER), { paddingTopLeft: [16, 130], paddingBottomRight: [16, sheetPad()], animate: true });
-    UI.toast("Touchez une ville pour la choisir", "info");
+  Screens._transportContinue = function () {
+    if (!trip.from) { UI.toast("Indiquez d'où vous partez.", "error"); const el = document.getElementById("from-input"); if (el) el.focus(); return; }
+    if (!trip.to) { UI.toast("Indiquez où vous allez.", "error"); const el = document.getElementById("dest-input"); if (el) el.focus(); return; }
+    const proceed = () => { updateDistance(); syncTrip(); if (App.current && App.current.id === "transport") App.nav("transportConfirm"); };
+    if (trip.route && trip.route.key === routeKey()) { proceed(); return; }
+    UI.toast("Calcul de l'itinéraire et du prix…", "info");
+    let done = false; const finish = () => { if (done) return; done = true; proceed(); };
+    loadRoute().then(finish, finish); setTimeout(finish, 4000);
   };
 
-  Screens._mapZoomCotonou = function () {
-    if (mapInst) mapInst.setView([COTONOU.lat, COTONOU.lng], COTONOU.zoom);
+  /* ---------- Confirmation ---------- */
+  Screens.transportConfirm = function (container) {
+    if (!trip.from || !trip.to) { App.resetTo("transport"); return; }
+    updateDistance();
+    const v = vehicleOf();
+    const methods = ACState.paymentMethods;
+    const body = `
+      <div class="grid lg:grid-cols-[1fr_380px] gap-6">
+        <div class="space-y-4">
+          <div class="card overflow-hidden"><div id="cf-map" class="h-52 lg:h-72 w-full bg-surface-low"></div>
+            <div class="p-4 space-y-3">
+              <div class="flex gap-3"><span class="w-2.5 h-2.5 rounded-full bg-gold mt-1.5 flex-shrink-0"></span><div class="min-w-0"><p class="t-caption text-ink-3">Départ</p><p class="t-title truncate">${esc(trip.from.name)}</p></div></div>
+              <div class="flex gap-3"><span class="w-2.5 h-2.5 rounded-sm bg-ink mt-1.5 flex-shrink-0"></span><div class="min-w-0"><p class="t-caption text-ink-3">Destination</p><p class="t-title truncate">${esc(trip.to.name)}</p></div></div>
+            </div></div>
+          <div class="card p-4">
+            <p class="t-caption text-ink-3 mb-2">Véhicule</p>
+            <div class="flex items-center gap-3"><span class="w-12 h-12 rounded-xl bg-gold text-[#0A0A0A] flex items-center justify-center">${icon(v.icon, "text-[26px]")}</span><div class="flex-1"><p class="t-title">${v.label}</p><p class="t-small text-ink-2">${v.sub} · arrivée en ${v.avail}</p></div><button type="button" onclick="App.back()" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
+          </div>
+          <div class="card p-4">
+            <p class="t-caption text-ink-3 mb-2">Moyen de paiement</p>
+            <div class="space-y-2">${methods.map((m) => `<button type="button" onclick="Screens._tripMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${trip.method === m.type ? "border-gold bg-gold/10" : "border-line"}">
+              <span class="menu-icon">${icon(m.icon)}</span><span class="flex-1 min-w-0"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2 truncate">${m.sub}</span></span>${trip.method === m.type ? icon("check_circle", "text-gold", true) : ""}
+            </button>`).join("")}</div>
+          </div>
+          <div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon("sell")}</span><input id="promo" class="flex-1 bg-transparent outline-none t-body" placeholder="Code promo (ex. YOUSS10)"/><button type="button" onclick="Screens._applyPromo()" class="t-small font-bold text-gold-deep dark:text-gold">Appliquer</button></div>
+        </div>
+        <aside class="space-y-4 lg:sticky lg:top-24 self-start">
+          <div class="card-dark p-5">
+            <p class="t-caption text-gold">Récapitulatif</p>
+            ${UI.row("Distance", M().fmtKm(trip.km))}${UI.row("Durée estimée", "≈ " + M().fmtEta(etaSec(trip.km)))}${UI.row("Tarif", v.label)}
+            ${trip.promo ? UI.row("Code promo", "-" + ACStore.fmtFCFA(trip.promo)) : ""}
+            <div class="divider border-white/15 my-2"></div>
+            <div class="flex items-center justify-between"><span class="t-title">Prix de la course</span><span class="t-h2">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
+            <p class="t-small text-white/60 mt-2">Prix fixe calculé sur l'itinéraire routier. Pas de surprise à l'arrivée.</p>
+          </div>
+          ${UI.primaryButton("Confirmer la course", "Screens._transportRequest()", { size: "lg", iconRight: "arrow_forward" })}
+          <p class="t-small text-ink-3 text-center">Annulation gratuite avant l'arrivée du chauffeur.</p>
+        </aside>
+      </div>`;
+    Shell.render(container, { title: "Confirmation", subtitle: "Vérifiez votre course", back: true, body, nav: false, onMount: () => {
+      const m = M().create("cf-map", { interactive: false, zoomControl: false });
+      if (!m) return;
+      m.setPin("from", [trip.from.lat, trip.from.lng]); m.setPin("to", [trip.to.lat, trip.to.lng]);
+      const coords = trip.route && trip.route.key === routeKey() ? trip.route.coords : [[trip.from.lat, trip.from.lng], [trip.to.lat, trip.to.lng]];
+      m.drawRoute(coords); m.fit(coords, { paddingTopLeft: [30, 30], paddingBottomRight: [30, 30] });
+    } });
   };
-
-  Screens._setTripPoint = function (role, place, replace) {
-    if (role === "from") {
-      trip.from = place.name;
-      trip.fromLat = place.lat;
-      trip.fromLng = place.lng;
-      if (trip.pickMode === "from") trip.pickMode = "to";
-    } else {
-      trip.to = place.name;
-      trip.toLat = place.lat;
-      trip.toLng = place.lng;
-    }
-    updateTripDistance();
-    if (replace) {
-      App.replace("transport");
-    } else {
-      refreshMarkers();
-      fitTripBounds();
-      syncInputs();
-      UI.toast((role === "from" ? "Départ : " : "Destination : ") + place.name.split("(")[0].trim(), "info");
-    }
-  };
-
-  Screens._pickPoi = function (id) {
-    const p = POIS.find((x) => x.id === id);
-    if (!p) return;
-    Screens._setTripPoint(trip.pickMode, p, false);
-  };
-
-  Screens._swapTripPoints = function () {
-    const f = { name: trip.from, lat: trip.fromLat, lng: trip.fromLng };
-    trip.from = trip.to;
-    trip.fromLat = trip.toLat;
-    trip.fromLng = trip.toLng;
-    trip.to = f.name;
-    trip.toLat = f.lat;
-    trip.toLng = f.lng;
-    updateTripDistance();
-    refreshMarkers();
-    fitTripBounds();
-    syncInputs();
-  };
-
-  Screens._pickVehicle = function (id) {
-    trip.vehicle = id;
-    App.replace("transport");
-  };
+  Screens._tripMethod = function (type) { trip.method = type; syncTrip(); App.replace("transportConfirm"); };
+  Screens._applyPromo = function () { const v = (document.getElementById("promo").value || "").trim().toUpperCase(); if (v === "YOUSS10") { trip.promo = Math.round(trip.price * 0.1 / 100) * 100; UI.toast("Code appliqué : -10 %", "success"); App.replace("transportConfirm"); } else UI.toast("Code promo inconnu (essayez YOUSS10).", "error"); };
 
   Screens._transportRequest = function () {
-    if (trip.fromLat == null || trip.fromLng == null) {
-      UI.toast("Indiquez d'où vous partez.", "error");
-      const el = document.getElementById("from-input");
-      if (el) el.focus();
-      return;
-    }
-    if (trip.toLat == null || trip.toLng == null || !trip.to) {
-      UI.toast("Indiquez où vous allez.", "error");
-      const el = document.getElementById("dest-input");
-      if (el) el.focus();
-      return;
-    }
-    const proceed = function () {
-      /* Un seul prix fixe, calculé sur la distance routière */
-      trip.price = priceFromDistance();
-      UI.toast("Prix de la course : " + ACStore.fmtFCFA(trip.price), "success");
-      Screens._transportSearch();
-    };
-    const key = currentRouteKey();
-    if (trip.route && trip.route.key === key) { proceed(); return; }
-    UI.toast("Calcul de l'itinéraire et du prix…", "info");
-    let done = false;
-    const finish = function () { if (done) return; done = true; if (App.current && App.current.id === "transport") proceed(); };
-    loadTripRoute().then(finish, finish);
-    setTimeout(finish, 4000);
-  };
-
-  Screens._transportSearch = function () {
-    destroyMap();
+    trip.status = "searching"; trip.driver = null; syncTrip();
     App.nav("transportSearching");
-    setTimeout(() => {
-      if (App.current && App.current.id === "transportSearching") {
-        trip.driver = {
-          name: "Koffi Adjovi",
-          car: trip.vehicle === "moto" ? "Honda CG 125" : trip.vehicle === "premium" ? "Toyota Camry" : "Toyota Corolla",
-          plate: "RB-4821-A",
-          rating: 4.8,
-          phone: "+229 97 11 22 33",
-          avatar: "https://i.pravatar.cc/100?u=koffi-adjovi"
-        };
-        App.replace("transportDriverFound");
-      }
-    }, 2200);
   };
 
-  Screens.transportDriverFound = function (container) {
-    const d = trip.driver || { name: "Koffi Adjovi", car: "Toyota Corolla", plate: "RB-4821-A", rating: 4.8, avatar: "https://i.pravatar.cc/100?u=koffi-adjovi" };
-    const topbar = UI.topBar({ title: "Chauffeur trouvé", back: "App.nav('home')" });
-    const body = `
-    <section class="yc-card p-space-20 flex flex-col items-center text-center space-y-3">
-      <img class="w-20 h-20 rounded-full object-cover" src="${d.avatar}" alt=""/>
-      <h2 class="font-headline-sm text-headline-sm font-bold">${d.name}</h2>
-      <p class="font-body-sm text-body-sm text-on-surface-variant">★ ${d.rating} · ${d.car} · ${d.plate}</p>
-      <p class="font-title-md text-title-md font-bold text-secondary">Arrivée dans 3 min</p>
-    </section>
-    <div class="pt-space-16">${UI.primaryButton("Suivre la course", "App.replace('transportInRide')")}</div>`;
-    Shell.render(container, { topbar, body, nav: false });
-  };
-
+  /* ---------- Recherche ---------- */
   Screens.transportSearching = function (container) {
-    destroyMap();
-    const topbar = UI.topBar({ title: "Recherche", back: "App.back()" });
-    const body = `
-    <div class="flex-1 flex flex-col items-center justify-center text-center space-y-space-20 py-space-40">
-      <div class="relative w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-        <div class="absolute inset-0 rounded-full pulse-ring"></div>
-        ${UI.icon("directions_car", "text-primary text-[40px]")}
-      </div>
-      <h2 class="font-headline-sm text-headline-sm font-bold">Recherche d'un chauffeur...</h2>
-      <p class="font-body-sm text-body-sm text-on-surface-variant max-w-[260px]">${trip.from} → ${trip.to}${trip.km ? " · " + trip.km.toFixed(1).replace(".", ",") + " km" : ""}</p>
-      <button type="button" onclick="App.nav('home')" class="font-label-md text-label-md text-error">Annuler</button>
+    if (!trip.to) { App.resetTo("transport"); return; }
+    const body = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto">
+      <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center"><div class="absolute inset-0 rounded-full animate-pulse-ring"></div><div class="absolute inset-4 rounded-full border-2 border-gold/30 animate-ping"></div>${icon(vehicleOf().icon, "text-gold text-[52px]")}</div>
+      <h2 class="t-h1 mt-8">Recherche d'un chauffeur…</h2>
+      <p class="t-body text-ink-2 mt-2 max-w-[320px]">${esc(trip.from.name)} → ${esc(trip.to.name)}${trip.km ? " · " + M().fmtKm(trip.km) : ""}</p>
+      <p id="search-status" class="t-small text-ink-3 mt-6">Envoi de la demande aux chauffeurs ${vehicleOf().label.toLowerCase()} à proximité…</p>
+      <button type="button" onclick="Screens._cancelSearch()" class="btn btn-outline mt-10">Annuler la demande</button>
     </div>`;
-    Shell.render(container, { topbar, body, nav: false });
+    Shell.render(container, { title: "Recherche", back: "App.nav('transportConfirm')", body, nav: false, hideSearch: true });
+    const msgs = ["3 chauffeurs contactés…", "Un chauffeur a accepté. Vérification…"];
+    msgs.forEach((m, i) => setTimeout(() => { const el = document.getElementById("search-status"); if (el && App.current.id === "transportSearching") el.textContent = m; }, 900 * (i + 1)));
+    setTimeout(() => { if (App.current && App.current.id === "transportSearching") { Screens._transportAssignDriver(); App.replace("transportDriverFound"); } }, 2600);
+  };
+  Screens._cancelSearch = function () { trip.status = "idle"; syncTrip(); UI.toast("Demande annulée. Aucun montant débité.", "info"); App.resetTo("transport"); };
+  Screens._transportAssignDriver = function () {
+    const d = YCData.driverFor(ACState.user.city, trip.vehicle === "premium" ? "premium" : trip.vehicle);
+    trip.driver = Object.assign({}, d, { car: trip.vehicle === "moto" && d.vehicle !== "moto" ? "Honda CG 125 · Noire" : d.car, etaMin: trip.vehicle === "moto" ? 2 : trip.vehicle === "premium" ? 6 : 4 });
+    trip.status = "assigned"; trip.startedAt = Date.now(); syncTrip();
+    ACStore.addNotification("Chauffeur trouvé", trip.driver.name + " arrive dans " + trip.driver.etaMin + " min · " + trip.driver.car + " · " + trip.driver.plate, "transport", "transportDriverFound");
+    ACStore.emit();
   };
 
-  /* Écran 5 — Trajet en cours (format type Google Maps) */
-  Screens.transportInRide = function (container) {
+  /* ---------- Chauffeur trouvé ---------- */
+  Screens.transportDriverFound = function (container) {
     if (!trip.driver) { App.resetTo("transport"); return; }
     const d = trip.driver;
-    updateTripDistance();
-    const etaSec = etaSecondsFromKm(trip.km || 6);
-    const body = `
-    <div class="yc-gmap-wrap">
-      <div id="yc-inride-map" class="yc-gmap-canvas"></div>
-
-      <div class="absolute top-3 left-3 right-3 z-[600] flex justify-between items-start pointer-events-none">
-        <button type="button" onclick="App.nav('home')"
-          class="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center pointer-events-auto">${UI.icon("close")}</button>
-        <div class="flex gap-2 pointer-events-auto">
-          <span class="inline-flex items-center gap-1 h-10 px-3 rounded-full bg-white text-on-surface font-label-sm text-label-sm font-bold shadow-md">
-            ${UI.icon("verified_user", "text-[14px] text-secondary")} <span id="ride-status-chip">Chauffeur en route</span>
-          </span>
-          <button type="button" onclick="Screens._transportSOS()"
-            class="h-10 px-3 rounded-full bg-[#EA4335] text-white font-label-sm text-label-sm font-bold shadow-md">SOS</button>
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
+      ${UI.successHero({ icon: "verified", title: "Chauffeur trouvé", body: "Votre chauffeur arrive. Vous recevrez une notification à son arrivée." })}
+      <div class="card p-5 flex flex-col items-center text-center">
+        ${UI.avatar(d, "w-24 h-24")}
+        <h3 class="t-h2 mt-3">${esc(d.name)}</h3>
+        <p class="t-small text-ink-2 mt-0.5">${UI.rating(d.rating, d.rides + " courses")} · membre vérifié</p>
+        <div class="grid grid-cols-3 gap-2 w-full mt-5">
+          <div class="rounded-xl bg-surface-low p-3"><p class="t-caption text-ink-3">Véhicule</p><p class="t-small font-bold mt-0.5">${esc(d.car)}</p></div>
+          <div class="rounded-xl bg-surface-low p-3"><p class="t-caption text-ink-3">Plaque</p><p class="t-small font-bold mt-0.5 tracking-wider">${esc(d.plate)}</p></div>
+          <div class="rounded-xl bg-gold-soft p-3"><p class="t-caption text-gold-deep">Arrivée</p><p class="t-small font-bold mt-0.5 text-gold-deep" id="df-eta">${d.etaMin} min</p></div>
+        </div>
+        <div class="flex gap-2 w-full mt-4">
+          <a href="tel:${esc(d.phone)}" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}${I18N.t("call")}</a>
+          <button type="button" onclick="Screens._tripChat()" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}${I18N.t("message")}</button>
         </div>
       </div>
-
-      <div class="absolute bottom-0 left-0 right-0 z-[600] yc-gmap-sheet p-4 space-y-3">
-        <div class="w-10 h-1 rounded-full bg-outline-variant/50 mx-auto"></div>
-        <div class="space-y-1.5">
-          <div class="flex justify-between items-end gap-2">
-            <div class="min-w-0">
-              <p class="font-label-sm text-label-sm text-on-surface-variant" id="ride-phase-label">${d.name.split(" ")[0]} arrive</p>
-              <p class="font-headline-md text-headline-md font-bold text-secondary leading-none" id="ride-eta-title">…</p>
-            </div>
-            <div class="text-right min-w-0">
-              <p class="font-body-sm text-body-sm text-on-surface-variant truncate" id="ride-eta-meta">${fmtKm(trip.km)} · ${trip.to.split("·")[0].trim()}</p>
-              <p class="font-label-sm text-label-sm font-semibold text-on-surface" id="ride-arrival"></p>
-            </div>
-          </div>
-          <div class="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
-            <div id="ride-progress" class="h-full rounded-full transition-[width] duration-200" style="width:0%;background:#C9A227"></div>
-          </div>
-          <p class="font-label-sm text-label-sm text-on-surface-variant">${fmtKm(trip.km)} par la route · ≈ ${formatEta(etaSec)} · ${ACStore.fmtFCFA(FARE.base)} + ${ACStore.fmtFCFA(FARE.perKm)}/km</p>
-        </div>
-        <div class="flex items-center gap-3">
-          <img class="w-12 h-12 rounded-full object-cover" src="${d.avatar}" alt=""/>
-          <div class="flex-1 min-w-0">
-            <p class="font-title-md text-title-md font-bold truncate">${d.name} · ★ ${d.rating}</p>
-            <p class="font-body-sm text-body-sm text-on-surface-variant truncate">${d.car} · ${d.plate}</p>
-          </div>
-          <a href="tel:${d.phone}" class="w-11 h-11 rounded-full bg-zinc-100 text-on-surface flex items-center justify-center">${UI.icon("call")}</a>
-          <button type="button" onclick="UI.toast('Lien de suivi partagé', 'success')"
-            class="w-11 h-11 rounded-full bg-zinc-100 text-on-surface flex items-center justify-center">${UI.icon("share")}</button>
-        </div>
-        <div class="flex items-center justify-between px-1">
-          <span class="font-body-md text-body-md text-on-surface-variant">Montant</span>
-          <span class="font-label-lg text-label-lg font-bold">${ACStore.fmtFCFA(trip.price)}</span>
-        </div>
-        <button type="button" onclick="Screens._transportFinish()"
-          class="w-full h-12 rounded-full bg-black text-white font-label-lg text-label-lg font-bold shadow-md">
-          Terminer la course
-        </button>
-      </div>
+      <div class="card p-4 space-y-2">${UI.row("Trajet", esc(trip.from.name.split("(")[0]) + " → " + esc(trip.to.name.split("(")[0]))}${UI.row("Prix", ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0))), true)}${UI.row("Paiement", (ACState.paymentMethods.find((m) => m.type === trip.method) || {}).label || "Youss Wallet")}</div>
+      ${UI.primaryButton("Suivre la course", "App.replace('transportInRide')", { size: "lg", icon: "near_me" })}
+      <button type="button" onclick="Screens._cancelRide()" class="w-full t-small text-danger font-semibold py-2">Annuler la course</button>
     </div>`;
-    Shell.render(container, { topbar: "", body, nav: false, fill: true });
-    initTransportMap("yc-inride-map", { interactive: false, showUser: false, animateCar: true });
+    Shell.render(container, { title: "Chauffeur trouvé", back: "App.nav('home')", body, nav: false, hideSearch: true });
+    let left = d.etaMin * 60 - 20;
+    const tick = setInterval(() => { const el = document.getElementById("df-eta"); if (!el || App.current.id !== "transportDriverFound") { clearInterval(tick); return; } left -= 7; el.textContent = M().fmtEta(left); }, 1000);
+  };
+  Screens._cancelRide = function () {
+    UI.confirm({ title: "Annuler la course ?", body: "L'annulation est gratuite avant l'arrivée du chauffeur.", okLabel: "Annuler la course", danger: true, icon: "cancel", onOk: "Screens._cancelSearch()" });
   };
 
-  Screens._transportSOS = function () { App.nav("sos"); };
-
-  Screens.sos = function (container) {
-    destroyMap();
-    const topbar = UI.topBar({ title: "Assistance SOS", back: "App.back()" });
-    const body = `
-    <div class="flex-1 flex flex-col items-center justify-center text-center space-y-space-20 py-space-24">
-      <div class="w-20 h-20 rounded-full bg-error-container flex items-center justify-center text-on-error-container">${UI.icon("sos", "text-[36px]")}</div>
-      <h2 class="font-headline-md text-headline-md font-bold">Besoin d'aide immédiate ?</h2>
-      <p class="font-body-sm text-body-sm text-on-surface-variant max-w-[260px]">Votre position et les détails de votre course seront partagés avec le support YOUSS CONNECT.</p>
-      <div class="w-full space-y-3">
-        ${UI.primaryButton("Alerter le support", "Screens._sosAlert()", { icon: "campaign" })}
-        ${UI.secondaryButton("Retour à la course", "App.back()")}
+  /* ---------- Messagerie ---------- */
+  Screens._tripChat = function () {
+    const d = trip.driver || {};
+    const canned = ["Je suis au point de départ", "J'arrive dans 2 minutes", "Pouvez-vous m'attendre ?", "Appelez-moi en arrivant"];
+    UI.openSheet(`<div class="flex items-center gap-3 mb-4">${UI.avatar(d, "w-11 h-11")}<div><p class="t-title">${esc(d.name || "Chauffeur")}</p><p class="t-small text-success font-semibold">En ligne</p></div></div>
+      <div id="chat-log" class="space-y-2 max-h-[260px] overflow-y-auto mb-3">
+        <div class="max-w-[80%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">Bonjour ${esc(ACState.user.name)}, je suis en route. ${esc((d.car || "").split("·")[0])}</div>
       </div>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">${canned.map((c) => `<button type="button" onclick="Screens._chatSend(${UI.js(c)})" class="chip">${c}</button>`).join("")}</div>
+      <form onsubmit="event.preventDefault();Screens._chatSend(document.getElementById('chat-input').value)" class="flex gap-2 mt-2"><input id="chat-input" class="input flex-1" placeholder="Votre message…"/><button type="submit" class="btn btn-primary !w-12 !px-0" aria-label="Envoyer">${icon("send")}</button></form>`);
+  };
+  Screens._chatSend = function (text) {
+    text = (text || "").trim(); if (!text) return;
+    const log = document.getElementById("chat-log"); const input = document.getElementById("chat-input"); if (input) input.value = "";
+    if (!log) return;
+    log.insertAdjacentHTML("beforeend", `<div class="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-inverse text-inverse-ink p-3 t-small">${esc(text)}</div>`);
+    log.scrollTop = log.scrollHeight;
+    setTimeout(() => { if (!document.getElementById("chat-log")) return; log.insertAdjacentHTML("beforeend", `<div class="max-w-[80%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">D'accord, à tout de suite 👍</div>`); log.scrollTop = log.scrollHeight; }, 900);
+  };
+
+  /* ---------- Suivi en course ---------- */
+  Screens.transportInRide = function (container) {
+    if (!trip.driver || !trip.to) { App.resetTo("transport"); return; }
+    const d = trip.driver;
+    updateDistance();
+    const sheet = `
+      <div class="p-4 lg:p-6 space-y-4">
+        <div class="flex items-center justify-between gap-3"><span class="badge badge-gold" id="ride-chip">${icon("verified_user", "text-[14px]")}Chauffeur en route</span><button type="button" onclick="App.nav('sos')" class="btn btn-sm btn-danger !rounded-full">SOS</button></div>
+        <div>
+          <div class="flex items-end justify-between gap-3"><div><p class="t-small text-ink-2" id="ride-label">${esc(d.name.split(" ")[0])} arrive</p><p class="t-h1 text-gold-deep dark:text-gold leading-none" id="ride-eta">…</p></div><div class="text-right"><p class="t-small text-ink-2 truncate" id="ride-meta">${M().fmtKm(trip.km)} · ${esc(trip.to.name.split("(")[0])}</p><p class="t-small font-semibold" id="ride-arrival"></p></div></div>
+          <div class="h-1.5 rounded-full bg-card-high overflow-hidden mt-3"><div id="ride-progress" class="h-full rounded-full bg-gold transition-[width] duration-200" style="width:0%"></div></div>
+        </div>
+        <div class="flex items-center gap-3">${UI.avatar(d, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(d.name)} · ★ ${d.rating}</p><p class="t-small text-ink-2 truncate">${esc(d.car)} · ${esc(d.plate)}</p></div>
+          <a href="tel:${esc(d.phone)}" class="icon-btn" aria-label="Appeler">${icon("call")}</a><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
+        <div class="flex items-center justify-between"><span class="t-body text-ink-2">Montant</span><span class="t-title font-extrabold">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
+        <button type="button" id="finish-btn" onclick="Screens._transportFinish()" class="btn btn-lg btn-dark btn-block">Terminer la course</button>
+      </div>`;
+    const body = `<div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
+      <aside id="tr-sheet" class="absolute bottom-0 inset-x-0 z-20 bg-card rounded-t-3xl shadow-float lg:static lg:rounded-none lg:shadow-none lg:border-r lg:border-line lg:h-full lg:overflow-y-auto"><div class="w-10 h-1.5 bg-line rounded-full mx-auto mt-2 lg:hidden"></div>${sheet}</aside>
+      <div class="absolute inset-0 lg:static lg:h-full"><div id="ride-map" class="absolute inset-0 lg:relative lg:h-full w-full"></div></div>
     </div>`;
-    Shell.render(container, { topbar, body, nav: false });
+    Shell.render(container, { title: "Suivi de la course", back: "App.nav('home')", body, nav: false, fill: true, hideSearch: true, onMount: startRide });
   };
-
-  Screens._sosAlert = function () {
-    ACStore.addNotification("Alerte SOS envoyée", "Le support YOUSS CONNECT a été notifié.", "transport");
-    ACStore.emit();
-    UI.toast("Support alerté. Restez en ligne.", "success");
-    App.back();
-  };
-
-  Screens._transportFinish = function () {
-    destroyMap();
-    App.nav("transportRating");
-  };
-
-  let ratingValue = 5;
-  Screens.transportRating = function (container) {
-    destroyMap();
-    if (!trip.driver) { App.resetTo("transport"); return; }
-    const topbar = UI.topBar({ title: "Course terminée" });
-    const body = `
-    <div class="flex-1 flex flex-col items-center text-center space-y-space-16 py-space-16">
-      <div class="w-16 h-16 rounded-full bg-yc-green/15 text-yc-green flex items-center justify-center">${UI.icon("check_circle", "text-[36px]", true)}</div>
-      <h2 class="font-headline-md text-headline-md font-bold">Trajet terminé</h2>
-      <p class="font-body-sm text-body-sm text-on-surface-variant">Comment s'est passée votre course avec ${trip.driver.name} ?</p>
-      <div class="flex space-x-2">
-        ${[1, 2, 3, 4, 5].map((i) => `<button type="button" onclick="Screens._setRating(${i})" class="text-[32px] ${i <= ratingValue ? "text-yc-green" : "text-outline-variant"}">${UI.icon("star", "", i <= ratingValue)}</button>`).join("")}
-      </div>
-      <div class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-space-16 flex items-center justify-between">
-        <span class="font-body-md text-body-md">Total à payer</span>
-        <span class="font-label-lg text-label-lg font-bold text-primary">${ACStore.fmtFCFA(trip.price)}</span>
-      </div>
-      <div class="w-full pt-space-8">${UI.primaryButton("Payer avec Youss Wallet", "Screens._transportPay()", { icon: "account_balance_wallet" })}</div>
-    </div>`;
-    Shell.render(container, { topbar, body, nav: false });
-  };
-
-  Screens._setRating = function (v) { ratingValue = v; App.replace("transportRating"); };
-
-  Screens._transportPay = function () {
-    ACStore.whenPaid(ACStore.payFromWallet({
-      amount: trip.price,
-      label: "Course · " + trip.to,
-      service: "transport",
-      pointsEarned: 25,
-      meta: { from: trip.from, to: trip.to, km: String(trip.km || "") }
-    }), function () {
-      UI.toast("Paiement réussi · +25 Youss Bonus", "success");
-      App.resetTo("home");
-    }, function () {
-      App.nav("paymentFailed");
+  function setRideUI(o) {
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = v; };
+    set("ride-label", o.label); set("ride-eta", o.title); set("ride-meta", o.meta); set("ride-arrival", o.arrival);
+    const bar = document.getElementById("ride-progress"); if (bar && o.progress != null) bar.style.width = Math.round(o.progress * 100) + "%";
+    const chip = document.getElementById("ride-chip"); if (chip && o.chip) chip.innerHTML = icon("verified_user", "text-[14px]") + o.chip;
+  }
+  function startRide() {
+    map = M().create("ride-map", { interactive: true, zoomControl: false });
+    if (!map) return;
+    const first = trip.driver.name.split(" ")[0];
+    const kind = trip.vehicle === "moto" ? "moto" : "car";
+    map.setPin("from", [trip.from.lat, trip.from.lng], trip.from.name); map.setPin("to", [trip.to.lat, trip.to.lng], trip.to.name);
+    const brg = M().bearingDeg(trip.from.lat, trip.from.lng, trip.to.lat, trip.to.lng);
+    const start = M().destinationPoint(trip.from.lat, trip.from.lng, (brg + 150) % 360, 1.1);
+    setRideUI({ label: first + " arrive", title: "…", meta: "Calcul de l'itinéraire du chauffeur…", progress: 0, chip: "Chauffeur en route" });
+    Promise.all([M().fetchRoute(start, trip.from), loadRoute()]).then(([approach]) => {
+      if (!map || !App.current || App.current.id !== "transportInRide") return;
+      const rideCoords = (trip.route && trip.route.coords) || [[trip.from.lat, trip.from.lng], [trip.to.lat, trip.to.lng]];
+      map.map && L.polyline(rideCoords, { color: "#0A0A0A", weight: 5, opacity: 0.3, dashArray: "6 10" }).addTo(map.map);
+      map.drawRoute(approach.coords, { color: "#C9A227", weight: 5, opacity: 0.9, dashArray: "1 8" });
+      map.fit(approach.coords.concat([[trip.from.lat, trip.from.lng]]), fitPad());
+      map.animate(approach.coords, {
+        visualSec: trip.fastDemo ? 6 : 20, realSec: Math.max(90, approach.sec), kind,
+        onTick: (t, km, sec) => setRideUI({ title: M().fmtEta(sec), meta: first + " est à " + M().fmtKm(km) + " · " + trip.driver.car.split("·")[0], arrival: "Prise en charge " + M().clockIn(sec), progress: t }),
+        onDone: () => {
+          UI.toast(first + " est arrivé au point de départ", "success");
+          if (navigator.vibrate) { try { navigator.vibrate([40, 60, 40]); } catch (e) { /* no-op */ } }
+          setRideUI({ label: "Chauffeur sur place", title: "Départ imminent", meta: "Installez-vous, la course démarre…", arrival: "", progress: 1, chip: "Prise en charge" });
+          map.after(2000, () => {
+            if (!map || App.current.id !== "transportInRide") return;
+            map.clearVehicle();
+            const total = trip.km || 1, real = etaSec(total), visual = trip.fastDemo ? 10 : Math.min(80, Math.max(30, total * 7));
+            map.drawRoute(rideCoords); map.fit(rideCoords, fitPad());
+            setRideUI({ label: "Temps restant", chip: "En course", progress: 0 });
+            trip.status = "riding"; syncTrip();
+            map.animate(rideCoords, {
+              visualSec: visual, realSec: real, kind,
+              onTick: (t, km, sec) => setRideUI({ title: t >= 1 ? "Arrivé" : M().fmtEta(sec), meta: t >= 1 ? "Destination atteinte" : M().fmtKm(km) + " restants · " + trip.to.name.split("(")[0], arrival: t >= 1 ? "" : "Arrivée prévue " + M().clockIn(sec), progress: t }),
+              onDone: () => { setRideUI({ label: "Course terminée", chip: "Arrivé" }); trip.status = "arrived"; syncTrip(); UI.toast("Vous êtes arrivé à destination", "success"); const b = document.getElementById("finish-btn"); if (b) b.classList.add("btn-primary"); }
+            });
+          });
+        }
+      });
     });
+  }
+  Screens._shareRide = function () {
+    const text = "Je suis en course YOUSS CONNECT avec " + trip.driver.name + " (" + trip.driver.plate + ") vers " + trip.to.name + ".";
+    if (navigator.share) navigator.share({ title: "Ma course YOUSS CONNECT", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien de suivi copié.", "success")); else UI.toast("Lien de suivi partagé.", "success");
   };
+  Screens._transportMarkArrived = function () { trip.status = "arrived"; trip.fastDemo = true; syncTrip(); };
+  Screens._transportFinish = function () { trip.status = "arrived"; syncTrip(); App.nav("transportEnd"); };
 
-  Screens.paymentFailed = function (container) {
-    destroyMap();
-    const topbar = UI.topBar({ title: "Paiement", back: "App.back()" });
-    const body = `
-    <div class="flex-1 flex flex-col items-center justify-center text-center space-y-space-16 py-space-40">
-      ${UI.icon("error", "text-error text-[48px]")}
-      <h2 class="font-headline-sm text-headline-sm font-bold">Paiement impossible</h2>
-      <p class="font-body-sm text-body-sm text-on-surface-variant max-w-[260px]">Solde insuffisant ou hors ligne. Rechargez Youss Wallet.</p>
-      ${UI.primaryButton("Recharger", "App.nav('walletTopup')", { green: true })}
-      ${UI.secondaryButton("Retour", "App.back()")}
+  /* ---------- Fin de course ---------- */
+  Screens.transportEnd = function (container) {
+    if (!trip.driver) { App.resetTo("transport"); return; }
+    const d = trip.driver;
+    const total = Math.max(FARE.min, trip.price - (trip.promo || 0));
+    const durationMin = Math.max(3, Math.round(etaSec(trip.km) / 60));
+    const method = ACState.paymentMethods.find((m) => m.type === trip.method) || ACState.paymentMethods[0];
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
+      ${UI.successHero({ icon: "flag", title: "Course terminée", body: "Merci d'avoir voyagé avec YOUSS CONNECT." })}
+      <div class="card p-5">
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="rounded-xl bg-surface-low p-3"><p class="t-caption text-ink-3">Prix</p><p class="t-h3 mt-0.5">${ACStore.fmtFCFA(total)}</p></div>
+          <div class="rounded-xl bg-surface-low p-3"><p class="t-caption text-ink-3">Durée</p><p class="t-h3 mt-0.5">${durationMin} min</p></div>
+          <div class="rounded-xl bg-surface-low p-3"><p class="t-caption text-ink-3">Distance</p><p class="t-h3 mt-0.5">${M().fmtKm(trip.km)}</p></div>
+        </div>
+        <div class="mt-4 space-y-1">${UI.row("Départ", esc(trip.from.name.split("(")[0]))}${UI.row("Arrivée", esc(trip.to.name.split("(")[0]))}${UI.row("Véhicule", vehicleOf().label + " · " + esc(d.car))}${UI.row("Paiement", method.label)}</div>
+      </div>
+      <div class="card p-5 text-center">
+        <div class="flex items-center justify-center gap-3 mb-3">${UI.avatar(d, "w-12 h-12")}<div class="text-left"><p class="t-title">${esc(d.name)}</p><p class="t-small text-ink-2">Comment s'est passée votre course ?</p></div></div>
+        <div class="flex justify-center gap-1.5">${[1, 2, 3, 4, 5].map((i) => `<button type="button" onclick="Screens._setRating(${i})" class="p-1" aria-label="${i} étoiles">${icon("star", "text-[36px] " + (i <= trip.rating ? "text-gold" : "text-line"), i <= trip.rating)}</button>`).join("")}</div>
+        <div class="flex flex-wrap justify-center gap-2 mt-3">${["Conduite prudente", "Ponctuel", "Véhicule propre", "Sympathique"].map((c) => `<button type="button" onclick="Screens._ratingTag(this)" class="chip chip-gold">${c}</button>`).join("")}</div>
+        <textarea id="ride-comment" class="textarea mt-3" placeholder="Un commentaire (optionnel)">${esc(trip.comment || "")}</textarea>
+        <div class="flex items-center justify-center gap-2 mt-3"><span class="t-small text-ink-2">Pourboire :</span>${[0, 200, 500, 1000].map((v) => `<button type="button" onclick="Screens._setTip(${v})" class="chip ${(trip.tip || 0) === v ? "on" : ""}">${v ? ACStore.fmtFCFA(v) : "Aucun"}</button>`).join("")}</div>
+      </div>
+      ${UI.primaryButton((trip.method === "cash" ? "Terminer · payé en espèces " : "Payer ") + ACStore.fmtFCFA(total + (trip.tip || 0)), "Screens._transportPay()", { size: "lg", icon: trip.method === "cash" ? "check" : "account_balance_wallet" })}
     </div>`;
-    Shell.render(container, { topbar, body, nav: false });
+    Shell.render(container, { title: "Fin de course", back: "App.nav('home')", body, nav: false, hideSearch: true });
+  };
+  Screens._setRating = function (v) { trip.rating = v; trip.comment = (document.getElementById("ride-comment") || {}).value || ""; App.replace("transportEnd"); };
+  Screens._setTip = function (v) { trip.tip = v; trip.comment = (document.getElementById("ride-comment") || {}).value || ""; App.replace("transportEnd"); };
+  Screens._ratingTag = function (btn) { btn.classList.toggle("on"); };
+  Screens._transportPay = function () {
+    const total = Math.max(FARE.min, trip.price - (trip.promo || 0)) + (trip.tip || 0);
+    trip.comment = (document.getElementById("ride-comment") || {}).value || "";
+    const dest = trip.to.name.split("(")[0].trim();
+    ACStore.whenPaid(ACStore.pay({
+      amount: total, label: "Course · " + dest, service: "transport", pointsEarned: 25, method: trip.method,
+      meta: { from: trip.from.name, to: trip.to.name, km: String(trip.km || "") },
+      activity: { detail: { from: trip.from.name, to: trip.to.name, km: trip.km, driver: trip.driver.name, rating: trip.rating, vehicle: vehicleOf().label, duration: Math.round(etaSec(trip.km) / 60) } }
+    }), function () {
+      const city = ACState.user.city;
+      trip.status = "done"; trip.driver = null; trip.promo = 0; trip.tip = 0; trip.fastDemo = false; syncTrip();
+      const rest = YCData.nearby(trip.to.lat, trip.to.lng, YCData.restaurantsIn(city), 1)[0];
+      App.resetTo("paymentSuccess", { amount: total, title: "Course payée", body: "+25 points Youss Bonus ajoutés. Merci " + ACState.user.name + " !", next: "transport", rest: rest ? rest.id : "" });
+    }, function (res) { App.nav("paymentFailed", { retry: "transportEnd", amount: total, reason: res.reason }); });
   };
 
-  /* Compat anciennes routes */
+  /* ---------- SOS (partagé avec Sécurité) ---------- */
+  Screens.sos = function (container) {
+    const body = `<div class="max-w-narrow mx-auto w-full flex-1 flex flex-col items-center justify-center text-center py-8 space-y-5">
+      <div class="w-24 h-24 rounded-full bg-danger-soft text-danger flex items-center justify-center animate-pulse-ring">${icon("sos", "text-[44px]")}</div>
+      <h2 class="t-h1">Besoin d'aide immédiate ?</h2>
+      <p class="t-body text-ink-2 max-w-[360px]">Votre position${trip.driver ? ", les détails de votre course et l'identité du chauffeur" : ""} seront partagés avec l'assistance YOUSS CONNECT et vos contacts de confiance.</p>
+      <div class="w-full space-y-3">
+        ${UI.button("Alerter l'assistance YOUSS CONNECT", "Screens._sosAlert()", { variant: "danger", size: "lg", icon: "campaign" })}
+        <a href="tel:117" class="btn btn-outline btn-lg btn-block">${icon("call")}Appeler les secours</a>
+        ${UI.secondaryButton("Partager ma position", "Screens._shareRide()", { icon: "share" })}
+        <button type="button" onclick="App.back()" class="w-full t-small text-ink-2 py-2">Retour</button>
+      </div></div>`;
+    Shell.render(container, { title: "Assistance SOS", back: true, body, nav: false, hideSearch: true });
+  };
+  Screens._sosAlert = function () {
+    ACStore.addNotification("Alerte SOS envoyée", "L'assistance YOUSS CONNECT a été notifiée et vous rappelle immédiatement.", "transport", "security");
+    ACStore.emit(); UI.toast("Assistance alertée. Restez en ligne.", "success"); App.back();
+  };
+
   Screens.transportEstimate = Screens.transport;
 })();

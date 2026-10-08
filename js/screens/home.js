@@ -1,98 +1,118 @@
+/* Accueil — centre de l'application */
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
+  const { icon, esc, go } = UI;
+  const IMG = YCData.IMG;
 
   const SERVICES = [
-    { id: "transport", label: "Transport", icon: "directions_car" },
-    { id: "delivery", label: "Livraison", icon: "local_shipping" },
-    { id: "restaurants", label: "Restaurants", icon: "restaurant" },
-    { id: "events", label: "Événements", icon: "confirmation_number" },
-    { id: "market", label: "Youss Market", icon: "storefront" },
-    { id: "culture", label: "Culture & Tourisme", icon: "account_balance" }
+    { id: "transport", label: "svc_transport", icon: "directions_car", img: IMG + "services/svc-transport.jpg", sub: "Course en 2 min" },
+    { id: "delivery", label: "svc_delivery", icon: "local_shipping", img: IMG + "services/svc-delivery.jpg", sub: "Colis, repas, documents" },
+    { id: "restaurants", label: "svc_restaurants", icon: "restaurant", img: IMG + "food/rest-maman-benin.jpg", sub: "Commandez, suivez" },
+    { id: "events", label: "svc_events", icon: "confirmation_number", img: IMG + "services/svc-events.jpg", sub: "Billets avec QR Code" },
+    { id: "market", label: "svc_market", icon: "storefront", img: IMG + "services/svc-market.jpg", sub: "Produits locaux" },
+    { id: "culture", label: "svc_culture", icon: "account_balance", img: IMG + "places/site-amazone.jpg", sub: "Scanner un monument" }
   ];
 
-  const NEARBY = [
-    { title: "Chez Maman Bénin", meta: "Restaurant · 0,8 km", route: "restaurantDetail", params: { id: "rest1" } },
-    { title: "Festival des Arts Vodoun", meta: "Événement · Ouidah", route: "eventDetail", params: { id: "ev1" } },
-    { title: "Robe Wax contemporaine", meta: "Youss Market", route: "productDetail", params: { id: "p1" } }
-  ];
+  function serviceCard(s) {
+    return `<button type="button" onclick="App.nav('${s.id}')" class="relative rounded-2xl overflow-hidden text-left h-28 sm:h-32 lg:h-40 card-press group">
+      ${UI.img(s.img, "", "img-cover transition-transform duration-500 group-hover:scale-105")}
+      <div class="absolute inset-0 gradient-up"></div>
+      <span class="absolute top-2.5 left-2.5 w-9 h-9 rounded-full bg-white/95 text-ink flex items-center justify-center">${icon(s.icon, "text-[20px]")}</span>
+      <div class="absolute bottom-2.5 left-3 right-3 text-white"><h3 class="t-title lg:t-h3 leading-tight">${I18N.t(s.label)}</h3><p class="t-small text-white/75 hidden sm:block">${s.sub}</p></div>
+    </button>`;
+  }
+
+  function recommendations() {
+    const city = ACState.user.city;
+    const recos = [];
+    const lastRest = ACState.activities.find((a) => a.service === "restaurant");
+    const rest = YCData.restaurantsIn(city)[0];
+    if (rest) recos.push({ icon: "restaurant", img: rest.img, title: lastRest ? "Recommander chez " + rest.name : rest.name, sub: rest.cat + " · " + rest.time, onclick: go("restaurantDetail", { id: rest.id }) });
+    const ticket = ACState.tickets[0];
+    if (ticket) recos.push({ icon: "directions_car", img: ticket.img, title: "Course vers " + ticket.place.split(",")[0], sub: "Billet " + YCData.fmtDateShort(ticket.date) + " · arrivez à l'heure", onclick: `Screens._transportPreset({toName:${UI.js(ticket.place)}});App.nav('transport')` });
+    const site = YCData.sitesIn(city)[0];
+    if (site) recos.push({ icon: "qr_code_scanner", img: site.img, title: "Scanner " + site.name, sub: "Histoire, audio-guide, lieux à proximité", onclick: go("culturalScanner") });
+    const prod = YCData.PRODUCTS.find((p) => p.old);
+    if (prod) recos.push({ icon: "storefront", img: prod.img, title: prod.name, sub: "Offre Youss Market · " + ACStore.fmtFCFA(prod.price), onclick: go("productDetail", { id: prod.id }) });
+    return recos.slice(0, 4);
+  }
 
   Screens.home = function (container) {
-    const unread = ACState.notifications.filter(n => !n.read).length;
-    const topbar = `
-    <div class="w-full px-space-20 pt-space-12 pb-space-8 flex items-center justify-between bg-surface flex-shrink-0">
-      <div class="min-w-0">
-        <h1 class="font-headline-sm text-headline-sm font-bold text-on-surface truncate">${UI.t("hello")}, ${ACState.user.name}</h1>
-        <p class="font-body-sm text-body-sm text-on-surface-variant truncate flex items-center gap-1">${UI.icon("location_on", "text-[14px] text-secondary")}${ACState.user.city}, ${ACState.user.country}</p>
-      </div>
-      <button type="button" onclick="App.nav('notifications')"
-        class="relative w-11 h-11 rounded-full bg-white border border-outline-variant/30 shadow-sm flex items-center justify-center">
-        ${UI.icon("notifications")}
-        ${unread ? '<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-secondary"></span>' : ""}
-      </button>
-    </div>`;
+    const city = ACState.user.city;
+    const cityData = YCData.cityOf(city);
+    const nearbyList = []
+      .concat(YCData.restaurantsIn(city).slice(0, 2).map((r) => ({ img: r.img, title: r.name, meta: "Restaurant · " + r.km + " km · " + r.rating + " ★", onclick: go("restaurantDetail", { id: r.id }) })))
+      .concat(YCData.sitesIn(city).slice(0, 1).map((s) => ({ img: s.img, title: s.name, meta: YCData.siteType(s.type).label + " · " + s.place, onclick: go("cultureDetail", { id: s.id }) })))
+      .concat(YCData.eventsIn(city).slice(0, 1).map((e) => ({ img: e.img, title: e.name, meta: "Événement · " + YCData.fmtDateShort(e.date), onclick: go("eventDetail", { id: e.id }) })));
+    const events = YCData.EVENTS.slice().sort((a, b) => a.date.localeCompare(b.date)).filter((e) => e.date >= "2026-10-07").slice(0, 4);
+    const recos = recommendations();
+    const active = ACState.orders.filter((o) => !ACStore.orderStep(o).done)[0];
 
     const body = `
-    <section class="w-full">
-      <button type="button" onclick="App.nav('search')" class="w-full h-12 bg-white rounded-2xl border border-outline-variant/40 shadow-sm flex items-center px-space-16 gap-3 text-left">
-        ${UI.icon("search", "text-outline")}<span class="font-body-md text-body-md text-outline">${UI.t("search")}</span>
-      </button>
-    </section>
+      <!-- Recherche + bannière -->
+      <section class="lg:hidden">
+        <button type="button" onclick="App.nav('explorer',{focus:1})" class="w-full h-12 card flex items-center gap-3 px-4 text-left text-ink-3"><span class="ms text-[22px]">search</span><span class="t-body">${I18N.t("search")}</span></button>
+      </section>
+      ${active ? `<button type="button" onclick="${go("orderTracking", { id: active.id })}" class="w-full card-dark p-4 flex items-center gap-3 text-left">
+        <span class="w-11 h-11 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon(ACStore.orderStep(active).current.icon, "text-[22px]")}</span>
+        <span class="min-w-0 flex-1"><span class="block t-caption text-gold">Commande en cours · ${esc(active.number)}</span><span class="block t-title truncate">${ACStore.orderStep(active).current.label} · ${esc(active.title)}</span></span>
+        ${icon("chevron_right", "text-white/60")}
+      </button>` : ""}
 
-    <section class="grid grid-cols-2 gap-3">
-      ${SERVICES.map(s => `
-      <button type="button" onclick="App.nav('${s.id}')"
-        class="yc-card yc-card-press p-space-16 text-left flex items-center gap-3">
-        <span class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style="background:#F4E4B3;color:#0A0A0A">${UI.icon(s.icon, "text-[22px]")}</span>
-        <span class="font-title-md text-title-md font-bold leading-tight">${s.label}</span>
-      </button>`).join("")}
-    </section>
+      <section class="grid lg:grid-cols-[1fr_340px] gap-6 lg:gap-8">
+        <div class="space-y-6 lg:space-y-8 min-w-0">
+          <div>
+            <div class="hidden lg:block mb-4"><h2 class="t-h1">Que souhaitez-vous faire aujourd'hui ?</h2><p class="t-body text-ink-2 mt-1">${esc(cityData.tagline)}</p></div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 lg:gap-4">${SERVICES.map(serviceCard).join("")}</div>
+          </div>
 
-    <section class="w-full space-y-3">
-      <h2 class="font-headline-sm text-headline-sm font-bold">${UI.t("nearby")}</h2>
-      ${NEARBY.map(n => `
-      <button type="button" onclick="App.nav('${n.route}', ${JSON.stringify(n.params).replace(/"/g, "&quot;")})"
-        class="w-full yc-card yc-card-press p-space-16 flex items-center justify-between text-left">
-        <div><p class="font-title-md text-title-md font-semibold">${n.title}</p><p class="font-body-sm text-body-sm text-on-surface-variant">${n.meta}</p></div>
-        ${UI.icon("chevron_right", "text-outline")}
-      </button>`).join("")}
-    </section>
+          <div>${UI.sectionTitle(I18N.t("nearby"), I18N.t("see_all"), go("explorer", { near: 1 }), "Autour de vous à " + esc(city))}
+            <div class="grid sm:grid-cols-2 gap-3">${nearbyList.map((n) => `<button type="button" onclick="${n.onclick}" class="card card-press p-2.5 flex items-center gap-3 text-left">
+              <span class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-card-high">${UI.img(n.img, n.title)}</span>
+              <span class="min-w-0 flex-1"><span class="block t-title truncate">${n.title}</span><span class="block t-small text-ink-2 truncate">${n.meta}</span></span>${icon("chevron_right", "text-ink-3")}
+            </button>`).join("")}</div>
+          </div>
 
-    <section class="w-full space-y-3">
-      <h2 class="font-headline-sm text-headline-sm font-bold">${UI.t("recos")}</h2>
-      <button type="button" onclick="App.nav('transport')" class="w-full rounded-2xl bg-black text-white p-space-16 text-left">
-        <p class="font-label-sm text-label-sm text-secondary">Pour vous</p>
-        <p class="font-title-md text-title-md font-bold mt-1">Course vers Haie Vive · 8 min</p>
-      </button>
-    </section>
+          <div>${UI.sectionTitle(I18N.t("recos"), null, null, "Selon vos habitudes et votre ville")}
+            <div class="hscroll lg:grid lg:grid-cols-2 xl:grid-cols-4 gap-3">${recos.map((r) => `<button type="button" onclick="${r.onclick}" class="card card-press overflow-hidden text-left w-[230px] lg:w-auto">
+              <span class="block h-24 lg:h-28 bg-card-high relative">${UI.img(r.img, "")}<span class="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/95 text-ink flex items-center justify-center">${icon(r.icon, "text-[18px]")}</span></span>
+              <span class="block p-3"><span class="block t-title truncate">${r.title}</span><span class="block t-small text-ink-2 truncate">${r.sub}</span></span>
+            </button>`).join("")}</div>
+          </div>
 
-    <section class="w-full space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="font-headline-sm text-headline-sm font-bold">${UI.t("upcoming")}</h2>
-        <button type="button" onclick="App.nav('events')" class="font-label-md text-label-md text-secondary font-semibold">Voir tout</button>
-      </div>
-      <button type="button" onclick="App.nav('eventDetail', {id:'ev2'})" class="w-full yc-card overflow-hidden text-left">
-        <div class="h-28 bg-zinc-900 text-white p-space-16 flex flex-col justify-end">
-          <p class="font-label-sm text-label-sm text-secondary">21 sept. 2026 · Cotonou</p>
-          <p class="font-title-md text-title-md font-bold">Concert au Stade de l'Amitié</p>
+          <div>${UI.sectionTitle(I18N.t("upcoming"), I18N.t("see_all"), "App.nav('events')")}
+            <div class="hscroll lg:grid lg:grid-cols-2 gap-3 lg:gap-4">${events.map((e) => UI.eventCard(e, true)).join("")}</div>
+          </div>
+
+          <div>${UI.sectionTitle(I18N.t("discover"), I18N.t("explore"), "App.nav('culture')", "Destinations, monuments et expériences culturelles")}
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, false)).join("")}</div>
+          </div>
         </div>
-      </button>
-    </section>
 
-    <section class="w-full space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="font-headline-sm text-headline-sm font-bold">${UI.t("discover")}</h2>
-        <button type="button" onclick="App.nav('culture')" class="font-label-md text-label-md text-secondary font-semibold">Explorer</button>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        ${["Cotonou", "Porto-Novo", "Ouidah", "Abomey"].map(city => `
-        <button type="button" onclick="App.nav('culture', {city:'${city}'})"
-          class="h-24 rounded-2xl bg-zinc-900 text-white p-space-12 text-left flex flex-col justify-end">
-          <span class="font-title-md text-title-md font-bold">${city}</span>
-        </button>`).join("")}
-      </div>
-    </section>`;
-
-    Shell.render(container, { topbar, body, nav: "home" });
+        <!-- Colonne latérale desktop : Wallet, Bonus, Business -->
+        <aside class="space-y-4 lg:sticky lg:top-24 self-start">
+          <button type="button" onclick="App.nav('wallet')" class="w-full card-dark p-5 text-left relative overflow-hidden">
+            <span class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-gold/20 blur-2xl"></span>
+            <span class="t-caption text-gold">${I18N.t("wallet")}</span>
+            <span class="block t-h1 mt-1">${ACStore.fmtFCFA(ACState.wallet.balance)}</span>
+            <span class="block t-small text-white/70 mt-1">${I18N.t("balance")} · ${esc(ACState.user.fullName)}</span>
+            <span class="mt-4 flex gap-2">${[["north_east", "Envoyer", "walletSend"], ["qr_code_scanner", "QR Pay", "walletQrPay"], ["add", "Recharger", "walletTopup"]].map((a) => `<span onclick="event.stopPropagation();App.nav('${a[2]}')" class="flex-1 h-10 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center gap-1.5 t-small font-semibold">${icon(a[0], "text-[18px]")}${a[1]}</span>`).join("")}</span>
+          </button>
+          <button type="button" onclick="App.nav('rewards')" class="w-full card p-4 text-left flex items-center gap-3">
+            <span class="w-11 h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("workspace_premium", "text-[24px]", true)}</span>
+            <span class="min-w-0 flex-1"><span class="block t-title">${ACState.rewards.points.toLocaleString("fr-FR")} points Youss Bonus</span><span class="block t-small text-ink-2">Niveau ${YCData.tierFor(ACState.rewards.points).id}${YCData.nextTier(ACState.rewards.points) ? " · " + (YCData.nextTier(ACState.rewards.points).min - ACState.rewards.points).toLocaleString("fr-FR") + " pts avant " + YCData.nextTier(ACState.rewards.points).id : ""}</span></span>${icon("chevron_right", "text-ink-3")}
+          </button>
+          <button type="button" onclick="App.nav('business')" class="w-full card p-4 text-left flex items-center gap-3">
+            <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("business_center", "text-[24px]")}</span>
+            <span class="min-w-0 flex-1"><span class="block t-title">Youss Business</span><span class="block t-small text-ink-2">Gérez votre activité : produits, commandes, statistiques</span></span>${icon("chevron_right", "text-ink-3")}
+          </button>
+          <button type="button" onclick="Demo.openMenu()" class="hidden lg:flex w-full card p-4 text-left items-center gap-3 border-dashed">
+            <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("play_circle", "text-[24px]")}</span>
+            <span class="min-w-0 flex-1"><span class="block t-title">${I18N.t("demo_tour")}</span><span class="block t-small text-ink-2">Transport, restaurant, événement, commerce, culture</span></span>
+          </button>
+        </aside>
+      </section>`;
+    Shell.render(container, { homeHeader: true, body, nav: "home" });
   };
 })();

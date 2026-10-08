@@ -1,409 +1,82 @@
 <!DOCTYPE html>
-<html class="light" lang="fr">
+<html lang="fr">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>YOUSS CONNECT — KYA CORPORATION</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>YOUSS CONNECT — Une seule application pour vivre l'Afrique au quotidien</title>
+<meta name="description" content="YOUSS CONNECT, la super application africaine portée par KYA CORPORATION : transport, livraison, restaurants, événements, Youss Market, culture et tourisme, Youss Wallet, Youss Bonus et Youss Business."/>
 <link rel="manifest" href="./manifest.webmanifest"/>
 <link rel="icon" href="./icons/favicon.ico" sizes="any"/>
 <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png"/>
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/>
-<meta name="theme-color" content="#0A0A0A"/>
+<meta name="theme-color" content="#FAFAFA"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="YOUSS CONNECT"/>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet"/>
+<meta property="og:title" content="YOUSS CONNECT"/>
+<meta property="og:description" content="Une seule application pour vivre l'Afrique au quotidien. Portée par KYA CORPORATION."/>
+<meta property="og:image" content="./assets/img/brand/og-cover.jpg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        colors: {
-          "on-primary": "#0A0A0A",
-          "primary-fixed": "#F4E4B3",
-          "surface-container-low": "#F4F4F5",
-          "surface-container-highest": "#E4E4E7",
-          "on-surface": "#0A0A0A",
-          "surface-bright": "#FFFFFF",
-          "surface-variant": "#E4E4E7",
-          "secondary-fixed-dim": "#C9A227",
-          "primary": "#0A0A0A",
-          "inverse-on-surface": "#F4F4F5",
-          "on-error-container": "#93000a",
-          "outline-variant": "#D4D4D8",
-          "surface-container": "#ECECEE",
-          "inverse-surface": "#18181B",
-          "surface-tint": "#C9A227",
-          "on-secondary-fixed": "#1A1400",
-          "background": "#FAFAFA",
-          "surface-container-lowest": "#ffffff",
-          "secondary": "#C9A227",
-          "secondary-container": "#C9A227",
-          "on-primary-fixed-variant": "#3F3F46",
-          "primary-fixed-dim": "#E8D48A",
-          "secondary-fixed": "#F4E4B3",
-          "on-tertiary-fixed-variant": "#3F3F46",
-          "tertiary-fixed-dim": "#C9A227",
-          "on-tertiary": "#0A0A0A",
-          "error": "#ba1a1a",
-          "surface-container-high": "#E4E4E7",
-          "surface-dim": "#D4D4D8",
-          "error-container": "#ffdad6",
-          "inverse-primary": "#E8D48A",
-          "tertiary-fixed": "#F4E4B3",
-          "on-background": "#0A0A0A",
-          "on-secondary-container": "#0A0A0A",
-          "on-surface-variant": "#52525B",
-          "tertiary-container": "#F4E4B3",
-          "on-tertiary-container": "#0A0A0A",
-          "tertiary": "#A07812",
-          "primary-container": "#C9A227",
-          "on-tertiary-fixed": "#1A1400",
-          "outline": "#71717A",
-          "surface": "#FAFAFA",
-          "on-secondary-fixed-variant": "#5C4A08",
-          "on-primary-container": "#0A0A0A",
-          "on-primary-fixed": "#0A0A0A",
-          "on-error": "#ffffff",
-          "on-secondary": "#0A0A0A",
-          "yc-green": "#C9A227",
-          "yc-purple": "#0A0A0A",
-          "yc-purple-deep": "#111111",
-          "ac-gold": "#C9A227"
-        },
-        borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
-        spacing: {
-          "space-12": "0.75rem", "space-40": "2.5rem", "space-8": "0.5rem", "space-32": "2rem",
-          "space-4": "0.25rem", "gutter": "1rem", "space-20": "1.25rem", "space-16": "1rem",
-          "max-width-mobile": "390px", "margin-mobile": "1.25rem", "space-2": "0.125rem", "space-24": "1.5rem"
-        },
-        fontFamily: {
-          "display-lg": ["Plus Jakarta Sans"], "title-md": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"],
-          "headline-lg": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"],
-          "headline-md": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"]
-        },
-        fontSize: {
-          "display-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
-          "title-md": ["16px", { lineHeight: "22px", fontWeight: "600" }],
-          "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
-          "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-          "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.015em", fontWeight: "600" }],
-          "label-sm": ["10px", { lineHeight: "12px", letterSpacing: "0.04em", fontWeight: "600" }],
-          "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
-          "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "500" }],
-          "headline-md": ["20px", { lineHeight: "28px", letterSpacing: "-0.01em", fontWeight: "600" }],
-          "label-lg": ["14px", { lineHeight: "20px", fontWeight: "500" }],
-          "headline-sm": ["18px", { lineHeight: "24px", letterSpacing: "-0.005em", fontWeight: "600" }]
-        }
-      }
-    }
-  };
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..700,0..1,-50..200&display=block" rel="stylesheet"/>
+<link rel="stylesheet" href="./vendor/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="./css/app.css"/>
+<script>
+  /* Thème appliqué avant le premier rendu pour éviter un flash */
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem("youss-state-v2") || "null");
+      if (s && s.prefs && s.prefs.theme === "dark") document.documentElement.classList.add("dark");
+    } catch (e) {}
+  })();
 </script>
-<style>
-  .material-symbols-outlined {
-    font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal;
-    font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none;
-    display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr;
-    -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
-    /* Evita el flash de texto (directions_car, etc.) antes de cargar la fuente */
-    visibility: hidden;
-  }
-  html.fonts-ready .material-symbols-outlined { visibility: visible; }
-  .fill-icon { font-variation-settings: 'FILL' 1; }
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  .screen { display: none; }
-  .screen.active { display: flex; }
-  .toast { transition: all .25s ease; }
-  @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(201,162,39,.45)} 100%{box-shadow:0 0 0 14px rgba(201,162,39,0)} }
-  .pulse-ring { animation: pulseRing 1.6s ease-out infinite; }
-  body { -webkit-tap-highlight-color: transparent; font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
-
-  /* —— Splash blanc (panneau marque) + Onboarding violet —— */
-  @keyframes ycFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-  @keyframes ycLogoIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
-  @keyframes ycSplashOut { to { opacity: 0; } }
-
-  .yc-splash-white {
-    background: #ffffff;
-  }
-  .yc-splash-white.yc-splash--exit { animation: ycSplashOut .25s ease-in forwards; }
-  .yc-splash-brand-logo {
-    width: 220px; height: auto; max-height: 240px; object-fit: contain;
-    animation: ycLogoIn .5s ease-out both;
-  }
-  .yc-splash-waves {
-    position: absolute; left: 0; bottom: 0; width: 160px; height: 120px;
-    pointer-events: none; overflow: hidden;
-  }
-  .yc-splash-waves span {
-    position: absolute; border-radius: 50%;
-  }
-  .yc-splash-waves .w1 {
-    width: 200px; height: 200px; left: -90px; bottom: -110px;
-    background: rgba(59, 20, 102, .12);
-  }
-  .yc-splash-waves .w2 {
-    width: 160px; height: 160px; left: -70px; bottom: -95px;
-    background: rgba(245, 166, 35, .18);
-  }
-  .yc-splash-waves .w3 {
-    width: 120px; height: 120px; left: -55px; bottom: -75px;
-    background: rgba(34, 197, 94, .16);
-  }
-
-  .yc-onboard {
-    background:
-      radial-gradient(ellipse 90% 50% at 50% 110%, rgba(201,162,39,.18) 0%, transparent 55%),
-      linear-gradient(165deg, #0A0A0A 0%, #171717 55%, #262626 100%);
-  }
-  .yc-splash-skyline {
-    position: absolute; bottom: 0; left: 0; right: 0; height: 42%;
-    background: linear-gradient(to top, rgba(0,0,0,.92), transparent),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 390 170' fill='%23111111'%3E%3Cpath d='M0 170V100h16V72h14v28h18V58h16v42h20V85h14v15h16V52h22v48h20V95h14v15h26V68h18v32h20V82h14v18h28V55h22v45h20V92h14v18h36V75h18v95H0z'/%3E%3Cpath d='M168 52l22-38 22 38h-10v28h-24V52h-10z' opacity='.9'/%3E%3C/svg%3E") bottom center / 100% auto no-repeat;
-    opacity: .65; pointer-events: none;
-  }
-  .yc-splash-logo-wrap {
-    width: 120px; height: 120px; border-radius: 50%;
-    background: #fff;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 12px 40px rgba(0,0,0,.35);
-    animation: ycLogoIn .55s ease-out both;
-    margin-bottom: 1rem;
-  }
-  .yc-splash-logo {
-    width: 96px; height: 96px; object-fit: contain;
-  }
-  /* Logo onboarding : carré lilas, angles à 90° */
-  .yc-onboard-logo-plate {
-    background: #FFFFFF;
-    width: 168px;
-    height: 168px;
-    border-radius: 0;
-    padding: 14px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
-    animation: ycLogoIn .55s ease-out both;
-  }
-  .yc-onboard-logo {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    margin: 0 auto;
-  }
-  .yc-anim { animation: ycFadeUp .5s ease-out both; }
-  .yc-anim-d1 { animation-delay: .08s; }
-  .yc-anim-d2 { animation-delay: .16s; }
-  .yc-anim-d3 { animation-delay: .24s; }
-  .yc-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 12px; border-radius: 999px;
-    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14);
-    color: rgba(255,255,255,.92); font-size: 11px; font-weight: 600;
-  }
-  .yc-btn-green {
-    background: #C9A227; color: #0A0A0A; font-weight: 700;
-    box-shadow: 0 8px 24px rgba(201,162,39,.35);
-  }
-  .yc-btn-green:active { filter: brightness(.95); }
-  .yc-btn-ghost {
-    background: transparent; color: #fff; font-weight: 600;
-    border: 1.5px solid rgba(212, 175, 55, .75);
-  }
-  .yc-nav-fab {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: #C9A227; color: #0A0A0A;
-    box-shadow: 0 6px 20px rgba(201,162,39,.4);
-    display: flex; align-items: center; justify-content: center;
-    margin-top: -22px; border: 4px solid #fff;
-  }
-  /* Google Maps–like map chrome */
-  .yc-gmap-wrap { position: relative; flex: 1; min-height: 0; width: 100%; }
-  /* Static CSS (not Tailwind JIT) so Leaflet sees the right box at init time */
-  .yc-gmap-canvas { position: absolute !important; inset: 0; width: 100%; height: 100%; z-index: 0; }
-  .yc-gmap-input {
-    border: 0 !important; padding: 0 !important; box-shadow: none !important;
-    background: transparent !important; outline: none !important; width: 100%;
-    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-    font-size: 14px; font-weight: 600; color: #0A0A0A; line-height: 1.3;
-  }
-  .yc-gmap-input::placeholder { color: #A1A1AA; font-weight: 500; }
-  .yc-gmap-input:focus { --tw-ring-shadow: 0 0 #0000 !important; }
-  .yc-gmap-input::-webkit-search-cancel-button, .yc-gmap-input::-webkit-search-decoration { -webkit-appearance: none; display: none; }
-  .yc-place-chip {
-    padding: 0 12px; height: 32px; border-radius: 999px; flex-shrink: 0;
-    background: rgba(255,255,255,.94); border: 1px solid rgba(0,0,0,.06);
-    box-shadow: 0 2px 8px rgba(0,0,0,.08);
-    font: 600 12px "Plus Jakarta Sans", sans-serif; color: #3F3F46;
-    white-space: nowrap;
-  }
-  .yc-place-chip:active { background: #0A0A0A; color: #fff; }
-  .yc-city-label { background: rgba(255,255,255,.94); border: 1px solid rgba(0,0,0,.06); border-radius: 999px; padding: 3px 9px; font: 650 11px "Plus Jakarta Sans", sans-serif; color: #0A0A0A; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-  .yc-city-label::before { display: none; }
-  .yc-car-icon { transition: transform .12s linear; }
-  .yc-gmap-wrap .leaflet-container {
-    width: 100%; height: 100%;
-    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-    background: #e8e6e2;
-  }
-  .yc-gmap-wrap .leaflet-control-zoom {
-    border: none !important;
-    box-shadow: 0 6px 18px rgba(0,0,0,.14) !important;
-    border-radius: 14px !important;
-    overflow: hidden;
-    margin-right: 12px !important;
-    margin-bottom: 12px !important;
-  }
-  .yc-gmap-wrap .leaflet-control-zoom a {
-    width: 40px !important; height: 40px !important;
-    line-height: 40px !important;
-    color: #0A0A0A !important;
-    border: none !important;
-    background: #fff !important;
-  }
-  .yc-gmap-wrap .leaflet-control-attribution {
-    font-size: 10px; background: rgba(255,255,255,.8) !important; border-radius: 8px;
-  }
-  .yc-gmap-wrap .leaflet-popup-content-wrapper {
-    border-radius: 14px; box-shadow: 0 10px 28px rgba(0,0,0,.16);
-    border: 1px solid rgba(0,0,0,.06); padding: 2px 4px;
-    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-  }
-  .yc-gmap-wrap .leaflet-popup-tip { box-shadow: none; }
-  .yc-gmap-wrap .leaflet-popup-content { margin: 10px 12px; font-size: 13px; line-height: 1.35; }
-  .yc-map-pin {
-    position: relative; width: 40px; height: 52px;
-    display: flex; flex-direction: column; align-items: center;
-    filter: drop-shadow(0 8px 14px rgba(0,0,0,.3));
-  }
-  .yc-map-pin__head {
-    width: 34px; height: 34px; border-radius: 50%;
-    border: 3px solid #fff; display: flex; align-items: center; justify-content: center;
-    font: 800 13px/1 "Plus Jakarta Sans", sans-serif;
-    position: relative; z-index: 1;
-  }
-  .yc-map-pin--from .yc-map-pin__head { background: #C9A227; color: #0A0A0A; }
-  .yc-map-pin--to .yc-map-pin__head { background: #0A0A0A; color: #fff; }
-  .yc-map-pin__tip {
-    width: 0; height: 0; margin-top: -3px;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 12px solid #0A0A0A;
-  }
-  .yc-map-pin--from .yc-map-pin__tip { border-top-color: #C9A227; }
-  .yc-map-pin__pulse {
-    position: absolute; bottom: 1px; width: 16px; height: 6px;
-    border-radius: 999px; background: rgba(0,0,0,.2); filter: blur(1px);
-  }
-  .yc-map-user {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: #0A0A0A; border: 3px solid #fff;
-    box-shadow: 0 0 0 6px rgba(201,162,39,.28), 0 2px 8px rgba(0,0,0,.25);
-  }
-  .yc-pick-hint {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 8px 12px; border-radius: 999px;
-    background: rgba(10,10,10,.92); color: #fff;
-    border: 1px solid rgba(201,162,39,.35);
-    box-shadow: 0 8px 22px rgba(0,0,0,.22);
-    font: 600 12px/1.2 "Plus Jakarta Sans", system-ui, sans-serif;
-    backdrop-filter: blur(6px);
-  }
-  .yc-pick-hint__dot {
-    width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0;
-    background: #C9A227; box-shadow: 0 0 0 4px rgba(201,162,39,.25);
-  }
-  .yc-pick-hint--to .yc-pick-hint__dot { background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,.18); }
-  .yc-map-fab {
-    width: 44px; height: 44px; border-radius: 14px;
-    background: #fff; color: #0A0A0A;
-    border: 1px solid rgba(0,0,0,.06);
-    box-shadow: 0 8px 20px rgba(0,0,0,.14);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .yc-map-fab:active { transform: scale(.96); background: #F4E4B3; }
-  .yc-gmap-sheet {
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -4px 24px rgba(0,0,0,.18);
-    background: #fff;
-  }
-  .yc-gmap-card {
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 1px 4px rgba(0,0,0,.06);
-    border: 1px solid rgba(0,0,0,.05);
-  }
-  /* Polish cards & media */
-  .yc-card {
-    background: #fff;
-    border: 1px solid rgba(208, 198, 217, .45);
-    border-radius: 1rem;
-    box-shadow: 0 4px 16px rgba(59, 20, 102, .05);
-  }
-  .yc-card-press { transition: transform .15s ease, box-shadow .15s ease; }
-  .yc-card-press:active { transform: scale(.985); }
-  .yc-img-fade { animation: ycImgIn .45s ease both; }
-  @keyframes ycImgIn {
-    from { opacity: 0; transform: scale(1.02); }
-    to { opacity: 1; transform: none; }
-  }
-  #app main { scroll-behavior: smooth; }
-</style>
 </head>
-<body class="bg-white text-on-surface antialiased">
-<div id="app" class="relative w-full max-w-max-width-mobile mx-auto min-h-screen bg-white flex flex-col shadow-2xl overflow-hidden"></div>
+<body>
+<div id="app" class="min-h-dvh"></div>
+<noscript><div style="padding:2rem;text-align:center;font-family:system-ui">YOUSS CONNECT nécessite JavaScript.</div></noscript>
 
-<!-- App scripts loaded in order -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="./vendor/leaflet/leaflet.js" defer></script>
 <script src="./js/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="./js/i18n.js"></script>
+<script src="./js/data.js"></script>
 <script src="./js/state.js"></script>
 <script src="./js/backend.js"></script>
 <script src="./js/ui.js"></script>
 <script src="./js/scanner.js"></script>
-<script src="./js/screens/shell.js"></script>
+<script src="./js/map.js"></script>
+<script src="./js/demo.js"></script>
+<script src="./js/shell.js"></script>
 <script src="./js/screens/auth.js"></script>
 <script src="./js/screens/home.js"></script>
+<script src="./js/screens/explorer.js"></script>
 <script src="./js/screens/transport.js"></script>
+<script src="./js/screens/delivery.js"></script>
+<script src="./js/screens/restaurants.js"></script>
+<script src="./js/screens/orders.js"></script>
+<script src="./js/screens/events.js"></script>
+<script src="./js/screens/market.js"></script>
+<script src="./js/screens/culture.js"></script>
 <script src="./js/screens/wallet.js"></script>
 <script src="./js/screens/rewards.js"></script>
+<script src="./js/screens/business.js"></script>
 <script src="./js/screens/activities.js"></script>
 <script src="./js/screens/notifications.js"></script>
 <script src="./js/screens/profile.js"></script>
-<script src="./js/screens/explorer.js"></script>
-<script src="./js/screens/restaurants.js"></script>
-<script src="./js/screens/market.js"></script>
-<script src="./js/screens/events.js"></script>
-<script src="./js/screens/culture.js"></script>
-<script src="./js/screens/delivery.js"></script>
-<script src="./js/screens/business.js"></script>
 <script src="./js/router.js"></script>
 <script>
   (function () {
-    function markFontsReady() {
-      document.documentElement.classList.add("fonts-ready");
-    }
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(markFontsReady).catch(markFontsReady);
-    } else {
-      markFontsReady();
-    }
-    setTimeout(markFontsReady, 1200);
+    function ready() { document.documentElement.classList.add("fonts-ready"); }
+    if (document.fonts && document.fonts.load) {
+      Promise.all([document.fonts.load("20px 'Material Symbols Outlined'"), document.fonts.ready]).then(ready, ready);
+    } else { ready(); }
+    setTimeout(ready, 1500);
   })();
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("./sw.js").catch(function () {});
-    });
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("./sw.js").catch(function () {}); });
   }
 </script>
 </body>

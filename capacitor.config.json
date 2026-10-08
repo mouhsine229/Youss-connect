@@ -3,8 +3,6 @@
   "appName": "YOUSS CONNECT",
   "webDir": ".",
   "bundledWebRuntime": false,
-  "backgroundColor": "#F8F9FF",
-  "server": {
-    "androidScheme": "https"
-  }
+  "backgroundColor": "#FAFAFA",
+  "server": { "androidScheme": "https" }
 }
