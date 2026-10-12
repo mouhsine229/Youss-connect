@@ -109,12 +109,20 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.version === 2) {
+        if (parsed && parsed.version === 2 && Object.prototype.toString.call(parsed) === "[object Object]") {
           const base = defaults();
-          /* Les données de référence (seed) priment pour les clés absentes */
-          Object.keys(base).forEach((k) => { if (parsed[k] === undefined) parsed[k] = base[k]; });
-          parsed.session.remote = false;
-          return parsed;
+          const out = {};
+          Object.keys(base).forEach((k) => {
+            if (k === "__proto__" || k === "constructor" || k === "prototype") return;
+            out[k] = parsed[k] !== undefined ? parsed[k] : base[k];
+          });
+          out.session = Object.assign({}, base.session, out.session && typeof out.session === "object" ? out.session : {});
+          out.session.remote = false;
+          out.session.authenticated = !!out.session.authenticated;
+          out.wallet = Object.assign({}, base.wallet, out.wallet && typeof out.wallet === "object" ? out.wallet : {});
+          const bal = Number(out.wallet.balance);
+          out.wallet.balance = isFinite(bal) ? Math.max(0, Math.min(bal, 10000000)) : base.wallet.balance;
+          return out;
         }
       }
     } catch (e) { /* stockage indisponible */ }
@@ -191,7 +199,8 @@
   // opts: { amount, label, service, pointsEarned, method ('wallet'|'cash'|'mobile'), meta, activity:{...} }
   function pay(opts) {
     opts = opts || {};
-    const amount = Math.round(opts.amount || 0);
+    const amount = Math.round(Number(opts.amount) || 0);
+    if (!isFinite(amount) || amount <= 0 || amount > 2000000) return { ok: false, reason: "error" };
     const method = opts.method || State.prefs.paymentMethod || "wallet";
     const pointsEarned = opts.pointsEarned || 0;
     if (method === "wallet" && window.YCBackend && YCBackend.isLive()) return YCBackend.pay(opts);
@@ -219,6 +228,8 @@
   const payFromWallet = (opts) => pay(Object.assign({}, opts, { method: "wallet" }));
 
   function creditWallet(amount, label) {
+    amount = Math.round(Number(amount) || 0);
+    if (amount < 500 || amount > 1000000) return { ok: false, reason: "invalid_amount", message: "Montant de recharge invalide." };
     if (window.YCBackend && YCBackend.isLive()) return YCBackend.topup(amount, label);
     State.wallet.balance += amount;
     addTransaction({ label, amount, type: "credit", service: "wallet" });

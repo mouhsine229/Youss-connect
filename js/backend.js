@@ -155,17 +155,8 @@
       return { ok: true, balance: body.balance };
     });
   }
-  function topup(amount, label) {
-    return client.rpc("wallet_topup", { p_amount: Math.round(amount), p_label: label || "Rechargement" }).then(function (res) {
-      if (res.error) return { ok: false, reason: "error", message: explain(res.error) };
-      var body = res.data || { ok: false };
-      if (!body.ok) return body;
-      ACState.wallet.balance = body.balance;
-      ACStore.addTransaction({ label: label, amount: amount, type: "credit", service: "wallet" });
-      ACStore.addNotification("Rechargement réussi", label + " (" + ACStore.fmtFCFA(amount) + ") ajouté à votre solde.", "wallet", "wallet");
-      ACStore.emit();
-      return { ok: true, balance: body.balance };
-    });
+  function topup() {
+    return Promise.resolve({ ok: false, reason: "error", message: "La recharge en ligne attend le prestataire de paiement." });
   }
   function saveProfile(fields) {
     if (!isLive() || !client) return Promise.resolve({ ok: true });

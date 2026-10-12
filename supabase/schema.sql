@@ -157,7 +157,7 @@ begin
 end;
 $$;
 
--- Recharge in-app, en attendant le webhook MoMo (étape 3). Plafonnée.
+-- Recharge : réservée au service (webhook MoMo / back-office). Pas d'exécution client.
 create or replace function public.wallet_topup(p_amount integer, p_label text)
 returns jsonb
 language plpgsql
@@ -190,4 +190,3 @@ $$;
 revoke all on function public.wallet_pay(integer, text, text, integer, jsonb) from public;
 revoke all on function public.wallet_topup(integer, text) from public;
 grant execute on function public.wallet_pay(integer, text, text, integer, jsonb) to authenticated;
-grant execute on function public.wallet_topup(integer, text) to authenticated;

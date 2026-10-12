@@ -144,11 +144,12 @@
 
   // Panier
   Screens._addToCart = function (restId, dishId) {
+    if (window.YCGuard && (!YCGuard.idOk(restId) || !YCGuard.idOk(dishId))) return;
     if (isKitchenPaused(restId)) { UI.toast("Ce restaurant est en pause. Réessayez plus tard.", "info"); return; }
     const r = YCData.restaurant(restId); if (!r) return;
     const d = r.menu.find((x) => x.id === dishId); if (!d) return;
     if (ACState.cart.restaurant && ACState.cart.restaurant !== restId && ACState.cart.items.length) {
-      UI.confirm({ title: "Remplacer le panier ?", body: "Votre panier contient des plats d'un autre restaurant. Voulez-vous le vider pour commander chez " + esc(r.name) + " ?", okLabel: "Vider et ajouter", icon: "shopping_bag", onOk: `ACState.cart.items=[];ACState.cart.restaurant=null;Screens._addToCart('${restId}','${dishId}')` });
+      UI.confirm({ title: "Remplacer le panier ?", body: "Votre panier contient des plats d'un autre restaurant. Voulez-vous le vider pour commander chez " + r.name + " ?", okLabel: "Vider et ajouter", icon: "shopping_bag", onOk: `ACState.cart.items=[];ACState.cart.restaurant=null;Screens._addToCart('${restId}','${dishId}')` });
       return;
     }
     ACState.cart.restaurant = restId;

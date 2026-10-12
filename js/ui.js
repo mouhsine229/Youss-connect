@@ -18,19 +18,22 @@
   }
 
   // Boutons
+  function attrJs(code) {
+    return String(code == null ? "" : code).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  }
   function button(label, onclick, opts) {
     opts = opts || {};
     const variant = opts.variant || "primary";
     const size = opts.size === "sm" ? "btn-sm" : opts.size === "lg" ? "btn-lg" : "";
     const cls = `btn btn-${variant} ${size} ${opts.block === false ? "" : "btn-block"} ${opts.cls || ""}`;
     const ic = opts.icon ? icon(opts.icon, "text-[20px]") : "";
-    return `<button type="button" onclick="${onclick}" class="${cls}" ${opts.disabled ? "disabled" : ""} ${opts.id ? `id="${opts.id}"` : ""}>${opts.iconRight ? "" : ic}<span>${label}</span>${opts.iconRight ? icon(opts.iconRight, "text-[20px]") : ""}</button>`;
+    return `<button type="button" onclick="${attrJs(onclick)}" class="${cls}" ${opts.disabled ? "disabled" : ""} ${opts.id ? `id="${opts.id}"` : ""}>${opts.iconRight ? "" : ic}<span>${label}</span>${opts.iconRight ? icon(opts.iconRight, "text-[20px]") : ""}</button>`;
   }
   const primaryButton = (label, onclick, opts) => button(label, onclick, Object.assign({ variant: "primary" }, opts));
   const secondaryButton = (label, onclick, opts) => button(label, onclick, Object.assign({ variant: "outline" }, opts));
   const darkButton = (label, onclick, opts) => button(label, onclick, Object.assign({ variant: "dark" }, opts));
   function iconButton(name, onclick, label, cls) {
-    return `<button type="button" onclick="${onclick}" class="icon-btn ${cls || ""}" aria-label="${escAttr(label || name)}" title="${escAttr(label || "")}">${icon(name)}</button>`;
+    return `<button type="button" onclick="${attrJs(onclick)}" class="icon-btn ${cls || ""}" aria-label="${escAttr(label || name)}" title="${escAttr(label || "")}">${icon(name)}</button>`;
   }
 
   // Badges, puces
@@ -40,7 +43,7 @@
   }
   function chip(label, onclick, on, opts) {
     opts = opts || {};
-    return `<button type="button" onclick="${onclick}" class="chip ${opts.gold ? "chip-gold" : ""} ${on ? "on" : ""}" aria-pressed="${on ? "true" : "false"}">${opts.icon ? icon(opts.icon, "text-[16px]") : ""}${label}</button>`;
+    return `<button type="button" onclick="${attrJs(onclick)}" class="chip ${opts.gold ? "chip-gold" : ""} ${on ? "on" : ""}" aria-pressed="${on ? "true" : "false"}">${opts.icon ? icon(opts.icon, "text-[16px]") : ""}${label}</button>`;
   }
   function stars(rating, cls) {
     const r = Math.round((rating || 0) * 2) / 2;
@@ -70,7 +73,7 @@
   function sectionTitle(title, action, onclick, sub) {
     return `<div class="flex items-end justify-between gap-3 mb-3 min-w-0">
       <div class="min-w-0"><h2 class="t-h2 truncate">${title}</h2>${sub ? `<p class="t-small text-ink-2 mt-0.5 truncate">${sub}</p>` : ""}</div>
-      ${action ? `<button type="button" onclick="${onclick}" class="t-small font-bold text-gold-deep dark:text-gold hover:underline whitespace-nowrap flex-shrink-0">${action}</button>` : ""}
+      ${action ? `<button type="button" onclick="${attrJs(onclick)}" class="t-small font-bold text-gold-deep dark:text-gold hover:underline whitespace-nowrap flex-shrink-0">${action}</button>` : ""}
     </div>`;
   }
 
@@ -146,7 +149,7 @@
     return `<section class="card-dark p-4 lg:p-5">
       <p class="t-caption text-gold mb-3">${title || t("next_steps")}</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 ${items.length > 2 ? "lg:grid-cols-3" : ""} gap-2.5">
-        ${items.map((it) => `<button type="button" onclick="${it.onclick}" class="flex items-center gap-3 rounded-xl bg-white/10 hover:bg-white/15 p-3 text-left transition-colors">
+        ${items.map((it) => `<button type="button" onclick="${attrJs(it.onclick)}" class="flex items-center gap-3 rounded-xl bg-white/10 hover:bg-white/15 p-3 text-left transition-colors">
           <span class="w-10 h-10 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center flex-shrink-0">${icon(it.icon, "text-[20px]")}</span>
           <span class="min-w-0"><span class="block t-title truncate">${it.label}</span>${it.sub ? `<span class="block t-small text-white/70 truncate">${it.sub}</span>` : ""}</span>
           ${icon("chevron_right", "ml-auto text-white/60")}
@@ -199,14 +202,14 @@
   function error(id) { return `<p id="${id}" class="hidden t-small text-danger font-semibold" role="alert"></p>`; }
   function showError(id, msg) { const el = document.getElementById(id); if (!el) return; el.textContent = msg; el.classList.remove("hidden"); }
   function toggle(on, onclick, label) {
-    return `<button type="button" role="switch" aria-checked="${on ? "true" : "false"}" onclick="${onclick}" class="switch ${on ? "on" : ""}" aria-label="${escAttr(label || "")}"></button>`;
+    return `<button type="button" role="switch" aria-checked="${on ? "true" : "false"}" onclick="${attrJs(onclick)}" class="switch ${on ? "on" : ""}" aria-label="${escAttr(label || "")}"></button>`;
   }
   function qtyControl(qty, onMinus, onPlus, small) {
     const s = small ? "w-8 h-8" : "w-9 h-9";
     return `<span class="inline-flex items-center gap-2.5">
-      <button type="button" onclick="${onMinus}" class="${s} rounded-full border border-line bg-card flex items-center justify-center active:scale-95" aria-label="Moins">${icon(qty <= 1 ? "delete" : "remove", "text-[18px]")}</button>
+      <button type="button" onclick="${attrJs(onMinus)}" class="${s} rounded-full border border-line bg-card flex items-center justify-center active:scale-95" aria-label="Moins">${icon(qty <= 1 ? "delete" : "remove", "text-[18px]")}</button>
       <span class="w-5 text-center font-bold">${qty}</span>
-      <button type="button" onclick="${onPlus}" class="${s} rounded-full bg-inverse text-inverse-ink flex items-center justify-center active:scale-95" aria-label="Plus">${icon("add", "text-[18px]")}</button>
+      <button type="button" onclick="${attrJs(onPlus)}" class="${s} rounded-full bg-inverse text-inverse-ink flex items-center justify-center active:scale-95" aria-label="Plus">${icon("add", "text-[18px]")}</button>
     </span>`;
   }
   function row(label, value, bold) {
@@ -271,12 +274,10 @@
     document.body.style.overflow = "";
   }
   function confirm(o) {
-    // onOk peut contenir des guillemets (JSON.stringify). Sans échappement,
-    // l'attribut onclick="..." se coupe et le clic ne fait rien.
-    const run = ("UI.closeSheet();" + (o.onOk || "")).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    const run = "UI.closeSheet();" + (o.onOk || "");
     openSheet(`<div class="text-center lg:text-left">
       ${o.icon ? `<div class="w-14 h-14 rounded-full ${o.danger ? "bg-danger-soft text-danger" : "bg-gold-soft text-gold-deep"} flex items-center justify-center mx-auto lg:mx-0 mb-3">${icon(o.icon, "text-[28px]")}</div>` : ""}
-      <h3 class="t-h3 mb-1.5">${esc(o.title)}</h3><p class="t-body text-ink-2 mb-5">${o.body || ""}</p>
+      <h3 class="t-h3 mb-1.5">${esc(o.title)}</h3><p class="t-body text-ink-2 mb-5">${esc(o.body || "")}</p>
       <div class="flex flex-col sm:flex-row gap-2.5">
         ${button(o.cancelLabel || t("cancel"), "UI.closeSheet()", { variant: "outline" })}
         ${button(o.okLabel || t("confirm"), run, { variant: o.danger ? "danger" : "primary" })}

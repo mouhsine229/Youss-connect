@@ -15,8 +15,8 @@
     { id: "opsSettings", label: "Sécurité", icon: "shield" }
   ];
 
-  function gateOn() { return sessionStorage.getItem("yc-ops") === "1"; }
-  function gateSet(v) { if (v) sessionStorage.setItem("yc-ops", "1"); else sessionStorage.removeItem("yc-ops"); }
+  function gateOn() { const v = sessionStorage.getItem("yc-ops") || ""; return v.indexOf("ok:") === 0; }
+  function gateSet(v) { if (v) sessionStorage.setItem("yc-ops", "ok:" + Date.now()); else sessionStorage.removeItem("yc-ops"); }
   window.YCGate = window.YCGate || {};
   YCGate.ops = gateOn;
   YCGate.setOps = gateSet;
@@ -56,13 +56,17 @@
           ${UI.error("ops-err")}
           <button type="submit" class="btn btn-lg btn-primary btn-block">Continuer</button>
         </form>
-        <p class="t-small text-white/40 mt-6">Démo : n'importe quel mot de passe, puis code 1234.</p>
+        <p class="t-small text-white/40 mt-6">Accès réservé aux comptes @kyacorp.africa.</p>
       </div>
     </div>`;
   };
   Screens._opsLogin = function () {
-    const mail = (document.getElementById("ops-mail") || {}).value || "";
-    if (!mail.includes("@")) { UI.showError("ops-err", "E-mail professionnel requis."); return; }
+    const mail = ((document.getElementById("ops-mail") || {}).value || "").trim();
+    const pass = (document.getElementById("ops-pass") || {}).value || "";
+    const wait = window.YCGuard && YCGuard.blocked("ops");
+    if (wait) { UI.showError("ops-err", YCGuard.waitMsg(wait)); return; }
+    if (!/@kyacorp\.africa$/i.test(mail)) { UI.showError("ops-err", "E-mail professionnel KYA requis."); return; }
+    if (pass.length < 8) { UI.showError("ops-err", "Mot de passe requis (8 caractères min.)."); return; }
     App.nav("opsOtp", { mail });
   };
   Screens.opsOtp = function (container, params) {
@@ -77,8 +81,15 @@
     </div>`;
   };
   Screens._opsOtpOk = function () {
+    const wait = window.YCGuard && YCGuard.blocked("ops");
+    if (wait) { UI.showError("ops-otp-err", YCGuard.waitMsg(wait)); return; }
     const c = (document.getElementById("ops-otp") || {}).value || "";
-    if (c !== "1234") { UI.showError("ops-otp-err", "Code incorrect."); return; }
+    if (c !== "1234") {
+      const left = window.YCGuard ? YCGuard.fail("ops") : 0;
+      UI.showError("ops-otp-err", left ? YCGuard.waitMsg(left) : "Code incorrect.");
+      return;
+    }
+    if (window.YCGuard) YCGuard.ok("ops");
     gateSet(true);
     App.resetTo("opsHome");
   };

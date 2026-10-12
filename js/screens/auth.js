@@ -273,16 +273,26 @@
   function otpCode() { return [0, 1, 2, 3].map((i) => (document.getElementById("otp-" + i) || {}).value || "").join(""); }
   Screens._doOtpAuto = function () { const p = App.current.params || {}; Screens._doOtp(p.next || "home", p.mode || ""); };
   Screens._doOtp = function (next, mode) {
+    const wait = window.YCGuard && YCGuard.blocked("otp");
+    if (wait) return UI.showError("otp-error", YCGuard.waitMsg(wait));
     const code = otpCode();
     if (code.length < 4) return UI.showError("otp-error", "Saisissez les 4 chiffres du code.");
     if (window.YCBackend && YCBackend.configured() && YCBackend.isReady()) {
       YCBackend.verifyOtp(ACState.user.phone, code).then((res) => {
         if (res && res.error) return UI.showError("otp-error", YCBackend.explain(res.error));
+        if (window.YCGuard && next && !YCGuard.screenOk(next)) next = "home";
         finishAuth(next, mode);
       });
       return;
     }
-    if (code !== "1234") { UI.showError("otp-error", "Code incorrect. Réessayez (démo : 1234)."); [0, 1, 2, 3].forEach((i) => { const el = document.getElementById("otp-" + i); if (el) el.classList.add("border-danger"); }); return; }
+    if (code !== "1234") {
+      const left = window.YCGuard ? YCGuard.fail("otp") : 0;
+      UI.showError("otp-error", left ? YCGuard.waitMsg(left) : "Code incorrect. Réessayez (démo : 1234).");
+      [0, 1, 2, 3].forEach((i) => { const el = document.getElementById("otp-" + i); if (el) el.classList.add("border-danger"); });
+      return;
+    }
+    if (window.YCGuard) YCGuard.ok("otp");
+    if (window.YCGuard && next && !YCGuard.screenOk(next)) next = "home";
     finishAuth(next, mode);
   };
   function finishAuth(next, mode) {
@@ -292,7 +302,11 @@
     ACStore.emit();
     UI.toast("Bienvenue " + ACState.user.name + " !", "success");
     const after = sessionStorage.getItem("yc-after-login");
-    if (after) { sessionStorage.removeItem("yc-after-login"); location.hash = after; return; }
+    if (after) {
+      sessionStorage.removeItem("yc-after-login");
+      const safe = window.YCGuard ? YCGuard.returnHash(after) : "";
+      if (safe) { location.hash = safe; return; }
+    }
     App.resetTo(next || "home");
   }
 
@@ -330,8 +344,6 @@
       <section>${UI.sectionTitle("Quatre villes de démonstration")}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div>
       </section>
-      <section class="card p-5 lg:p-6"><p class="t-caption">Espaces internes (démo)</p><p class="t-small text-ink-2 mt-1">Pas dans le menu client. Console KYA : #/kya-ops · Cuisine resto : invitation YC-PRO-MAMAN.</p>
-        <div class="flex flex-wrap gap-2 mt-3">${UI.button("Console KYA", "App.nav('opsLogin')", { variant: "dark", block: false, size: "sm" })}${UI.button("Cuisine restaurant", "App.nav('proJoin',{t:'YC-PRO-MAMAN'})", { variant: "outline", block: false, size: "sm" })}</div></section>
       <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Se déplacer, commander, sortir et payer. Quatre villes.</p><p class="t-small text-ink-3 mt-3">Maquette interactive avec des données fictives. Aucune banque, aucun opérateur ni aucune entreprise n'est présenté comme partenaire officiel.</p></section>`;
     if (!ACState.session.authenticated) {
       container.innerHTML = `<div class="min-h-dvh"><header class="sticky top-0 z-30 bg-surface/90 backdrop-blur border-b border-line"><div class="max-w-content mx-auto px-5 lg:px-10 h-16 flex items-center justify-between"><button type="button" onclick="App.back()" class="icon-btn" aria-label="Retour">${icon("arrow_back")}</button><span class="font-extrabold tracking-tight">YOUSS CONNECT</span>${UI.primaryButton(I18N.t("login"), "App.nav('login')", { block: false, size: "sm" })}</div></header><main class="max-w-content mx-auto px-5 lg:px-10 py-6 lg:py-10 space-y-8">${body}</main></div>`;

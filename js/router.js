@@ -153,7 +153,8 @@
       if (d && (isOpsScreen(d.id) || isKitchenScreen(d.id)) && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && ACState.session.authenticated && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && !ACState.session.authenticated && window.Screens[d.id] && !AUTH_FREE[d.id]) {
-        sessionStorage.setItem("yc-after-login", location.hash);
+        const backTo = window.YCGuard ? YCGuard.returnHash(location.hash) : "";
+        if (backTo) sessionStorage.setItem("yc-after-login", backTo);
       }
       replace("splash", {});
     });

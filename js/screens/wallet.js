@@ -165,8 +165,14 @@
   Screens._pinPaste = (ev) => { const t = (ev.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 4); if (!t) return; ev.preventDefault(); t.split("").forEach((c, i) => { const el = document.getElementById("pin-" + i); if (el) el.value = c; }); };
   Screens._biometric = (action) => { UI.toast("Empreinte reconnue (simulation).", "success"); setTimeout(() => Screens._pinDone(action), 500); };
   Screens._pinConfirm = function (action) {
+    const wait = window.YCGuard && YCGuard.blocked("pin");
+    if (wait) return UI.showError("pin-error", YCGuard.waitMsg(wait));
     const pin = [0, 1, 2, 3].map((i) => (document.getElementById("pin-" + i) || {}).value || "").join("");
-    if (pin !== "0000") return UI.showError("pin-error", "Code PIN incorrect (démo : 0000).");
+    if (pin !== "0000") {
+      const left = window.YCGuard ? YCGuard.fail("pin") : 0;
+      return UI.showError("pin-error", left ? YCGuard.waitMsg(left) : "Code PIN incorrect (démo : 0000).");
+    }
+    if (window.YCGuard) YCGuard.ok("pin");
     Screens._pinDone(action);
   };
   Screens._pinDone = function (action) {

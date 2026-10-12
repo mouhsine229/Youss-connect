@@ -35,7 +35,13 @@
   Screens._openNotif = function (id) {
     const n = ACState.notifications.find((x) => x.id === id); if (!n) return;
     n.read = true; ACStore.emit();
-    if (n.route) { const [screen, q] = n.route.split("?"); const params = {}; new URLSearchParams(q || "").forEach((v, k) => { params[k] = v; }); if (Screens[screen]) { App.nav(screen, params); return; } }
+    if (n.route) {
+      const [screen, q] = String(n.route).split("?");
+      if (window.YCGuard && !YCGuard.screenOk(screen)) { App.nav(ROUTE[n.service] || "home"); return; }
+      const params = {};
+      new URLSearchParams(q || "").forEach((v, k) => { if (YCGuard.idOk(k) && String(v).length < 80) params[k] = v; });
+      if (Screens[screen]) { App.nav(screen, params); return; }
+    }
     App.nav(ROUTE[n.service] || "home");
   };
 

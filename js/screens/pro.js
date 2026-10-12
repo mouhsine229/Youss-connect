@@ -11,8 +11,8 @@
     { id: "proPayouts", label: "Paiements", icon: "payments" }
   ];
 
-  function on() { return sessionStorage.getItem("yc-pro") === "1"; }
-  function setOn(v) { if (v) sessionStorage.setItem("yc-pro", "1"); else sessionStorage.removeItem("yc-pro"); }
+  function on() { const v = sessionStorage.getItem("yc-pro") || ""; return v.indexOf("ok:") === 0; }
+  function setOn(v) { if (v) sessionStorage.setItem("yc-pro", "ok:" + Date.now()); else sessionStorage.removeItem("yc-pro"); }
   window.YCGate = window.YCGate || {};
   YCGate.pro = on;
   YCGate.setPro = setOn;
@@ -78,8 +78,15 @@
   };
   Screens._proEnter = function () { setOn(true); UI.toast("Dossier accepté (démo). Cuisine ouverte.", "success"); App.resetTo("proHome"); };
   Screens._proPin = function () {
+    const wait = window.YCGuard && YCGuard.blocked("pro");
+    if (wait) { UI.toast(YCGuard.waitMsg(wait), "error"); return; }
     const c = (document.getElementById("pr-otp") || {}).value || "";
-    if (c !== "1234") { UI.toast("Code incorrect.", "error"); return; }
+    if (c !== "1234") {
+      const left = window.YCGuard ? YCGuard.fail("pro") : 0;
+      UI.toast(left ? YCGuard.waitMsg(left) : "Code incorrect.", "error");
+      return;
+    }
+    if (window.YCGuard) YCGuard.ok("pro");
     setOn(true); App.resetTo("proHome");
   };
   Screens._proOut = function () { setOn(false); App.resetTo("proLogin"); };
@@ -127,6 +134,7 @@
     UI.toast("Plat visible dans l'app client.", "success");
   };
   Screens._proDelDish = function (id) {
+    if (window.YCGuard && !YCGuard.idOk(id)) return;
     ACState.kitchen.dishes = (ACState.kitchen.dishes || []).filter((d) => d.id !== id);
     ACStore.emit();
     UI.toast("Plat retiré de la carte.", "info");

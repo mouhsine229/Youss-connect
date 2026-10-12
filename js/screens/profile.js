@@ -57,7 +57,19 @@
     Shell.render(container, { title: "Modifier mon profil", back: true, body, nav: false, showNav: true });
   };
   Screens._epCities = () => { const c = YCData.countryOf(document.getElementById("ep-country").value); document.getElementById("ep-city").innerHTML = c.cities.map((x) => `<option>${x}</option>`).join(""); };
-  Screens._avatarFile = (input) => { const f = input.files && input.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { ACState.user.avatar = r.result; ACStore.emit(); UI.toast("Photo mise à jour.", "success"); }; r.readAsDataURL(f); };
+  Screens._avatarFile = (input) => {
+    const f = input.files && input.files[0];
+    input.value = "";
+    if (!f) return;
+    if (!/^image\/(jpeg|png|webp|gif)$/i.test(f.type) || f.size > 1500000) { UI.toast("Image JPG, PNG ou WebP, 1,5 Mo max.", "error"); return; }
+    const r = new FileReader();
+    r.onload = () => {
+      const data = String(r.result || "");
+      if (!/^data:image\/(jpeg|png|webp|gif);base64,/i.test(data)) { UI.toast("Fichier image invalide.", "error"); return; }
+      ACState.user.avatar = data; ACStore.emit(); UI.toast("Photo mise à jour.", "success");
+    };
+    r.readAsDataURL(f);
+  };
   Screens._saveProfile = function () {
     const g = (id) => (document.getElementById(id) || {}).value || "";
     const first = g("ep-first").trim(), last = g("ep-last").trim(), email = g("ep-email").trim();
