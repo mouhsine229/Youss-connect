@@ -6,7 +6,12 @@
 
   function menuRow(ic, label, onclick, opts) {
     opts = opts || {};
-    return `<button type="button" onclick="${onclick}" class="menu-row ${opts.danger ? "!border-danger/30" : ""}"><span class="flex items-center gap-3 min-w-0"><span class="menu-icon ${opts.danger ? "!bg-danger-soft !text-danger" : ""}">${icon(ic)}</span><span class="min-w-0"><span class="block t-title ${opts.danger ? "text-danger" : ""}">${label}</span>${opts.sub ? `<span class="block t-small text-ink-2 truncate">${opts.sub}</span>` : ""}</span></span>${opts.right || icon("chevron_right", "text-ink-3")}</button>`;
+    const body = `<span class="flex items-center gap-3 min-w-0 flex-1"><span class="menu-icon ${opts.danger ? "!bg-danger-soft !text-danger" : ""}">${icon(ic)}</span><span class="min-w-0 text-left"><span class="block t-title ${opts.danger ? "text-danger" : ""}">${label}</span>${opts.sub ? `<span class="block t-small text-ink-2 truncate">${opts.sub}</span>` : ""}</span></span>`;
+    /* L'interrupteur ne doit pas être imbriqué dans le bouton : le navigateur le sort de la ligne. */
+    if (opts.right) {
+      return `<div class="menu-row !p-2 ${opts.danger ? "!border-danger/30" : ""}"><button type="button" onclick="${onclick}" class="flex-1 flex items-center min-w-0 rounded-xl px-2 py-2 text-left">${body}</button><span class="flex-shrink-0 pr-2">${opts.right}</span></div>`;
+    }
+    return `<button type="button" onclick="${onclick}" class="menu-row ${opts.danger ? "!border-danger/30" : ""}">${body}${icon("chevron_right", "text-ink-3")}</button>`;
   }
 
   Screens.profile = function (container) {
@@ -27,7 +32,7 @@
             ${menuRow("person", "Modifier mon profil", "App.nav('editProfile')")}${menuRow("restaurant", "Mes commandes", go("activities", { f: "restaurant" }))}${menuRow("directions_car", "Mes courses", go("activities", { f: "transport" }))}${menuRow("qr_code_2", "Mes billets", "App.nav('myTickets')", { sub: ACState.tickets.length + " billet(s)" })}${menuRow("home_pin", "Mes adresses", "App.nav('addresses')", { sub: ACState.addresses.length + " adresse(s)" })}${menuRow("credit_card", "Moyens de paiement", "App.nav('paymentMethods')")}${menuRow("bookmark", "Lieux sauvegardés", "App.nav('savedPlaces')", { sub: ACState.saved.length + " lieu(x)" })}${menuRow("workspace_premium", "Youss Bonus", "App.nav('rewards')", { sub: pts.toLocaleString("fr-FR") + " points" })}</div></section>
           <section><p class="t-caption text-ink-3 mb-2">Professionnel</p>${menuRow("business_center", "Youss Business", "App.nav('business')", { sub: "Espace professionnel · " + esc(ACState.business.profile.name) })}</section>
           <section><p class="t-caption text-ink-3 mb-2">Réglages</p><div class="grid sm:grid-cols-2 gap-2.5">
-            ${menuRow("security", I18N.t("security"), "App.nav('security')")}${menuRow("language", "Langues", "App.nav('languages')", { sub: (I18N.LANGS.find((l) => l.id === I18N.lang) || {}).label })}${menuRow("notifications", "Notifications", "App.nav('notificationPrefs')")}${menuRow(ACState.prefs.theme === "dark" ? "dark_mode" : "light_mode", I18N.t("theme"), "Screens._toggleTheme()", { sub: ACState.prefs.theme === "dark" ? I18N.t("theme_dark") : I18N.t("theme_light"), right: UI.toggle(ACState.prefs.theme === "dark", "event.stopPropagation();Screens._toggleTheme()", "Thème sombre") })}${menuRow("help", I18N.t("help"), "App.nav('help')")}${menuRow("settings", I18N.t("settings"), "App.nav('settings')")}</div></section>
+            ${menuRow("security", I18N.t("security"), "App.nav('security')")}${menuRow("language", "Langues", "App.nav('languages')", { sub: (I18N.LANGS.find((l) => l.id === I18N.lang) || {}).label })}${menuRow("notifications", "Notifications", "App.nav('notificationPrefs')")}${menuRow(ACState.prefs.theme === "dark" ? "dark_mode" : "light_mode", I18N.t("theme"), "Screens._toggleTheme()", { sub: ACState.prefs.theme === "dark" ? I18N.t("theme_dark") : I18N.t("theme_light"), right: UI.toggle(ACState.prefs.theme === "dark", "Screens._toggleTheme()", "Thème sombre") })}${menuRow("help", I18N.t("help"), "App.nav('help')")}${menuRow("settings", I18N.t("settings"), "App.nav('settings')")}</div></section>
           ${menuRow("logout", I18N.t("logout"), "Screens._logout()", { danger: true })}
           <p class="t-caption text-center">YOUSS CONNECT v2.0 · KYA CORPORATION</p>
         </div>
@@ -118,7 +123,7 @@
       <div class="space-y-2.5">
         ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: ACState.user.verified ? "Identité vérifiée" : "Vérification requise", right: UI.badge(ACState.user.verified ? "Vérifié" : "À faire", ACState.user.verified ? "success" : "warn") })}
         ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: "Modifier le code à 4 chiffres" })}
-        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: "Empreinte ou visage pour les paiements", right: UI.toggle(ACState.prefs.biometric !== false, "event.stopPropagation();Screens._toggleBio()", "Biométrie") })}
+        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: "Empreinte ou visage pour les paiements", right: UI.toggle(ACState.prefs.biometric !== false, "Screens._toggleBio()", "Biométrie") })}
         ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "3 appareils" })}
         ${menuRow("history", "Historique des connexions", "App.nav('loginHistory')", { sub: "Dernière : aujourd'hui, " + esc(ACState.user.city) })}
         ${menuRow("report", "Signalement", "App.nav('report')", { sub: "Signaler un chauffeur, un vendeur, un incident" })}

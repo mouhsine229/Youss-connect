@@ -12,6 +12,9 @@
   let ignoreNextHash = false;
 
   const AUTH_FREE = { splash: 1, onboarding: 1, login: 1, signup: 1, otp: 1, forgotPassword: 1, about: 1, opsLogin: 1, opsOtp: 1, proJoin: 1, proLogin: 1 };
+  /* « profile » et « productDetail » commencent aussi par « pro » : seule la cuisine (pro + majuscule) est un écran partenaire. */
+  function isOpsScreen(id) { return /^ops[A-Z]/.test(id || ""); }
+  function isKitchenScreen(id) { return /^pro[A-Z]/.test(id || ""); }
 
   function encode(id, params) {
     const q = new URLSearchParams();
@@ -35,14 +38,16 @@
   }
 
   function show(id, params) {
+    params = params || {};
+    const prevId = current && current.id;
     const fn = window.Screens && window.Screens[id];
     if (!fn) {
       console.error("Unknown screen:", id);
       container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(id)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
       return;
     }
-    const opsScreen = id.indexOf("ops") === 0;
-    const proScreen = id.indexOf("pro") === 0;
+    const opsScreen = isOpsScreen(id);
+    const proScreen = isKitchenScreen(id);
     if (opsScreen && id !== "opsLogin" && id !== "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops())) {
       id = "opsLogin"; params = {};
     } else if (proScreen && id !== "proJoin" && id !== "proLogin" && !(window.YCGate && YCGate.pro && YCGate.pro())) {
@@ -50,6 +55,10 @@
     } else if (!opsScreen && !proScreen && !AUTH_FREE[id] && !ACState.session.authenticated) {
       sessionStorage.setItem("yc-after-login", encode(id, params));
       id = ACState.session.onboardingSeen ? "login" : "onboarding"; params = {};
+    }
+    if (prevId && prevId !== id) {
+      if (window.UI && UI.closeSheet) UI.closeSheet();
+      if (window.YCScanner && YCScanner.stop && (prevId === "walletQrPay" || prevId === "culturalScanner")) YCScanner.stop();
     }
     current = { id, params: params || {} };
     document.dispatchEvent(new CustomEvent("yc:navigate", { detail: { id } }));
@@ -145,7 +154,7 @@
     const timeout = new Promise((resolve) => setTimeout(resolve, 2500));
     Promise.race([boot, timeout]).then(function () {
       const d = decode(location.hash);
-      if (d && (String(d.id).indexOf("ops") === 0 || String(d.id).indexOf("pro") === 0) && window.Screens[d.id]) { replace(d.id, d.params); return; }
+      if (d && (isOpsScreen(d.id) || isKitchenScreen(d.id)) && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && ACState.session.authenticated && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && !ACState.session.authenticated && window.Screens[d.id] && !AUTH_FREE[d.id]) {
         sessionStorage.setItem("yc-after-login", location.hash);

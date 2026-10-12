@@ -4,6 +4,8 @@
   window.Screens = window.Screens || {};
   const { icon, esc, go } = UI;
   const wf = { filter: "all", masked: false };
+  const EXTERNAL_FEE = 250;
+  const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
   const STATUS = { success: ["Réussi", "success"], pending: ["En attente", "warn"], failed: ["Échoué", "danger"] };
   function txRow(t) {
@@ -13,9 +15,15 @@
         <span class="min-w-0 flex-1"><span class="block t-title truncate">${esc(t.label)}</span><span class="block t-small text-ink-2 min-w-0"><span class="truncate block">${esc(t.date)}</span>${t.status !== "success" ? `<span class="inline-block mt-0.5">${UI.badge(st[0], st[1])}</span>` : ""}</span></span></span>
       <span class="t-small sm:t-title font-extrabold whitespace-nowrap flex-shrink-0 text-right tabular-nums ${t.type === "credit" ? "text-success" : t.status === "failed" ? "text-ink-3 line-through" : ""}">${t.type === "credit" ? "+" : "−"}${ACStore.fmtFCFA(Math.abs(t.amount))}</span></button>`;
   }
+  function inLast30Days(t) {
+    if (t.status !== "success") return false;
+    if (!t.at) return true;
+    return t.at >= Date.now() - MONTH_MS;
+  }
   function monthly() {
-    const tx = ACState.wallet.transactions.filter((t) => t.status !== "failed");
-    const inn = tx.filter((t) => t.type === "credit").reduce((s, t) => s + t.amount, 0), out = tx.filter((t) => t.type === "debit").reduce((s, t) => s + Math.abs(t.amount), 0);
+    const tx = ACState.wallet.transactions.filter(inLast30Days);
+    const inn = tx.filter((t) => t.type === "credit").reduce((s, t) => s + Math.abs(t.amount), 0);
+    const out = tx.filter((t) => t.type === "debit").reduce((s, t) => s + Math.abs(t.amount), 0);
     return { inn, out };
   }
   function walletActionBtn(a) {
@@ -33,7 +41,8 @@
             <div class="flex items-center justify-between gap-2"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white flex-shrink-0" aria-label="Masquer le solde">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
             <p class="t-h1 sm:t-display mt-2 break-words leading-tight">${wf.masked ? "•••••• FCFA" : ACStore.fmtFCFA(ACState.wallet.balance)}</p>
             <p class="t-small text-white/70 mt-1 truncate">${esc(ACState.user.fullName)} · ${esc(ACState.user.phone)}</p>
-            <div class="wallet-kpi-grid mt-5"><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Entrées</p><p class="t-small sm:t-title text-success truncate tabular-nums">+${ACStore.fmtFCFA(m.inn)}</p></div><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Sorties</p><p class="t-small sm:t-title truncate tabular-nums">−${ACStore.fmtFCFA(m.out)}</p></div></div>
+            <p class="t-caption text-white/50 mt-4">30 derniers jours</p>
+            <div class="wallet-kpi-grid mt-2"><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Entrées</p><p class="t-small sm:t-title text-success truncate tabular-nums">+${ACStore.fmtFCFA(m.inn)}</p></div><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Sorties</p><p class="t-small sm:t-title truncate tabular-nums">−${ACStore.fmtFCFA(m.out)}</p></div></div>
           </section>
           <section class="wallet-action-grid" aria-label="Actions Wallet">${actions.map(walletActionBtn).join("")}</section>
           <p class="t-small text-ink-3 flex gap-2 min-w-0">${icon("info", "text-[16px] flex-shrink-0 mt-0.5")}<span class="min-w-0">${I18N.t("conceptual")}</span></p>
@@ -58,12 +67,27 @@
         ${t.reason ? `<p class="t-small text-danger mt-2">${esc(t.reason)}</p>` : ""}</div>
       <div class="card p-4">${UI.row("Référence", esc(t.ref || "—"))}${UI.row("Service", (t.service || "wallet").charAt(0).toUpperCase() + (t.service || "wallet").slice(1))}${UI.row("Moyen", t.external ? "Paiement mobile (conceptuel)" : "Youss Wallet")}${UI.row("Statut", st[0])}</div>
       <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Reçu PDF", "UI.toast('Reçu envoyé par e-mail (démo).','success')", { icon: "download" })}${UI.secondaryButton("Signaler", "App.nav('report')", { icon: "flag" })}</div>
-      ${t.status === "failed" ? UI.primaryButton("Réessayer le paiement", "App.nav('walletQrPay')", { icon: "replay" }) : ""}
-      ${t.status === "pending" ? UI.secondaryButton("Annuler l'opération", `Screens._cancelPending('${t.id}')`, { icon: "cancel" }) : ""}
+      ${t.status === "failed" ? UI.primaryButton("Réessayer le paiement", `App.nav('${t.retry || (String(t.label).indexOf("QR") >= 0 ? "walletQrPay" : "walletPay")}')`, { icon: "replay" }) : ""}
+      ${t.status === "pending" ? `<div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Annuler", `Screens._cancelPending('${t.id}')`, { icon: "cancel" })}${UI.primaryButton("Confirmer", `Screens._confirmPending('${t.id}')`, { icon: "check" })}</div>` : ""}
     </div>` : UI.emptyState({ icon: "receipt_long", title: "Transaction introuvable", body: "" });
     Shell.render(container, { title: "Détail de la transaction", back: true, body, nav: false, showNav: true });
   };
-  Screens._cancelPending = (id) => { const t = ACState.wallet.transactions.find((x) => x.id === id); if (!t) return; t.status = "failed"; t.reason = "Annulée par l'utilisateur"; ACStore.emit(); UI.toast("Opération annulée.", "info"); App.back(); };
+  Screens._cancelPending = (id) => {
+    const t = ACState.wallet.transactions.find((x) => x.id === id);
+    if (!t || t.status !== "pending") return;
+    const refunded = t.type === "debit" && t.balanceApplied;
+    if (refunded) {
+      ACState.wallet.balance += Math.abs(t.amount);
+      t.balanceApplied = false;
+    }
+    t.status = "failed";
+    t.reason = "Annulée par l'utilisateur";
+    const act = ACState.activities.find((x) => x.title === t.label && x.status === "En attente");
+    if (act) act.status = "Annulé";
+    ACStore.emit();
+    UI.toast(refunded ? "Opération annulée. Le montant est revenu sur votre solde." : "Opération annulée.", "info");
+    App.back();
+  };
 
   /* ---------- Recharger ---------- */
   const tp = { method: "mobile", amount: 0 };
@@ -74,17 +98,27 @@
       <div class="card p-5"><p class="t-caption text-ink-3 mb-2">Montant</p><div class="amount-pick-grid">${amounts.map((a) => `<button type="button" onclick="Screens._topupPick(${a})" class="chip justify-center h-12 min-w-0 ${tp.amount === a ? "on" : ""}">${a.toLocaleString("fr-FR")}</button>`).join("")}</div>
         <label class="block mt-3"><span class="label">Ou montant personnalisé (FCFA)</span><input id="topup-amount" type="number" inputmode="numeric" min="500" step="500" value="${tp.amount || ""}" placeholder="Ex. 15 000" class="input input-lg text-xl font-bold" oninput="Screens._topupCustom(this.value)"/></label></div>
       <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Méthode</p>${methods.map((m) => `<button type="button" onclick="Screens._topupMethod('${m[0]}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${tp.method === m[0] ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[1])}</span><span class="flex-1"><span class="block t-title">${m[2]}</span><span class="block t-small text-ink-2">${m[3]}</span></span>${tp.method === m[0] ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>
-      ${UI.primaryButton("Recharger" + (tp.amount ? " · " + ACStore.fmtFCFA(tp.amount) : ""), "Screens._doTopup()", { size: "lg", icon: "add" })}
+      ${UI.primaryButton("Recharger" + (tp.amount ? " · " + ACStore.fmtFCFA(tp.amount) : ""), "Screens._doTopup()", { size: "lg", icon: "add", id: "topup-go" })}
       <p class="t-small text-ink-3 text-center">${I18N.t("conceptual")}</p></div>`;
     Shell.render(container, { title: "Recharger mon Wallet", back: true, body, nav: false, showNav: true });
   };
   Screens._topupPick = (a) => { tp.amount = a; App.replace("walletTopup"); };
-  Screens._topupCustom = (v) => { tp.amount = parseInt(v, 10) || 0; };
+  Screens._topupCustom = (v) => {
+    tp.amount = parseInt(v, 10) || 0;
+    const btn = document.getElementById("topup-go");
+    const span = btn && btn.querySelector("span:last-child");
+    if (span) span.textContent = "Recharger" + (tp.amount ? " · " + ACStore.fmtFCFA(tp.amount) : "");
+  };
   Screens._topupMethod = (m) => { tp.method = m; App.replace("walletTopup"); };
   Screens._doTopup = function () {
     const amount = tp.amount || parseInt((document.getElementById("topup-amount") || {}).value, 10);
     if (!amount || amount < 500) { UI.toast("Montant minimum : 500 FCFA.", "error"); return; }
-    if (tp.method === "agent") { ACStore.addTransaction({ label: "Dépôt chez un agent", amount, type: "credit", status: "pending", service: "wallet" }); ACStore.emit(); App.resetTo("paymentPending", { amount, title: "Dépôt en attente", body: "Présentez ce code à un agent YOUSS CONNECT. Le solde sera crédité après validation.", code: String(Math.floor(100000 + Math.random() * 899999)) }); return; }
+    if (tp.method === "agent") {
+      const tx = ACStore.addTransaction({ label: "Dépôt chez un agent", amount, type: "credit", status: "pending", service: "wallet", balanceApplied: false });
+      ACStore.emit();
+      App.resetTo("paymentPending", { amount, title: "Dépôt en attente", body: "Présentez ce code à un agent YOUSS CONNECT. Le solde sera crédité après validation.", code: String(Math.floor(100000 + Math.random() * 899999)), txid: tx.id });
+      return;
+    }
     ACStore.whenPaid(ACStore.creditWallet(amount, tp.method === "card" ? "Rechargement par carte" : "Rechargement par paiement mobile"), function () { tp.amount = 0; App.resetTo("paymentSuccess", { amount, title: "Wallet rechargé", body: "Votre nouveau solde est de " + ACStore.fmtFCFA(ACState.wallet.balance) + ".", next: "wallet" }); }, function (res) { UI.toast(res.message || "Rechargement impossible.", "error"); });
   };
 
@@ -106,9 +140,11 @@
     const name = document.getElementById("send-name").value.trim(), amount = parseInt(document.getElementById("send-amount").value, 10), note = document.getElementById("send-note").value.trim();
     if (!name) return UI.showError("send-error", "Indiquez un destinataire.");
     if (!amount || amount < 100) return UI.showError("send-error", "Indiquez un montant valide (100 FCFA minimum).");
-    if (amount > ACState.wallet.balance) { App.nav("paymentFailed", { retry: "walletSend", amount, reason: "insufficient_balance" }); return; }
-    pendingSend = { name, amount, note, external: /Marc|Externe/i.test(name) };
-    UI.openSheet(`<h3 class="t-h3 mb-3">Confirmer l'envoi</h3><div class="card p-4 mb-4">${UI.row("Destinataire", esc(name))}${UI.row("Montant", ACStore.fmtFCFA(amount), true)}${UI.row("Frais", pendingSend.external ? "250 FCFA (hors réseau)" : "Gratuit")}${note ? UI.row("Note", esc(note)) : ""}</div>${UI.primaryButton("Confirmer avec mon code PIN", "UI.closeSheet();App.nav('securityPin',{action:'walletSendConfirm'})", { icon: "lock" })}`);
+    const external = /Marc|Externe/i.test(name);
+    const fee = external ? EXTERNAL_FEE : 0;
+    if (amount + fee > ACState.wallet.balance) { App.nav("paymentFailed", { retry: "walletSend", amount: amount + fee, reason: "insufficient_balance" }); return; }
+    pendingSend = { name, amount, note, external, fee };
+    UI.openSheet(`<h3 class="t-h3 mb-3">Confirmer l'envoi</h3><div class="card p-4 mb-4">${UI.row("Destinataire", esc(name))}${UI.row("Montant", ACStore.fmtFCFA(amount), true)}${UI.row("Frais", fee ? ACStore.fmtFCFA(fee) + " (hors réseau)" : "Gratuit")}${fee ? UI.row("Total débité", ACStore.fmtFCFA(amount + fee), true) : ""}${note ? UI.row("Note", esc(note)) : ""}</div>${UI.primaryButton("Confirmer avec mon code PIN", "UI.closeSheet();App.nav('securityPin',{action:'walletSendConfirm'})", { icon: "lock" })}`);
   };
 
   /* ---------- Code PIN (confirmation sécurisée) ---------- */
@@ -118,7 +154,7 @@
     const body = `<div class="max-w-narrow mx-auto w-full flex-1 flex flex-col items-center text-center py-6 space-y-5">
       <div class="w-16 h-16 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("lock", "text-[30px]")}</div>
       <div><h2 class="t-h2">${titles[action] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">Entrez votre code PIN à 4 chiffres. Démo : <b>0000</b></p></div>
-      <div class="flex gap-3" onpaste="Screens._pinPaste(event)">${[0, 1, 2, 3].map((i) => `<input id="pin-${i}" type="password" inputmode="numeric" maxlength="1" class="input input-lg w-14 text-center text-2xl font-extrabold px-0" oninput="Screens._pinInput(${i},this)" onkeydown="if(event.key==='Backspace'&&!this.value&&${i}>0)document.getElementById('pin-${i - 1}').focus()" aria-label="Chiffre ${i + 1}"/>`).join("")}</div>
+      <div class="flex gap-2 sm:gap-3 max-w-full justify-center px-2" onpaste="Screens._pinPaste(event)">${[0, 1, 2, 3].map((i) => `<input id="pin-${i}" type="password" inputmode="numeric" maxlength="1" class="input input-lg w-12 sm:w-14 flex-1 max-w-[3.5rem] text-center text-xl sm:text-2xl font-extrabold px-0" oninput="Screens._pinInput(${i},this)" onkeydown="if(event.key==='Backspace'&&!this.value&&${i}>0)document.getElementById('pin-${i - 1}').focus()" aria-label="Chiffre ${i + 1}"/>`).join("")}</div>
       ${UI.error("pin-error")}
       <button type="button" onclick="Screens._biometric('${action}')" class="btn btn-outline">${icon("fingerprint", "text-[22px]")}Utiliser la biométrie</button>
       <div class="w-full">${UI.primaryButton("Confirmer", `Screens._pinConfirm('${action}')`, { size: "lg" })}</div></div>`;
@@ -136,7 +172,18 @@
   Screens._pinDone = function (action) {
     if (action === "walletSendConfirm" && pendingSend) {
       const s = pendingSend;
-      if (s.external) { ACStore.addTransaction({ label: "Envoi à " + s.name.split("·")[0].trim(), amount: -(s.amount + 250), type: "debit", status: "pending", service: "wallet" }); ACState.wallet.balance -= s.amount + 250; ACStore.addActivity({ service: "wallet", title: "Envoi à " + s.name.split("·")[0].trim(), amount: s.amount, status: "En attente", icon: "north_east" }); ACStore.emit(); pendingSend = null; App.resetTo("paymentPending", { amount: s.amount, title: "Envoi en attente", body: "Le destinataire n'est pas encore sur YOUSS CONNECT : il recevra un SMS pour retirer les fonds sous 72 h." }); return; }
+      if (s.external) {
+        const total = s.amount + (s.fee || EXTERNAL_FEE);
+        if (total > ACState.wallet.balance) { pendingSend = null; App.nav("paymentFailed", { retry: "walletSend", amount: total, reason: "insufficient_balance" }); return; }
+        const label = "Envoi à " + s.name.split("·")[0].trim();
+        ACState.wallet.balance -= total;
+        const tx = ACStore.addTransaction({ label, amount: -total, type: "debit", status: "pending", service: "wallet", balanceApplied: true });
+        ACStore.addActivity({ service: "wallet", title: label, amount: total, status: "En attente", icon: "north_east" });
+        ACStore.emit();
+        pendingSend = null;
+        App.resetTo("paymentPending", { amount: total, title: "Envoi en attente", body: "Le destinataire n'est pas encore sur YOUSS CONNECT : il recevra un SMS pour retirer les fonds sous 72 h.", txid: tx.id });
+        return;
+      }
       ACStore.whenPaid(ACStore.payFromWallet({ amount: s.amount, label: "Envoi à " + s.name.split("·")[0].trim() + (s.note ? " · " + s.note : ""), service: "wallet" }), () => { pendingSend = null; App.resetTo("paymentSuccess", { amount: s.amount, title: "Argent envoyé", body: s.name.split("·")[0].trim() + " a reçu " + ACStore.fmtFCFA(s.amount) + ".", next: "wallet" }); }, (res) => App.nav("paymentFailed", { retry: "walletSend", amount: s.amount, reason: res.reason }));
     } else if (action === "changePin") { UI.toast("Code PIN mis à jour.", "success"); App.resetTo("security"); }
     else if (action === "walletQrPayConfirm") Screens._confirmQrPayPaid();
@@ -227,27 +274,35 @@
   /* ---------- Retirer ---------- */
   let pendingWithdraw = null;
   Screens.walletWithdraw = function (container) {
+    if (!Screens._wdMethod) Screens._wdMethod = "mobile";
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="card p-5"><label class="block"><span class="label">Montant (FCFA)</span><input id="wd-amount" type="number" inputmode="numeric" min="500" step="500" placeholder="Ex. 20 000" class="input input-lg text-2xl font-extrabold"/></label><p class="t-small text-ink-2 mt-2">Disponible : <b>${ACStore.fmtFCFA(ACState.wallet.balance)}</b> · minimum 500 FCFA</p></div>
-      <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Vers</p>${[["smartphone", "Paiement mobile", "Opérateur à définir · conceptuel", "mobile"], ["store", "Agent YOUSS CONNECT", "Retrait en espèces avec code", "agent"]].map((m, i) => `<button type="button" onclick="document.querySelectorAll('[data-wd]').forEach(b=>b.classList.remove('border-gold','bg-gold/10'));this.classList.add('border-gold','bg-gold/10');Screens._wdMethod='${m[3]}'" data-wd class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${i === 0 ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[0])}</span><span class="flex-1"><span class="block t-title">${m[1]}</span><span class="block t-small text-ink-2">${m[2]}</span></span></button>`).join("")}</div>
+      <div class="card p-5"><label class="block"><span class="label">Montant (FCFA)</span><input id="wd-amount" type="number" inputmode="numeric" min="500" step="500" placeholder="Ex. 20 000" value="${esc(Screens._wdAmount || "")}" class="input input-lg text-2xl font-extrabold" oninput="Screens._wdAmount=this.value"/></label><p class="t-small text-ink-2 mt-2">Disponible : <b>${ACStore.fmtFCFA(ACState.wallet.balance)}</b> · minimum 500 FCFA</p></div>
+      <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Vers</p>${[["smartphone", "Paiement mobile", "Opérateur à définir · conceptuel", "mobile"], ["store", "Agent YOUSS CONNECT", "Retrait en espèces avec code", "agent"]].map((m) => `<button type="button" onclick="Screens._wdPick('${m[3]}')" data-wd class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${Screens._wdMethod === m[3] ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[0])}</span><span class="flex-1"><span class="block t-title">${m[1]}</span><span class="block t-small text-ink-2">${m[2]}</span></span></button>`).join("")}</div>
       ${UI.primaryButton("Retirer", "Screens._doWithdraw()", { size: "lg", icon: "account_balance" })}
       <p class="t-small text-ink-3 text-center">${I18N.t("conceptual")}</p></div>`;
     Shell.render(container, { title: "Retirer", subtitle: "Youss Wallet · conceptuel", back: true, body, nav: false, showNav: true });
-    Screens._wdMethod = "mobile";
+  };
+  Screens._wdPick = (method) => {
+    Screens._wdMethod = method;
+    const input = document.getElementById("wd-amount");
+    Screens._wdAmount = input ? input.value : Screens._wdAmount;
+    App.replace("walletWithdraw");
   };
   Screens._doWithdraw = function () {
     const amount = parseInt(document.getElementById("wd-amount").value, 10);
     if (!amount || amount < 500) { UI.toast("Montant minimum 500 FCFA.", "error"); return; }
     if (amount > ACState.wallet.balance) { App.nav("paymentFailed", { retry: "walletWithdraw", amount, reason: "insufficient_balance" }); return; }
-    pendingWithdraw = { amount, method: Screens._wdMethod || "mobile" };
+    if (!Screens._wdMethod) Screens._wdMethod = "mobile";
+    pendingWithdraw = { amount, method: Screens._wdMethod };
     App.nav("securityPin", { action: "withdraw" });
   };
   Screens._doWithdrawPaid = function () {
     const w = pendingWithdraw; if (!w) { App.resetTo("wallet"); return; }
+    if (w.amount > ACState.wallet.balance) { pendingWithdraw = null; App.nav("paymentFailed", { retry: "walletWithdraw", amount: w.amount, reason: "insufficient_balance" }); return; }
     ACState.wallet.balance -= w.amount;
-    const tx = ACStore.addTransaction({ label: w.method === "agent" ? "Retrait chez un agent" : "Retrait vers paiement mobile", amount: -w.amount, type: "debit", status: "pending", service: "wallet" });
+    const tx = ACStore.addTransaction({ label: w.method === "agent" ? "Retrait chez un agent" : "Retrait vers paiement mobile", amount: -w.amount, type: "debit", status: "pending", service: "wallet", balanceApplied: true });
     ACStore.addActivity({ service: "wallet", title: tx.label, amount: w.amount, status: "En attente", icon: "account_balance" });
-    ACStore.emit(); pendingWithdraw = null;
+    ACStore.emit(); pendingWithdraw = null; Screens._wdAmount = "";
     App.resetTo("paymentPending", { amount: w.amount, title: "Retrait en attente", body: w.method === "agent" ? "Présentez ce code à un agent YOUSS CONNECT pour recevoir vos espèces." : "Le transfert vers votre compte mobile sera confirmé sous quelques minutes.", code: w.method === "agent" ? String(Math.floor(100000 + Math.random() * 899999)) : "", txid: tx.id });
   };
 
@@ -274,7 +329,30 @@
       <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Mes transactions", "App.resetTo('wallet')", { icon: "receipt_long" })}${UI.primaryButton("Simuler la confirmation", `Screens._confirmPending('${esc(params.txid || "")}')`, { icon: "check" })}</div></div>`;
     Shell.render(container, { title: "En attente", back: "App.resetTo('wallet')", body, nav: false, hideSearch: true });
   };
-  Screens._confirmPending = (txid) => { const t = txid ? ACState.wallet.transactions.find((x) => x.id === txid) : ACState.wallet.transactions.find((x) => x.status === "pending"); if (t) { t.status = "success"; const a = ACState.activities.find((x) => x.title === t.label && x.status === "En attente"); if (a) a.status = "Terminé"; ACStore.addNotification("Opération confirmée", t.label + " · " + ACStore.fmtFCFA(Math.abs(t.amount)), "wallet", "wallet"); ACStore.emit(); } App.resetTo("paymentSuccess", { amount: t ? Math.abs(t.amount) : 0, title: "Opération confirmée", next: "wallet" }); };
+  Screens._confirmPending = (txid) => {
+    const t = txid ? ACState.wallet.transactions.find((x) => x.id === txid) : ACState.wallet.transactions.find((x) => x.status === "pending");
+    if (!t || t.status !== "pending") { App.resetTo("wallet"); return; }
+    if (!t.balanceApplied) {
+      const amt = Math.abs(t.amount);
+      if (t.type === "credit") {
+        ACState.wallet.balance += amt;
+        t.balanceApplied = true;
+      } else if (t.type === "debit") {
+        if (amt > ACState.wallet.balance) {
+          App.nav("paymentFailed", { retry: "wallet", amount: amt, reason: "insufficient_balance" });
+          return;
+        }
+        ACState.wallet.balance -= amt;
+        t.balanceApplied = true;
+      }
+    }
+    t.status = "success";
+    const a = ACState.activities.find((x) => x.title === t.label && x.status === "En attente");
+    if (a) a.status = "Terminé";
+    ACStore.addNotification("Opération confirmée", t.label + " · " + ACStore.fmtFCFA(Math.abs(t.amount)), "wallet", "wallet");
+    ACStore.emit();
+    App.resetTo("paymentSuccess", { amount: Math.abs(t.amount), title: "Opération confirmée", body: t.type === "credit" ? "Votre solde a été crédité." : "L'opération est confirmée.", next: "wallet" });
+  };
   Screens.paymentFailed = function (container, params) {
     const reasons = { insufficient_balance: ["Solde insuffisant", "Votre solde Youss Wallet ne couvre pas ce montant. Rechargez ou choisissez un autre moyen de paiement."], offline: ["Vous êtes hors ligne", "Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible."], error: ["Paiement impossible", "Une erreur est survenue. Aucun montant n'a été débité."] };
     const r = reasons[params.reason] || reasons.error;

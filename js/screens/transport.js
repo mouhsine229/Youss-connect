@@ -14,13 +14,14 @@
   const OPERATORS = [
     { id: "youss", label: "YOUSS Ride", sub: "Flotte YOUSS. Suivi et paiement dans l'app.", available: true },
     { id: "gozem", label: "Gozem", sub: "Partenariat en cours. Pas encore branché.", available: false },
-    { id: "yango", label: "Yango", sub: "Partenariat en cours. Pas encore branché.", available: false },
+    { id: "wedrive", label: "WeDrive", sub: "Partenariat en cours. Pas encore branché.", available: false },
     { id: "indrive", label: "inDrive", sub: "Partenariat en cours. Pas encore branché.", available: false }
   ];
 
   /* État du trajet (persisté légèrement dans ACState.trip) */
   const trip = { from: null, to: null, vehicle: "car", operator: "youss", route: null, km: 0, sec: 0, price: 0, driver: null, method: "wallet", pickMode: "to", status: "idle", rating: 5, comment: "", startedAt: null };
   if (ACState.trip && ACState.trip.from) Object.assign(trip, ACState.trip, { route: null });
+  if (trip.operator === "yango") trip.operator = "wedrive";
   function syncTrip() { ACState.trip = { from: trip.from, to: trip.to, vehicle: trip.vehicle, operator: trip.operator, km: trip.km, sec: trip.sec, price: trip.price, driver: trip.driver, method: trip.method, status: trip.status, startedAt: trip.startedAt }; }
   const operatorOf = () => OPERATORS.find((o) => o.id === trip.operator) || OPERATORS[0];
 
@@ -116,11 +117,12 @@
         </div>
       </div>`;
     Shell.render(container, { title: "Transport", subtitle: "Où allez-vous ?", back: "App.nav('home')", body, nav: false, fill: true, onMount: initMainMap });
+    refreshPanel();
   };
 
   function initMainMap() {
     map = M().create("tr-map", { interactive: true, zoomPosition: "bottomright" });
-    if (!map) return;
+    if (!map) { refreshPanel(); return; }
     refreshMarkers();
     map.onClick((p) => Screens._setTripPoint(trip.pickMode, { name: "Point sur la carte (" + p.lat.toFixed(4) + ", " + p.lng.toFixed(4) + ")", lat: p.lat, lng: p.lng }));
     M().locate((pos) => { if (map) map.setUser([pos.lat, pos.lng]); });

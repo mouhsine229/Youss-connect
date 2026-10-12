@@ -3,7 +3,7 @@
    - Code : network-first (chaque déploiement est pris en compte immédiatement).
    - Images locales : cache-first (photos des restaurants, produits, lieux).
    - Polices Google et tuiles de carte : stale-while-revalidate avec plafond. */
-const VERSION = "youss-connect-v12";
+const VERSION = "youss-connect-v13";
 const SHELL = VERSION + "-shell";
 const IMAGES = VERSION + "-images";
 const RUNTIME = VERSION + "-runtime";
