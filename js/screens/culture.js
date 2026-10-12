@@ -61,13 +61,14 @@
     Shell.render(container, { title: c.name, subtitle: c.country + " · Destination", back: true, body, nav: false, showNav: true, onMount: () => { const m = YCMap.create("dest-map", { interactive: false, zoomControl: false, lat: c.lat, lng: c.lng, zoom: 11 }); if (m) sites.filter((s) => YCData.distanceKm(s.lat, s.lng, c.lat, c.lng) < 40).forEach((s) => m.addPoi([s.lat, s.lng], YCData.siteType(s.type).icon, "<b>" + esc(s.name) + "</b>", () => App.nav("cultureDetail", { id: s.id }))); } });
   };
   Screens._cityRestaurants = (c) => { Shell.pickCity(c); App.nav("restaurants"); };
-  Screens._cityEvents = (c) => { App.nav("events"); };
+  Screens._cityEvents = (c) => { App.nav("events", { city: c }); };
 
   // Fiche site (Aperçu / Histoire / Visite / Infos)
   const st = { tab: "overview" };
   const TABS = [["overview", "Aperçu"], ["history", "Histoire"], ["visit", "Visite"], ["info", "Infos"]];
   Screens.cultureDetail = function (container, params) {
-    const s = YCData.site(params.id) || YCData.SITES[0];
+    const s = YCData.site(params.id);
+    if (!s) { App.resetTo("culture"); return; }
     if (params.tab) st.tab = params.tab;
     const type = YCData.siteType(s.type);
     const scanned = !!params.scanned;

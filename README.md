@@ -1,6 +1,6 @@
 # YOUSS CONNECT
 
-Maquette interactive de la super application de KYA CORPORATION. Une seule app, un seul compte, pour se déplacer, se faire livrer, manger, sortir, acheter local, visiter et payer, à Cotonou, Dakar, Lomé et Accra.
+Maquette interactive de KYA CORPORATION : transport, livraison, restos, sorties, achats, culture et paiement, à Cotonou, Dakar, Lomé et Accra.
 
 Tout tourne dans le navigateur, sans backend : les données sont fictives, l'état est gardé en localStorage, et les services se parlent entre eux. Payer une course débite le wallet, crédite des points, crée une activité et une notification.
 

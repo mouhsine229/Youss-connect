@@ -16,6 +16,7 @@
 
   Screens.events = function (container, params) {
     if (params && params.cat) f.cat = params.cat;
+    if (params && params.city) f.city = params.city;
     const items = list();
     const featured = items[0];
     const body = `
@@ -43,7 +44,8 @@
 
   // Fiche
   Screens.eventDetail = function (container, params) {
-    const e = YCData.event(params.id) || YCData.EVENTS[0];
+    const e = YCData.event(params.id);
+    if (!e) { App.resetTo("events"); return; }
     if (!sel.ticket || !e.tickets.find((t) => t.id === sel.ticket)) { sel.ticket = e.tickets[0].id; sel.qty = 1; }
     const t = e.tickets.find((x) => x.id === sel.ticket);
     const total = t.price * sel.qty;

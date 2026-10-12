@@ -47,11 +47,26 @@
       <div class="card p-5 space-y-3">${UI.field("bp-name", "Nom de l'entreprise", { value: p.name })}${UI.select("bp-cat", "Catégorie", ["Mode & artisanat", "Restaurant", "Commerce", "Transport", "Événementiel", "Culture & tourisme", "Services"], p.category)}
         <div class="grid grid-cols-2 gap-3">${UI.select("bp-city", "Ville", YCData.DESTINATIONS, p.city)}${UI.field("bp-hours", "Horaires", { value: p.hours })}</div>${UI.field("bp-address", "Adresse", { value: p.address, icon: "location_on" })}${UI.field("bp-phone", "Téléphone", { value: p.phone, type: "tel", icon: "call" })}
         <label class="block"><span class="label">Description</span><textarea id="bp-desc" class="textarea">${esc(p.desc)}</textarea></label></div>
-      <div class="card p-4 space-y-3"><p class="t-caption text-ink-3">Visibilité</p>${[["Boutique visible sur Youss Market", true], ["Accepter les réservations", true], ["Mise en avant sponsorisée (offre pro)", false]].map((x) => `<div class="flex items-center justify-between"><span class="t-body">${x[0]}</span>${UI.toggle(x[1], "this.classList.toggle('on');UI.toast('Préférence enregistrée.','success')", x[0])}</div>`).join("")}</div>
+      <div class="card p-4 space-y-3"><p class="t-caption text-ink-3">Visibilité</p>${[["shopVisible", "Boutique visible sur Youss Market", p.shopVisible !== false], ["acceptBookings", "Accepter les réservations", p.acceptBookings !== false], ["featured", "Mise en avant sponsorisée (offre pro)", !!p.featured]].map((x) => `<div class="flex items-center justify-between"><span class="t-body">${x[1]}</span>${UI.toggle(x[2], `Screens._bizVis('${x[0]}')`, x[1])}</div>`).join("")}</div>
       ${UI.primaryButton("Enregistrer", "Screens._bizSaveProfile()", { size: "lg", icon: "save" })}</div>`;
     Shell.render(container, { title: "Profil professionnel", back: true, body, nav: false, showNav: true });
   };
-  Screens._bizSaveProfile = () => { const p = B().profile; const g = (id) => (document.getElementById(id) || {}).value || ""; p.name = g("bp-name") || p.name; p.category = g("bp-cat"); p.city = g("bp-city"); p.hours = g("bp-hours"); p.address = g("bp-address"); p.phone = g("bp-phone"); p.desc = g("bp-desc"); ACStore.emit(); UI.toast("Profil professionnel mis à jour.", "success"); App.nav("business"); };
+  function readBizProfile() {
+    const p = B().profile, g = (id) => (document.getElementById(id) || {}).value;
+    if (g("bp-name") == null) return p;
+    p.name = g("bp-name") || p.name; p.category = g("bp-cat") || p.category; p.city = g("bp-city") || p.city;
+    p.hours = g("bp-hours") || p.hours; p.address = g("bp-address") || p.address; p.phone = g("bp-phone") || p.phone;
+    p.desc = g("bp-desc") != null ? g("bp-desc") : p.desc;
+    return p;
+  }
+  Screens._bizVis = (k) => {
+    const p = readBizProfile();
+    const on = k === "featured" ? !!p[k] : p[k] !== false;
+    p[k] = !on;
+    ACStore.emit();
+    UI.toast("Préférence enregistrée.", "success");
+  };
+  Screens._bizSaveProfile = () => { readBizProfile(); ACStore.emit(); UI.toast("Profil professionnel mis à jour.", "success"); App.nav("business"); };
 
   Screens.businessCatalogue = function (container) {
     const b = B();

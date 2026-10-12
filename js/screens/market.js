@@ -61,7 +61,8 @@
   // Fiche produit
   const gal = { idx: 0 };
   Screens.productDetail = function (container, params) {
-    const p = YCData.product(params.id) || YCData.PRODUCTS[0];
+    const p = YCData.product(params.id);
+    if (!p) { App.resetTo("market"); return; }
     const s = YCData.seller(p.seller);
     const fav = ACState.favorites.indexOf(p.id) >= 0;
     const similar = YCData.PRODUCTS.filter((x) => x.id !== p.id && (x.cat === p.cat || x.seller === p.seller)).slice(0, 4);

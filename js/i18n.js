@@ -22,7 +22,7 @@
     wallet: "Youss Wallet", balance: "Solde disponible", send: "Envoyer", receive: "Recevoir", topup: "Recharger", withdraw: "Retirer", qrpay: "QR Pay", recent: "Transactions récentes",
     // Divers
     lang_title: "Langue", lang_done: "Langue : Français", settings: "Paramètres", notifications: "Notifications", security: "Sécurité", help: "Aide", logout: "Déconnexion",
-    theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démo", next_steps: "Aussi près d'ici",
+    theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démo", next_steps: "Et ensuite",
     empty_results: "Aucun résultat", empty_results_body: "Changez le mot-clé ou la catégorie.",
     conceptual: "Fonction de démonstration. Son lancement réel dépendra des agréments obtenus dans chaque pays."
   };
@@ -38,7 +38,7 @@
     login: "Log in", signup: "Create an account", phone: "Phone number", password: "Password", forgot: "Forgot password", otp: "OTP verification",
     wallet: "Youss Wallet", balance: "Available balance", send: "Send", receive: "Receive", topup: "Top up", withdraw: "Withdraw", qrpay: "QR Pay", recent: "Recent transactions",
     lang_title: "Language", lang_done: "Language: English", settings: "Settings", notifications: "Notifications", security: "Security", help: "Help", logout: "Log out",
-    theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo walkthroughs", next_steps: "Nearby",
+    theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo walkthroughs", next_steps: "What's next",
     empty_results: "No results", empty_results_body: "Try another keyword or category.",
     conceptual: "Demo feature. Going live depends on the licences granted in each country."
   };

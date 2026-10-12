@@ -10,7 +10,7 @@
     { title: "Livraison, restaurants, commerce", body: "Faites livrer un colis, commandez un repas ou achetez un produit local depuis la même application, avec le même compte.", img: IMG + "onboarding/onb-services.jpg", tag: "Services" },
     { title: "Événements et activités", body: "Concerts, festivals, conférences, spectacles et sport. Vous réservez et votre billet numérique vous attend dans l'application.", img: IMG + "onboarding/onb-events.jpg", tag: "Événements" },
     { title: "Culture et tourisme africain", body: "Destinations, monuments, musées et un scanner culturel qui raconte l'histoire de chaque lieu que vous visitez.", img: IMG + "onboarding/onb-culture.jpg", tag: "Culture" },
-    { title: "Tout au même endroit", body: "Transport, services, commerce, événements, culture, Wallet et Bonus. YOUSS CONNECT réunit tout cela à Cotonou, Dakar, Lomé et Accra.", img: IMG + "onboarding/onb-ecosystem.jpg", tag: "Écosystème" }
+    { title: "Tout au même endroit", body: "Un compte pour le transport, les commandes, les sorties, le Wallet et les Bonus. Cotonou, Dakar, Lomé, Accra.", img: IMG + "onboarding/onb-ecosystem.jpg", tag: "Compte unique" }
   ];
 
   // Splash
@@ -21,7 +21,7 @@
         <div class="absolute -bottom-40 -left-24 w-[28rem] h-[28rem] rounded-full bg-gold/10 blur-3xl"></div>
         <img src="./assets/youss-logo-full.png" alt="YOUSS CONNECT" class="w-[220px] lg:w-[280px] h-auto object-contain animate-pop" width="280" height="248"/>
         <p class="mt-6 t-caption text-[#0A0A0A]/60 tracking-[0.3em] animate-fade-in" style="animation-delay:.3s">Portée par KYA CORPORATION</p>
-        <p class="mt-3 t-body lg:text-[17px] text-[#0A0A0A]/80 max-w-[320px] leading-relaxed animate-fade-in" style="animation-delay:.45s">Une seule application pour vivre l'Afrique au quotidien.</p>
+        <p class="mt-3 t-body lg:text-[17px] text-[#0A0A0A]/80 max-w-[320px] leading-relaxed animate-fade-in" style="animation-delay:.45s">Se déplacer, commander, sortir et payer. Quatre villes.</p>
         <div class="mt-10 w-40 h-1 rounded-full bg-[#0A0A0A]/10 overflow-hidden"><div id="yc-splash-bar" class="h-full bg-gold w-0 transition-[width] duration-[1600ms] ease-out"></div></div>
         <p class="absolute bottom-6 t-caption text-[#0A0A0A]/40">Cotonou · Dakar · Lomé · Accra</p>
       </div>`;
@@ -90,7 +90,7 @@
         <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-[#0A0A0A]/40"></div>
         <div class="relative flex items-center gap-3"><img src="./assets/youss-logo-transparent.png" alt="" class="w-12 h-12 object-contain bg-white rounded-2xl p-1.5"/><div><p class="font-extrabold tracking-tight text-lg leading-tight">YOUSS CONNECT</p><p class="t-caption text-white/60">KYA CORPORATION</p></div></div>
         <div class="relative max-w-[460px]">
-          <h2 class="t-display text-balance">Une seule application pour vivre l'Afrique au quotidien.</h2>
+          <h2 class="t-display text-balance">Se déplacer, commander, sortir et payer. Quatre villes.</h2>
           <p class="t-body text-white/70 mt-4 leading-relaxed">Transport, livraison, restaurants, événements, Youss Market, culture et tourisme, Youss Wallet, Youss Bonus et Youss Business. Un seul compte pour tout, et chaque service parle aux autres.</p>
           <div class="flex flex-wrap gap-2 mt-6">${["Cotonou", "Dakar", "Lomé", "Accra"].map((c) => `<span class="badge bg-white/10 text-white">${icon("location_on", "text-gold text-[14px]", true)}${c}</span>`).join("")}</div>
         </div>
@@ -315,7 +315,7 @@
         <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent"></div>
         <div class="relative max-w-[720px]">
           <img src="./assets/youss-logo-on-dark.png" alt="YOUSS CONNECT" class="w-24 lg:w-32 mb-4"/>
-          <h1 class="t-display text-balance">La super application africaine qui connecte mobilité, services, commerce, événements, culture et tourisme.</h1>
+          <h1 class="t-display text-balance">Transport, livraison, restos, sorties, achats, culture. Un compte, quatre villes.</h1>
           <p class="t-body lg:text-[17px] text-white/75 mt-4">Portée par KYA CORPORATION · Cotonou, Dakar, Lomé, Accra</p>
           <div class="flex flex-wrap gap-3 mt-6">${ACState.session.authenticated ? UI.primaryButton("Ouvrir l'application", "App.resetTo('home')", { block: false, iconRight: "arrow_forward" }) : UI.primaryButton("Essayer la démo", "Screens._enterDemo()", { block: false, iconRight: "arrow_forward" })}${UI.button("Parcours guidés", "Demo.openMenu()", { variant: "outline", block: false, cls: "!bg-white/10 !text-white !border-white/20", icon: "play_circle" })}</div>
         </div>
@@ -332,11 +332,11 @@
       </section>
       <section class="card p-5 lg:p-6"><p class="t-caption">Espaces internes (démo)</p><p class="t-small text-ink-2 mt-1">Pas dans le menu client. Console KYA : #/kya-ops · Cuisine resto : invitation YC-PRO-MAMAN.</p>
         <div class="flex flex-wrap gap-2 mt-3">${UI.button("Console KYA", "App.nav('opsLogin')", { variant: "dark", block: false, size: "sm" })}${UI.button("Cuisine restaurant", "App.nav('proJoin',{t:'YC-PRO-MAMAN'})", { variant: "outline", block: false, size: "sm" })}</div></section>
-      <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Une seule application pour vivre l'Afrique au quotidien.</p><p class="t-small text-ink-3 mt-3">Maquette interactive avec des données fictives. Aucune banque, aucun opérateur ni aucune entreprise n'est présenté comme partenaire officiel.</p></section>`;
+      <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Se déplacer, commander, sortir et payer. Quatre villes.</p><p class="t-small text-ink-3 mt-3">Maquette interactive avec des données fictives. Aucune banque, aucun opérateur ni aucune entreprise n'est présenté comme partenaire officiel.</p></section>`;
     if (!ACState.session.authenticated) {
       container.innerHTML = `<div class="min-h-dvh"><header class="sticky top-0 z-30 bg-surface/90 backdrop-blur border-b border-line"><div class="max-w-content mx-auto px-5 lg:px-10 h-16 flex items-center justify-between"><button type="button" onclick="App.back()" class="icon-btn" aria-label="Retour">${icon("arrow_back")}</button><span class="font-extrabold tracking-tight">YOUSS CONNECT</span>${UI.primaryButton(I18N.t("login"), "App.nav('login')", { block: false, size: "sm" })}</div></header><main class="max-w-content mx-auto px-5 lg:px-10 py-6 lg:py-10 space-y-8">${body}</main></div>`;
       return;
     }
-    Shell.render(container, { title: I18N.t("nav_about"), subtitle: "YOUSS CONNECT en un coup d'œil", back: true, body, nav: false, showNav: true });
+    Shell.render(container, { title: I18N.t("nav_about"), subtitle: "Ce que fait l'application", back: true, body, nav: false, showNav: true });
   };
 })();

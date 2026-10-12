@@ -25,7 +25,7 @@
         name: "Alassane", fullName: "Alassane Koffi", phone: "+229 97 00 00 00", email: "alassane@example.com",
         city: "Cotonou", country: "Bénin", countryCode: "BJ", dial: "+229", avatar: IMG + "avatars/avatar-alassane.jpg", verified: true, since: "2025"
       },
-      prefs: { theme: "light", paymentMethod: "wallet", notif: { transport: true, orders: true, delivery: true, events: true, wallet: true, promos: false, rewards: true } },
+      prefs: { theme: "light", paymentMethod: "wallet", location: true, recs: true, notif: { transport: true, orders: true, delivery: true, events: true, wallet: true, promos: false, rewards: true, dnd: false } },
       wallet: {
         balance: 248500, currency: "FCFA",
         transactions: [
@@ -77,7 +77,7 @@
       favorites: [],
       trip: null,
       business: {
-        profile: { name: "Atelier Ayélé", category: "Mode & artisanat", city: "Cotonou", address: "Haie Vive, Cotonou", phone: "+229 97 00 00 00", hours: "09h00 - 19h00", desc: "Mode contemporaine en wax, pièces cousues à la main.", verified: true },
+        profile: { name: "Atelier Ayélé", category: "Mode & artisanat", city: "Cotonou", address: "Haie Vive, Cotonou", phone: "+229 97 00 00 00", hours: "09h00 - 19h00", desc: "Mode contemporaine en wax, pièces cousues à la main.", verified: true, shopVisible: true, acceptBookings: true, featured: false },
         products: [
           { id: "bp1", name: "Robe wax contemporaine", price: 12000, stock: 7 },
           { id: "bp2", name: "Collier perles de traite", price: 5000, stock: 12 },

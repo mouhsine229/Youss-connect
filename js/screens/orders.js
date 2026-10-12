@@ -5,7 +5,7 @@
   const { icon, esc, go } = UI;
   let timer = null, map = null;
 
-  function findOrder(id) { return ACState.orders.find((o) => o.id === id) || ACState.orders[0]; }
+  function findOrder(id) { return ACState.orders.find((o) => o.id === id); }
 
   Screens.orderConfirmed = function (container, params) {
     const o = findOrder(params.id);

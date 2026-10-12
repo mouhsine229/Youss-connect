@@ -31,7 +31,7 @@
     const ticket = ACState.tickets[0];
     if (ticket) recos.push({ icon: "directions_car", img: ticket.img, title: "Course vers " + ticket.place.split(",")[0], sub: "Billet " + YCData.fmtDateShort(ticket.date), onclick: `Screens._transportPreset({toName:${UI.js(ticket.place)}});App.nav('transport')` });
     const site = YCData.sitesIn(city)[0];
-    if (site) recos.push({ icon: "qr_code_scanner", img: site.img, title: "Scanner " + site.name, sub: "Histoire, audio-guide, lieux à proximité", onclick: go("culturalScanner") });
+    if (site) recos.push({ icon: "qr_code_scanner", img: site.img, title: "Scanner " + site.name, sub: "Histoire, audio-guide, alentours", onclick: go("culturalScanner") });
     const prod = YCData.PRODUCTS.find((p) => p.old);
     if (prod) recos.push({ icon: "storefront", img: prod.img, title: prod.name, sub: ACStore.fmtFCFA(prod.price), onclick: go("productDetail", { id: prod.id }) });
     return recos.slice(0, 4);

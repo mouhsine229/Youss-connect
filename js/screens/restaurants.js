@@ -22,6 +22,7 @@
     return out;
   }
   function isOpen(r) { const h = new Date().getHours(); return h >= r.open[0] && h < r.open[1]; }
+  function isKitchenPaused(restId) { const k = ACState.kitchen; return !!(k && k.paused && k.restId === restId); }
 
   Screens.restaurants = function (container, params) {
     if (params && params.cat) filters.cat = params.cat;
@@ -50,7 +51,7 @@
     const open = isOpen(r);
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left">
       <div class="relative ratio-16-10 bg-card-high overflow-hidden">${UI.img(r.img, r.name)}
-        <span class="absolute top-2.5 left-2.5 badge ${open ? "badge-success" : "badge-neutral"}">${open ? "Ouvert" : "Fermé"} · ${r.time}</span>
+        <span class="absolute top-2.5 left-2.5 badge ${isKitchenPaused(r.id) ? "badge-warn" : open ? "badge-success" : "badge-neutral"}">${isKitchenPaused(r.id) ? "En pause" : open ? "Ouvert" : "Fermé"} · ${r.time}</span>
         <span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${r.rating} <span class="text-ink-3 font-normal">(${r.reviews})</span></span>
       </div>
       <div class="p-4"><div class="flex items-start justify-between gap-2"><h3 class="t-h3 truncate">${r.name}</h3><span class="t-small text-ink-2 whitespace-nowrap mt-1">${r.km} km</span></div>
@@ -74,16 +75,18 @@
   // Fiche restaurant
   const tabState = { tab: "menu" };
   Screens.restaurantDetail = function (container, params) {
-    const r = YCData.restaurant(params.id) || YCData.RESTAURANTS[0];
+    const r = YCData.restaurant(params.id);
+    if (!r) { App.resetTo("restaurants"); return; }
     if (params.tab) tabState.tab = params.tab;
     const open = isOpen(r);
+    const paused = isKitchenPaused(r.id);
     const groups = {}; r.menu.forEach((d) => { (groups[d.group] = groups[d.group] || []).push(d); });
     const inCart = (id) => (ACState.cart.restaurant === r.id ? (ACState.cart.items.find((i) => i.id === id) || {}).qty || 0 : 0);
     const dish = (d) => `<div id="dish-${d.id}" class="card p-3 flex gap-3 ${params.dish === d.id ? "ring-2 ring-gold" : ""}">
       <div class="w-24 h-24 lg:w-28 lg:h-28 rounded-xl overflow-hidden bg-card-high flex-shrink-0">${UI.img(d.img, d.name)}</div>
       <div class="flex-1 min-w-0 flex flex-col"><div class="flex items-start justify-between gap-2"><h4 class="t-title">${d.name}</h4>${d.pop ? UI.badge("Populaire", "gold") : ""}</div><p class="t-small text-ink-2 line-clamp-2 mt-0.5">${d.desc}</p>
         <div class="mt-auto pt-2 flex items-center justify-between"><span class="t-title font-extrabold">${ACStore.fmtFCFA(d.price)}</span>
-          ${inCart(d.id) ? UI.qtyControl(inCart(d.id), `Screens._cartQty('${d.id}',-1,'${r.id}')`, `Screens._cartQty('${d.id}',1,'${r.id}')`, true) : `<button type="button" onclick="Screens._addToCart('${r.id}','${d.id}')" class="btn btn-sm btn-primary !rounded-full">${icon("add", "text-[18px]")}${I18N.t("add")}</button>`}
+          ${paused ? `<span class="t-small text-ink-3">En pause</span>` : inCart(d.id) ? UI.qtyControl(inCart(d.id), `Screens._cartQty('${d.id}',-1,'${r.id}')`, `Screens._cartQty('${d.id}',1,'${r.id}')`, true) : `<button type="button" onclick="Screens._addToCart('${r.id}','${d.id}')" class="btn btn-sm btn-primary !rounded-full">${icon("add", "text-[18px]")}${I18N.t("add")}</button>`}
         </div></div></div>`;
     const menuHtml = Object.keys(groups).map((g) => `<div><h3 class="t-h3 mb-3">${g}</h3><div class="grid md:grid-cols-2 gap-3">${groups[g].map(dish).join("")}</div></div>`).join("");
     const reviewsHtml = `<div class="card p-5 flex flex-col sm:flex-row sm:items-center gap-5"><div class="text-center sm:text-left"><p class="t-display">${r.rating}</p>${UI.stars(r.rating)}<p class="t-small text-ink-2 mt-1">${r.reviews} avis</p></div>
@@ -96,7 +99,7 @@
     const tabs = [["menu", "Menu"], ["avis", "Avis (" + r.reviews + ")"], ["infos", "Infos"]];
     const body = `
       <section class="relative rounded-3xl overflow-hidden h-56 lg:h-80 bg-card-high">${UI.img(r.img, r.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-4 left-5 right-5 text-white"><div class="flex flex-wrap gap-2 mb-2"><span class="badge ${open ? "badge-success" : "badge-neutral"}">${open ? "Ouvert" : "Fermé"}</span>${r.tags.map((tg) => `<span class="badge bg-white/20 text-white">${tg}</span>`).join("")}</div>
+        <div class="absolute bottom-4 left-5 right-5 text-white"><div class="flex flex-wrap gap-2 mb-2"><span class="badge ${paused ? "badge-warn" : open ? "badge-success" : "badge-neutral"}">${paused ? "En pause" : open ? "Ouvert" : "Fermé"}</span>${r.tags.map((tg) => `<span class="badge bg-white/20 text-white">${tg}</span>`).join("")}</div>
           <h2 class="t-h1">${r.name}</h2><p class="t-body text-white/80 flex flex-wrap items-center gap-x-3 mt-1"><span>${icon("star", "text-gold text-[16px]", true)} ${r.rating} (${r.reviews})</span><span>${r.km} km</span><span>${r.time}</span><span>Livraison ${ACStore.fmtFCFA(r.fee)}</span></p></div>
         <button type="button" onclick="Screens._toggleFavorite('${r.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Favori">${icon("favorite", ACState.favorites.indexOf(r.id) >= 0 ? "text-danger" : "", ACState.favorites.indexOf(r.id) >= 0)}</button>
       </section>
@@ -141,7 +144,9 @@
 
   // Panier
   Screens._addToCart = function (restId, dishId) {
-    const r = YCData.restaurant(restId), d = r.menu.find((x) => x.id === dishId); if (!d) return;
+    if (isKitchenPaused(restId)) { UI.toast("Ce restaurant est en pause. Réessayez plus tard.", "info"); return; }
+    const r = YCData.restaurant(restId); if (!r) return;
+    const d = r.menu.find((x) => x.id === dishId); if (!d) return;
     if (ACState.cart.restaurant && ACState.cart.restaurant !== restId && ACState.cart.items.length) {
       UI.confirm({ title: "Remplacer le panier ?", body: "Votre panier contient des plats d'un autre restaurant. Voulez-vous le vider pour commander chez " + esc(r.name) + " ?", okLabel: "Vider et ajouter", icon: "shopping_bag", onOk: `ACState.cart.items=[];ACState.cart.restaurant=null;Screens._addToCart('${restId}','${dishId}')` });
       return;
@@ -163,7 +168,7 @@
   Screens.cartRestaurant = function (container) {
     const r = YCData.restaurant(ACState.cart.restaurant), items = ACState.cart.items;
     const sub = items.reduce((s, i) => s + i.price * i.qty, 0), fee = r ? r.fee : 0, service = items.length ? 200 : 0;
-    const body = !items.length || !r ? UI.emptyState({ icon: "shopping_bag", title: "Panier vide", body: "Ajoutez un plat pour commander. Vos restaurants préférés sont à portée de main.", actionLabel: "Voir les restaurants", actionOnclick: "App.resetTo('restaurants')" }) : `
+    const body = !items.length || !r ? UI.emptyState({ icon: "shopping_bag", title: "Panier vide", body: "Ajoutez un plat depuis la fiche du restaurant pour commander.", actionLabel: "Voir les restaurants", actionOnclick: "App.resetTo('restaurants')" }) : `
       <div class="grid lg:grid-cols-[1fr_380px] gap-6">
         <div class="space-y-4">
           <button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card p-3 flex items-center gap-3 w-full text-left"><span class="w-14 h-14 rounded-xl overflow-hidden bg-card-high">${UI.img(r.img, r.name)}</span><span class="flex-1 min-w-0"><span class="block t-title truncate">${r.name}</span><span class="block t-small text-ink-2">${r.cat} · ${r.time} · ${r.km} km</span></span><span class="t-small font-bold text-gold-deep dark:text-gold">Ajouter des plats</span></button>
@@ -220,6 +225,8 @@
   Screens._coMethod = (t) => { co.method = t; App.replace("checkoutRestaurant", { step: 1 }); };
   Screens._payRestaurant = function (total) {
     const r = YCData.restaurant(ACState.cart.restaurant);
+    if (!r) { UI.toast("Restaurant introuvable.", "error"); return; }
+    if (isKitchenPaused(r.id)) { UI.toast("Ce restaurant est en pause. Réessayez plus tard.", "info"); return; }
     const items = ACState.cart.items.slice();
     const addr = ACState.addresses.find((a) => a.id === co.address);
     ACStore.whenPaid(ACStore.pay({ amount: total, label: "Commande " + r.name, service: "restaurant", pointsEarned: Math.round(total / 100), method: co.method, activity: false }), function () {

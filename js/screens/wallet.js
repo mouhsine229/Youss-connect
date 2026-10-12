@@ -38,7 +38,7 @@
       <div class="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8 items-start min-w-0 max-w-full">
         <div class="space-y-4 lg:sticky lg:top-24 min-w-0 max-w-full">
           <section class="card-dark p-5 sm:p-6 min-w-0">
-            <div class="flex items-center justify-between gap-2"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white flex-shrink-0" aria-label="Masquer le solde">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
+            <div class="flex items-center justify-between gap-2"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white flex-shrink-0" aria-label="${wf.masked ? "Afficher le solde" : "Masquer le solde"}">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
             <p class="t-h1 sm:t-display mt-2 break-words leading-tight">${wf.masked ? "•••••• FCFA" : ACStore.fmtFCFA(ACState.wallet.balance)}</p>
             <p class="t-small text-white/70 mt-1 truncate">${esc(ACState.user.fullName)} · ${esc(ACState.user.phone)}</p>
             <p class="t-caption text-white/50 mt-4">30 derniers jours</p>
