@@ -21,7 +21,17 @@ Après une modification de `src/styles.css`, de `tailwind.config.js` ou de class
 
 ## Déploiement GitHub Pages
 
-Dépôt de publication : https://github.com/mouhsine229/Youss-connect — le site est à la racine de la branche `main` et GitHub Pages est configuré en « Deploy from a branch » (main, dossier `/`). Chaque push sur `main` redéploie https://mouhsine229.github.io/Youss-connect/ en une à deux minutes. Le fichier `.nojekyll` désactive le traitement Jekyll. Tout est statique : aucune étape de build n'est nécessaire côté GitHub.
+Dépôt : https://github.com/mouhsine229/Youss-connect  
+Site : https://mouhsine229.github.io/Youss-connect/
+
+GitHub Pages publie la branche **`gh-pages`**. Un workflow (`.github/workflows/gh-pages.yml`) copie `main` vers `gh-pages` à chaque push. Attendre 1–2 minutes, puis recharger sans cache.
+
+Liens internes (après déploiement) :
+
+- Console admin KYA : https://mouhsine229.github.io/Youss-connect/#/kya-ops  
+- Cuisine restaurant : https://mouhsine229.github.io/Youss-connect/#/pro/rejoindre?t=YC-PRO-MAMAN  
+
+Le fichier `.nojekyll` désactive Jekyll. Tout est statique : pas de build côté GitHub.
 
 ## Architecture
 

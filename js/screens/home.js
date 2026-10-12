@@ -104,7 +104,7 @@
             <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("business_center", "text-[24px]")}</span>
             <span class="min-w-0 flex-1"><span class="block t-title">Youss Business</span><span class="block t-small text-ink-2">Produits, commandes, stats</span></span>${icon("chevron_right", "text-ink-3")}
           </button>
-          <button type="button" onclick="Demo.openMenu()" class="hidden lg:flex w-full card p-4 text-left items-center gap-3 border-dashed">
+          <button type="button" onclick="Demo.openMenu()" class="flex w-full card p-4 text-left items-center gap-3 border-dashed">
             <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("play_circle", "text-[24px]")}</span>
             <span class="min-w-0 flex-1"><span class="block t-title">${I18N.t("demo_tour")}</span><span class="block t-small text-ink-2">Transport, restaurant, événement, commerce, culture</span></span>
           </button>
