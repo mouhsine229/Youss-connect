@@ -178,7 +178,7 @@
           <div class="flex items-center justify-between gap-3 mb-3"><p class="t-title">File du jour</p>${UI.primaryButton("Ajouter", "Screens._opsQueueForm()", { icon: "add", block: false, size: "sm" })}</div>
           ${queue.length ? queue.map((r) => `<div class="flex items-center justify-between gap-3 py-2.5 border-b border-line last:border-0"><div class="min-w-0"><p class="t-small font-semibold">${esc(r.title)}</p><p class="t-caption">${esc(r.meta)}</p></div>${delBtn("queue", r.id)}</div>`).join("") : emptyRow("File vide.")}
         </div>
-        <div class="card p-5"><p class="t-title mb-2">Rappel</p><p class="t-body text-ink-2">Wallet, Mobile Money et partenaires VTC sont en démo. Rien n'est branché sur une banque ou Yango / Gozem / inDrive.</p></div>
+        <div class="card p-5"><p class="t-title mb-2">Rappel</p><p class="t-body text-ink-2">Wallet, Mobile Money et partenaires VTC sont en démo. Rien n'est branché sur une banque ou WeDrive / Gozem / inDrive.</p></div>
       </div>`);
   };
   Screens._opsQueueForm = function () {

@@ -68,9 +68,9 @@
 
   // Titres de section
   function sectionTitle(title, action, onclick, sub) {
-    return `<div class="flex items-end justify-between gap-3 mb-3">
-      <div><h2 class="t-h2">${title}</h2>${sub ? `<p class="t-small text-ink-2 mt-0.5">${sub}</p>` : ""}</div>
-      ${action ? `<button type="button" onclick="${onclick}" class="t-small font-bold text-gold-deep dark:text-gold hover:underline whitespace-nowrap">${action}</button>` : ""}
+    return `<div class="flex items-end justify-between gap-3 mb-3 min-w-0">
+      <div class="min-w-0"><h2 class="t-h2 truncate">${title}</h2>${sub ? `<p class="t-small text-ink-2 mt-0.5 truncate">${sub}</p>` : ""}</div>
+      ${action ? `<button type="button" onclick="${onclick}" class="t-small font-bold text-gold-deep dark:text-gold hover:underline whitespace-nowrap flex-shrink-0">${action}</button>` : ""}
     </div>`;
   }
 

@@ -108,7 +108,7 @@
     const r = rest();
     const extra = ACState.kitchen.dishes || [];
     layout("proMenu", "Plats", `
-      <div class="card divide-y divide-line">${r.menu.map((d) => `<div class="p-3.5 flex items-center justify-between gap-3"><div class="min-w-0"><p class="t-title truncate">${esc(d.name)}</p><p class="t-small text-ink-2">${ACStore.fmtFCFA(d.price)} · ${esc(d.group)}</p></div><span class="t-caption">${d.opsAdd ? "Ajouté" : "Carte"}</span></div>`).join("")}</div>
+      <div class="card divide-y divide-line">${r.menu.map((d) => `<div class="p-3.5 flex items-center justify-between gap-3"><div class="min-w-0"><p class="t-title truncate">${esc(d.name)}</p><p class="t-small text-ink-2">${ACStore.fmtFCFA(d.price)} · ${esc(d.group)}</p></div>${d.opsAdd ? `<button type="button" onclick="Screens._proDelDish('${d.id}')" class="t-small text-danger font-semibold flex-shrink-0">Retirer</button>` : `<span class="t-caption">Carte</span>`}</div>`).join("")}</div>
       <div class="card p-4 space-y-3">
         <p class="t-title">Ajouter un plat</p>
         ${UI.field("pd-name", "Nom", { placeholder: "Ex. Amiwo au poulet" })}
@@ -125,6 +125,11 @@
     ACState.kitchen.dishes.push({ id: "pd_" + Date.now(), name, desc: "Ajouté par le restaurant", price, img: rest().img, group: document.getElementById("pd-group").value, opsAdd: true });
     ACStore.emit();
     UI.toast("Plat visible dans l'app client.", "success");
+  };
+  Screens._proDelDish = function (id) {
+    ACState.kitchen.dishes = (ACState.kitchen.dishes || []).filter((d) => d.id !== id);
+    ACStore.emit();
+    UI.toast("Plat retiré de la carte.", "info");
   };
 
   Screens.proHours = function () {
