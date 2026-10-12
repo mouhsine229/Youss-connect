@@ -459,7 +459,8 @@
   }
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const extraEvents = () => (window.ACState && ACState.content && ACState.content.events) || [];
-  const allEvents = () => extraEvents().concat(EVENTS);
+  const hiddenEvents = () => (window.ACState && ACState.content && ACState.content.ops && ACState.content.ops.hiddenEvents) || [];
+  const allEvents = () => extraEvents().concat(EVENTS.filter((e) => hiddenEvents().indexOf(e.id) < 0));
   const extraDishes = (restId) => {
     const k = window.ACState && ACState.kitchen;
     return k && k.restId === restId ? (k.dishes || []) : [];

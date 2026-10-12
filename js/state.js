@@ -23,7 +23,7 @@
     return {
       version: 2,
       session: { authenticated: false, onboardingSeen: false, mode: "particulier", remote: false },
-      content: { events: [] },
+      content: { events: [], ops: null },
       kitchen: { restId: "rest1", dishes: [], paused: false, ticket: [] },
       user: {
         name: "Alassane", fullName: "Alassane Koffi", phone: "+229 97 00 00 00", email: "alassane@example.com",
