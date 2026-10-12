@@ -1,5 +1,4 @@
 // Traductions. Le français est la référence, l'anglais est complet.
-// Fon et wolof ne couvrent que la navigation et les actions courantes, à faire relire par des locuteurs.
 // Une clé absente retombe sur le français.
 (function () {
   "use strict";
@@ -43,31 +42,18 @@
     conceptual: "Demo feature. Going live depends on the licences granted in each country."
   };
 
-  // Fon, partiel
-  const FON = {
-    nav_home: "Aigba", nav_explorer: "Kpɔ́n", nav_activities: "Azɔ lɛɛ", nav_wallet: "Wallet", nav_profile: "Nyɛ",
-    hello: "Nú mi", search: "Étɛ wè nɔ ɖi ?", nearby: "Ɖo nɔwiwa", recos: "Nú ɖó wè", upcoming: "Hunxwé lɛɛ", discover: "Kpɔ́n Afrika",
-    lang_title: "Gbè", lang_done: "Gbè : Fon", back: "Lɛkɔ", next: "Bɔ dó", confirm: "Yí gbè", cancel: "Jó dó"
-  };
-
-  // Wolof, partiel
-  const WO = {
-    nav_home: "Kër", nav_explorer: "Seet", nav_activities: "Jëf", nav_wallet: "Wallet", nav_profile: "Profil",
-    hello: "Salaam", search: "Looy wut ?", nearby: "Ci wetu", recos: "Ngir yaw", upcoming: "Ay eveneman", discover: "Xam Afrik",
-    lang_title: "Làkk", lang_done: "Làkk : Wolof", back: "Dellu", next: "Topp", confirm: "Dëggal", cancel: "Bàyyi"
-  };
-
-  const PACKS = { fr: FR, en: EN, fon: FON, wo: WO };
+  const PACKS = { fr: FR, en: EN };
   const LANGS = [
     { id: "fr", label: "Français", native: "Français", coverage: 100 },
-    { id: "en", label: "English", native: "English", coverage: 100 },
-    { id: "wo", label: "Wolof", native: "Wolof", coverage: 20, partial: true },
-    { id: "fon", label: "Fon", native: "Fɔngbè", coverage: 20, partial: true }
+    { id: "en", label: "English", native: "English", coverage: 100 }
   ];
 
   let current = "fr";
   try { current = localStorage.getItem("yc-lang") || "fr"; } catch (e) { /* navigation privée */ }
-  if (!PACKS[current]) current = "fr";
+  if (!PACKS[current]) {
+    current = "fr";
+    try { localStorage.setItem("yc-lang", "fr"); } catch (e) { /* no-op */ }
+  }
 
   function t(key) {
     const pack = PACKS[current] || FR;

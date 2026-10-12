@@ -39,7 +39,7 @@ Pas de bundler, pas de framework. Chaque fichier expose un objet global et `inde
 - `src/styles.css` : variables de design, thème clair/sombre et composants (`.btn`, `.card`, `.chip`, `.input`...). Compilé par Tailwind vers `css/app.css`.
 - `js/data.js` : pays, villes, restaurants et menus, produits, événements, sites culturels, chauffeurs, livreurs, récompenses, index de recherche.
 - `js/state.js` : l'état central et sa persistance. Session, utilisateur, wallet, points, adresses, paniers, commandes, billets, espace pro. Le paiement commun passe par `ACStore.pay()`.
-- `js/i18n.js` : français et anglais complets, fon et wolof partiels.
+- `js/i18n.js` : français et anglais.
 - `js/ui.js` : boutons, cartes, badges, formulaires, feuilles, toasts, états vides, squelettes.
 - `js/shell.js` : la mise en page. Barre latérale et en-tête sur desktop, en-tête et navigation basse sur mobile, sélecteur de ville.
 - `js/router.js` : routage par hash (`#/ecran?param=...`), bouton Retour, liens profonds comme `#/culture/<id>`, garde d'authentification.
@@ -74,4 +74,4 @@ Les états intermédiaires sont couverts : chargement, erreur, paiement en atten
 - Youss Wallet est conceptuel. Aucun flux financier, aucun partenaire engagé.
 - Le scanner culturel lit vraiment les QR Codes, mais la reconnaissance d'image est simulée.
 - Les itinéraires et les tuiles de carte demandent une connexion la première fois, ils sont mis en cache ensuite.
-- Le fon et le wolof ne couvrent que la navigation et les actions courantes, et restent à faire relire par des locuteurs.
+- L'interface est en français et en anglais.
