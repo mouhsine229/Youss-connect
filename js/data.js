@@ -458,6 +458,12 @@
       .sort((a, b) => a.dist - b.dist).slice(0, n || 4);
   }
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const extraEvents = () => (window.ACState && ACState.content && ACState.content.events) || [];
+  const allEvents = () => extraEvents().concat(EVENTS);
+  const extraDishes = (restId) => {
+    const k = window.ACState && ACState.kitchen;
+    return k && k.restId === restId ? (k.dishes || []) : [];
+  };
   const byId = (list, id) => list.find((x) => x.id === id);
   const fmtDate = (iso, opts) => {
     const d = new Date(iso + "T12:00:00");
@@ -477,7 +483,7 @@
       r.menu.forEach((d) => out.push({ kind: "plat", title: d.name, sub: r.name + " · " + r.city, icon: "lunch_dining", img: d.img, route: "restaurantDetail", params: { id: r.id, dish: d.id }, keys: [d.name, d.desc, r.name].join(" "), rating: r.rating, price: d.price, city: r.city, lat: r.lat, lng: r.lng }));
     });
     PRODUCTS.forEach((p) => out.push({ kind: "produit", title: p.name, sub: SELLERS[p.seller].name + " · " + p.cat, icon: "shopping_bag", img: p.img, route: "productDetail", params: { id: p.id }, keys: [p.name, p.cat, SELLERS[p.seller].name, p.desc].join(" "), rating: p.rating, price: p.price, city: SELLERS[p.seller].city, available: p.stock > 0 }));
-    EVENTS.forEach((e) => out.push({ kind: "evenement", title: e.name, sub: e.cat + " · " + e.city + " · " + fmtDateShort(e.date), icon: "confirmation_number", img: e.img, route: "eventDetail", params: { id: e.id }, keys: [e.name, e.cat, e.city, e.place, e.organizer].join(" "), rating: 4.8, price: minPrice(e), city: e.city, lat: e.lat, lng: e.lng }));
+    allEvents().forEach((e) => out.push({ kind: "evenement", title: e.name, sub: e.cat + " · " + e.city + " · " + fmtDateShort(e.date), icon: "confirmation_number", img: e.img, route: "eventDetail", params: { id: e.id }, keys: [e.name, e.cat, e.city, e.place, e.organizer].join(" "), rating: 4.8, price: minPrice(e), city: e.city, lat: e.lat, lng: e.lng }));
     SITES.forEach((s) => out.push({ kind: "lieu", title: s.name, sub: siteType(s.type).label + " · " + s.place, icon: siteType(s.type).icon, img: s.img, route: "cultureDetail", params: { id: s.id }, keys: [s.name, s.place, s.type, siteType(s.type).label, s.city, s.near || ""].join(" "), rating: 4.7, price: 0, city: s.city, lat: s.lat, lng: s.lng }));
     DESTINATIONS.forEach((c) => out.push({ kind: "destination", title: c, sub: CITIES[c].country + " · Destination", icon: "travel_explore", img: CITIES[c].hero, route: "destination", params: { city: c }, keys: [c, CITIES[c].country, "destination tourisme ville"].join(" "), rating: 4.9, price: 0, city: c }));
     [
@@ -516,10 +522,10 @@
     IMG, COUNTRIES, CITIES, DESTINATIONS, RESTAURANTS, RESTAURANT_CATS, SELLERS, PRODUCTS, PRODUCT_CATS,
     EVENTS, EVENT_CATS, SITE_TYPES, SITES, DRIVERS, COURIERS, REWARDS, TIERS,
     distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, siteType, search,
-    restaurant: (id) => byId(RESTAURANTS, id), product: (id) => byId(PRODUCTS, id), event: (id) => byId(EVENTS, id), site: (id) => byId(SITES, id),
+    restaurant: (id) => { const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r; }, product: (id) => byId(PRODUCTS, id), event: (id) => byId(allEvents(), id), site: (id) => byId(SITES, id), allEvents, extraDishes,
     seller: (id) => SELLERS[id], driverFor: (city, vehicle) => DRIVERS.find((d) => d.city === city && d.vehicle === vehicle) || DRIVERS.find((d) => d.city === city) || DRIVERS[0],
     courierFor: (city) => COURIERS.find((c) => c.city === city) || COURIERS[0],
-    restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => EVENTS.filter((e) => e.city === city || (CITIES[city] && e.country === CITIES[city].country)),
+    restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => allEvents().filter((e) => e.city === city || (CITIES[city] && e.country === CITIES[city].country)),
     sitesIn: (city) => SITES.filter((s) => s.city === city), productsBy: (sellerId) => PRODUCTS.filter((p) => p.seller === sellerId),
     tierFor: (points) => { let t = TIERS[0]; TIERS.forEach((x) => { if (points >= x.min) t = x; }); return t; },
     nextTier: (points) => TIERS.find((x) => x.min > points) || null

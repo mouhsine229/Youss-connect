@@ -10,7 +10,7 @@
 
   function list() {
     const q = YCData.norm(f.q);
-    return YCData.EVENTS.filter((e) => (f.cat === "Tous" || e.cat === f.cat) && (f.city === "Toutes" || e.city === f.city || e.country === (YCData.CITIES[f.city] || {}).country) && (!q || YCData.norm(e.name + " " + e.place + " " + e.city + " " + e.cat).includes(q)))
+    return YCData.allEvents().filter((e) => (f.cat === "Tous" || e.cat === f.cat) && (f.city === "Toutes" || e.city === f.city || e.country === (YCData.CITIES[f.city] || {}).country) && (!q || YCData.norm(e.name + " " + e.place + " " + e.city + " " + e.cat).includes(q)))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 

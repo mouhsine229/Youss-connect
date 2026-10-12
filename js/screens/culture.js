@@ -17,12 +17,12 @@
       <section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[200px] lg:min-h-[280px] flex items-end">
         ${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}<div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent"></div>
         <div class="relative p-5 lg:p-8 w-full flex flex-col lg:flex-row lg:items-end gap-4">
-          <div class="flex-1"><p class="t-caption text-gold">Culture & Tourisme</p><h2 class="t-h1 lg:t-display">${I18N.t("discover")}</h2><p class="t-body text-white/80 mt-1 max-w-[560px]">Monuments, palais, musées, sites historiques, traditions et activités culturelles à Cotonou, Dakar, Lomé et Accra.</p></div>
+          <div class="flex-1"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body text-white/80 mt-1 max-w-[560px]">Monuments, musées et sites à Cotonou, Dakar, Lomé et Accra.</p></div>
           <button type="button" onclick="App.nav('culturalScanner')" class="card-dark !bg-white/10 hover:!bg-white/15 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px]"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
         </div>
       </section>
-      <section>${UI.sectionTitle("Destinations", null, null, "Chaque ville a sa page : lieux, restaurants, événements, infos pratiques")}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div></section>
-      <section>${UI.sectionTitle("Près de vous", "Explorer autour", go("exploreAround", {}), "À " + esc(city))}<div class="grid sm:grid-cols-3 gap-3">${near.map((s) => UI.siteCard(s)).join("")}</div></section>
+      <section>${UI.sectionTitle("Villes")}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div></section>
+      <section>${UI.sectionTitle("Près de " + esc(city), "Carte", go("exploreAround", {}))}<div class="grid sm:grid-cols-3 gap-3">${near.map((s) => UI.siteCard(s)).join("")}</div></section>
       <section>${UI.sectionTitle("Monuments, musées et traditions")}
         <div class="flex flex-col lg:flex-row gap-3 mb-4">
           <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
@@ -30,7 +30,7 @@
         </div>
         ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuType('all');" })}
       </section>`;
-    Shell.render(container, { title: "Culture & Tourisme", subtitle: I18N.t("discover"), back: "App.nav('home')", body, nav: false, showNav: true });
+    Shell.render(container, { title: "Culture & tourisme", subtitle: esc(city), back: "App.nav('home')", body, nav: false, showNav: true });
   };
   Screens._cuType = (t) => { f.type = t; App.replace("culture"); };
   Screens._cuCity = (c) => { f.city = c; App.replace("culture"); };
@@ -78,7 +78,7 @@
     const tabContent = {
       overview: `<p class="t-body lg:text-[16px] lg:leading-[26px] text-ink-2">${s.body}</p>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">${[["history_edu", "Époque", s.epoch], ["location_on", "Lieu", s.place.split("·")[0]], ["schedule", "Horaires", s.visit.hours.split("(")[0]], ["payments", "Tarif", s.visit.price.split("(")[0]]].map((x) => `<div class="card p-3"><span class="text-gold">${icon(x[0], "text-[20px]")}</span><p class="t-caption text-ink-3 mt-1">${x[1]}</p><p class="t-small font-semibold">${x[2]}</p></div>`).join("")}</div>
-        <div class="mt-5"><h3 class="t-h3 mb-2">Importance culturelle</h3><p class="t-body text-ink-2">${s.importance}</p></div>`,
+        <div class="mt-5"><h3 class="t-h3 mb-2">Pourquoi c'est là</h3><p class="t-body text-ink-2">${s.importance}</p></div>`,
       history: `<div class="card-dark p-5"><p class="t-caption text-gold">${s.epoch}</p><p class="t-body lg:text-[16px] lg:leading-[27px] text-white/90 mt-2">${s.history}</p></div>
         <div class="mt-4 grid sm:grid-cols-2 gap-3">
           <button type="button" onclick="Screens._audioGuide('${s.id}')" class="card card-press p-4 flex items-center gap-3 text-left"><span id="audio-btn" class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("play_arrow", "text-[26px]", true)}</span><span><span class="block t-title">Audio-guide</span><span class="block t-small text-ink-2">Écouter l'histoire · 1 min</span></span></button>
@@ -110,7 +110,7 @@
             { icon: "directions_car", label: "Y aller en transport", sub: "Course vers " + esc(s.name.split(" ").slice(0, 3).join(" ")), onclick: `Screens._transportPreset({toLatLng:{name:${UI.js(s.name)},lat:${s.lat},lng:${s.lng}}});App.nav('transport')` },
             { icon: "confirmation_number", label: "Événements à " + esc(s.city), sub: "Concerts, festivals, spectacles", onclick: "App.nav('events')" },
             { icon: "travel_explore", label: "Destination " + esc(s.city), sub: "Page complète de la ville", onclick: go("destination", { city: s.city }) }
-          ], "Continuer l'expérience")}
+          ], "Autour de ce lieu")}
           <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Langue du contenu</p><div class="grid grid-cols-4 gap-2">${I18N.LANGS.map((l) => `<button type="button" onclick="UI.setLang('${l.id}')" class="chip justify-center ${I18N.lang === l.id ? "on" : ""}">${l.id.toUpperCase()}</button>`).join("")}</div><p class="t-small text-ink-3 mt-2">Fon et Wolof : traduction partielle de démonstration.</p></div>
         </aside>
       </div>`;

@@ -11,7 +11,7 @@
   let current = null;      // { id, params }
   let ignoreNextHash = false;
 
-  const AUTH_FREE = { splash: 1, onboarding: 1, login: 1, signup: 1, otp: 1, forgotPassword: 1, about: 1 };
+  const AUTH_FREE = { splash: 1, onboarding: 1, login: 1, signup: 1, otp: 1, forgotPassword: 1, about: 1, opsLogin: 1, opsOtp: 1, proJoin: 1, proLogin: 1 };
 
   function encode(id, params) {
     const q = new URLSearchParams();
@@ -28,6 +28,9 @@
     const [path, query] = h.split("?");
     const params = {};
     new URLSearchParams(query || "").forEach((v, k) => { params[k] = v; });
+    if (path === "kya-ops" || path === "ops") return { id: (window.YCGate && YCGate.ops && YCGate.ops()) ? "opsHome" : "opsLogin", params };
+    if (path === "pro/rejoindre") return { id: "proJoin", params };
+    if (path === "pro") return { id: (window.YCGate && YCGate.pro && YCGate.pro()) ? "proHome" : "proLogin", params };
     return { id: path, params };
   }
 
@@ -38,8 +41,13 @@
       container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(id)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
       return;
     }
-    if (!AUTH_FREE[id] && !ACState.session.authenticated) {
-      /* Lien profond avant connexion : on mémorise la cible */
+    const opsScreen = id.indexOf("ops") === 0;
+    const proScreen = id.indexOf("pro") === 0;
+    if (opsScreen && id !== "opsLogin" && id !== "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops())) {
+      id = "opsLogin"; params = {};
+    } else if (proScreen && id !== "proJoin" && id !== "proLogin" && !(window.YCGate && YCGate.pro && YCGate.pro())) {
+      id = "proLogin"; params = {};
+    } else if (!opsScreen && !proScreen && !AUTH_FREE[id] && !ACState.session.authenticated) {
       sessionStorage.setItem("yc-after-login", encode(id, params));
       id = ACState.session.onboardingSeen ? "login" : "onboarding"; params = {};
     }
@@ -52,7 +60,7 @@
     document.title = (id === "splash" ? "" : (titleFor(id) + " · ")) + "YOUSS CONNECT";
   }
   function titleFor(id) {
-    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business" };
+    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", opsHome: "Console KYA", opsLogin: "Console KYA", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Invitation resto" };
     return map[id] || id.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
   }
 
@@ -137,6 +145,7 @@
     const timeout = new Promise((resolve) => setTimeout(resolve, 2500));
     Promise.race([boot, timeout]).then(function () {
       const d = decode(location.hash);
+      if (d && (String(d.id).indexOf("ops") === 0 || String(d.id).indexOf("pro") === 0) && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && ACState.session.authenticated && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && !ACState.session.authenticated && window.Screens[d.id]) sessionStorage.setItem("yc-after-login", location.hash);
       replace("splash", {});

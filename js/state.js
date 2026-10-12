@@ -23,6 +23,8 @@
     return {
       version: 2,
       session: { authenticated: false, onboardingSeen: false, mode: "particulier", remote: false },
+      content: { events: [] },
+      kitchen: { restId: "rest1", dishes: [], paused: false, ticket: [] },
       user: {
         name: "Alassane", fullName: "Alassane Koffi", phone: "+229 97 00 00 00", email: "alassane@example.com",
         city: "Cotonou", country: "Bénin", countryCode: "BJ", dial: "+229", avatar: IMG + "avatars/avatar-alassane.jpg", verified: true, since: "2025"
@@ -52,7 +54,7 @@
         { id: "addr_work", label: "Travail", detail: "Ganhi, avenue Clozel, Cotonou", icon: "work", lat: 6.3600, lng: 2.4290 }
       ],
       paymentMethods: [
-        { id: "pm_wallet", type: "wallet", label: "Youss Wallet", sub: "Solde de l'écosystème", icon: "account_balance_wallet", isDefault: true },
+        { id: "pm_wallet", type: "wallet", label: "Youss Wallet", sub: "Solde de démo", icon: "account_balance_wallet", isDefault: true },
         { id: "pm_mobile", type: "mobile", label: "Paiement mobile", sub: "Conceptuel · opérateur à définir", icon: "smartphone" },
         { id: "pm_cash", type: "cash", label: "Espèces", sub: "À la livraison ou au chauffeur", icon: "payments" }
       ],

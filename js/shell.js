@@ -30,7 +30,7 @@
     { id: "rewards", label: "nav_rewards", icon: "workspace_premium" },
     { id: "business", label: "nav_business", icon: "business_center" },
     { id: "myTickets", label: "nav_tickets", icon: "qr_code_2" },
-    { id: "about", label: "nav_about", icon: "auto_awesome" }
+    { id: "about", label: "nav_about", icon: "info" }
   ];
 
   /* L'onglet « actif » de la barre latérale dépend de la section courante */
@@ -69,7 +69,7 @@
       <div class="mt-auto pt-6 space-y-3">
         <button type="button" onclick="Shell.openDemoMenu()" class="w-full card-dark p-3.5 text-left flex items-center gap-3 hover:opacity-95">
           <span class="w-9 h-9 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("play_arrow", "text-[22px]", true)}</span>
-          <span class="min-w-0"><span class="block t-title">${t("demo_tour")}</span><span class="block t-small text-white/70 truncate">5 parcours reliés</span></span>
+          <span class="min-w-0"><span class="block t-title">${t("demo_tour")}</span><span class="block t-small text-white/70 truncate">5 parcours</span></span>
         </button>
         <button type="button" onclick="App.nav('profile')" class="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-surface-low text-left">
           ${UI.avatar(user, "w-10 h-10")}
@@ -141,7 +141,7 @@
     } else {
       const wrap = o.fill
         ? `<main id="main" class="flex-1 min-h-0 flex flex-col relative screen-enter">${o.body}</main>`
-        : `<main id="main" class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden screen-enter"><div class="${o.narrow ? "max-w-narrow" : "max-w-content"} mx-auto w-full min-w-0 max-w-full px-5 lg:px-10 py-5 lg:py-8 space-y-6 lg:space-y-8 pb-10">${o.body}</div></main>`;
+        : `<main id="main" class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden screen-enter"><div class="${o.narrow ? "max-w-narrow" : "max-w-content"} mx-auto w-full min-w-0 max-w-full px-4 sm:px-5 lg:px-10 py-5 lg:py-8 space-y-6 lg:space-y-8 pb-10">${o.body}</div></main>`;
       container.innerHTML = `<div class="lg:flex min-h-dvh">
         ${sidebar(active)}
         <div class="flex-1 min-w-0 flex flex-col h-dvh">
@@ -156,7 +156,7 @@
 
   /* ---------- Sélecteur de ville (change la base de tous les services) ---------- */
   function openCityPicker() {
-    UI.openSheet(`<h3 class="t-h3 mb-1">${t("your_city")}</h3><p class="t-small text-ink-2 mb-4">Les services, la carte et les suggestions s'adaptent à la ville choisie.</p>
+    UI.openSheet(`<h3 class="t-h3 mb-1">${t("your_city")}</h3><p class="t-small text-ink-2 mb-4">Change la ville des restos, des courses et de la carte.</p>
       <div class="grid grid-cols-2 gap-3">${YCData.DESTINATIONS.map((c) => {
         const city = YCData.CITIES[c]; const on = ACState.user.city === c;
         return `<button type="button" onclick="Shell.pickCity('${c}')" class="relative h-28 rounded-2xl overflow-hidden text-left ${on ? "ring-2 ring-gold" : ""}">

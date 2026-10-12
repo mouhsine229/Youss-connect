@@ -330,6 +330,8 @@
       <section>${UI.sectionTitle("Quatre villes de démonstration")}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div>
       </section>
+      <section class="card p-5 lg:p-6"><p class="t-caption">Espaces internes (démo)</p><p class="t-small text-ink-2 mt-1">Pas dans le menu client. Console KYA : #/kya-ops · Cuisine resto : invitation YC-PRO-MAMAN.</p>
+        <div class="flex flex-wrap gap-2 mt-3">${UI.button("Console KYA", "App.nav('opsLogin')", { variant: "dark", block: false, size: "sm" })}${UI.button("Cuisine restaurant", "App.nav('proJoin',{t:'YC-PRO-MAMAN'})", { variant: "outline", block: false, size: "sm" })}</div></section>
       <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Une seule application pour vivre l'Afrique au quotidien.</p><p class="t-small text-ink-3 mt-3">Maquette interactive — données fictives. Aucune banque, opérateur ou entreprise n'est présenté comme partenaire officiel.</p></section>`;
     if (!ACState.session.authenticated) {
       container.innerHTML = `<div class="min-h-dvh"><header class="sticky top-0 z-30 bg-surface/90 backdrop-blur border-b border-line"><div class="max-w-content mx-auto px-5 lg:px-10 h-16 flex items-center justify-between"><button type="button" onclick="App.back()" class="icon-btn" aria-label="Retour">${icon("arrow_back")}</button><span class="font-extrabold tracking-tight">YOUSS CONNECT</span>${UI.primaryButton(I18N.t("login"), "App.nav('login')", { block: false, size: "sm" })}</div></header><main class="max-w-content mx-auto px-5 lg:px-10 py-6 lg:py-10 space-y-8">${body}</main></div>`;

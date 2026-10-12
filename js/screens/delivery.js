@@ -44,7 +44,7 @@
     const body = `
       <div class="grid lg:grid-cols-[1fr_380px] gap-6">
         <div class="space-y-5">
-          <section><p class="t-caption text-ink-3 mb-2">Que souhaitez-vous faire livrer ?</p>
+          <section><p class="t-caption mb-2">Type d'envoi</p>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">${CATS.map((c) => `<button type="button" onclick="Screens._dlCat('${c.id}')" class="rounded-2xl border p-3.5 text-left transition-colors ${parcel.cat === c.id ? "border-gold bg-gold/10" : "border-line bg-card hover:bg-surface-low"}" aria-pressed="${parcel.cat === c.id}">
               <span class="w-10 h-10 rounded-xl ${parcel.cat === c.id ? "bg-gold text-[#0A0A0A]" : "bg-surface-low"} flex items-center justify-center mb-2">${icon(c.icon, "text-[22px]")}</span><span class="block t-title">${c.label}</span><span class="block t-small text-ink-2">${c.hint}</span></button>`).join("")}</div>
           </section>

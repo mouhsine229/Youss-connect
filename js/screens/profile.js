@@ -20,7 +20,7 @@
             <div class="mt-5 space-y-2.5 t-small">${[["call", u.phone], ["mail", u.email], ["flag", u.country], ["location_city", u.city]].map((x) => `<p class="flex items-center gap-2.5"><span class="text-ink-3">${icon(x[0], "text-[18px]")}</span><span class="truncate">${esc(x[1])}</span></p>`).join("")}</div>
             <div class="grid grid-cols-3 gap-2 mt-5 text-center">${[["Courses", counts.rides, "activities", { f: "transport" }], ["Commandes", counts.orders, "activities", { f: "restaurant" }], ["Billets", counts.tickets, "myTickets", {}]].map((s) => `<button type="button" onclick="${go(s[2], s[3])}" class="rounded-xl bg-surface-low p-3 hover:bg-card-high"><p class="t-h3">${s[1]}</p><p class="t-caption text-ink-3">${s[0]}</p></button>`).join("")}</div>
           </section>
-          <button type="button" onclick="App.nav('rewards')" class="w-full card-dark p-5 text-left relative overflow-hidden"><span class="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-gold/25 blur-2xl"></span><p class="t-caption text-gold">Youss Bonus · niveau ${tier.id}</p><p class="t-h1 mt-1">${pts.toLocaleString("fr-FR")} pts</p><p class="t-small text-white/70 mt-1">${YCData.nextTier(pts) ? (YCData.nextTier(pts).min - pts).toLocaleString("fr-FR") + " pts avant " + YCData.nextTier(pts).id : "Niveau maximum"}</p></button>
+          <button type="button" onclick="App.nav('rewards')" class="w-full card-dark p-5 text-left"><p class="t-caption text-gold">Youss Bonus · niveau ${tier.id}</p><p class="t-h1 mt-1">${pts.toLocaleString("fr-FR")} pts</p><p class="t-small text-white/70 mt-1">${YCData.nextTier(pts) ? (YCData.nextTier(pts).min - pts).toLocaleString("fr-FR") + " pts avant " + YCData.nextTier(pts).id : "Niveau maximum"}</p></button>
         </div>
         <div class="space-y-5">
           <section><p class="t-caption text-ink-3 mb-2">Mon compte</p><div class="grid sm:grid-cols-2 gap-2.5">
@@ -29,13 +29,13 @@
           <section><p class="t-caption text-ink-3 mb-2">Réglages</p><div class="grid sm:grid-cols-2 gap-2.5">
             ${menuRow("security", I18N.t("security"), "App.nav('security')")}${menuRow("language", "Langues", "App.nav('languages')", { sub: (I18N.LANGS.find((l) => l.id === I18N.lang) || {}).label })}${menuRow("notifications", "Notifications", "App.nav('notificationPrefs')")}${menuRow(ACState.prefs.theme === "dark" ? "dark_mode" : "light_mode", I18N.t("theme"), "Screens._toggleTheme()", { sub: ACState.prefs.theme === "dark" ? I18N.t("theme_dark") : I18N.t("theme_light"), right: UI.toggle(ACState.prefs.theme === "dark", "event.stopPropagation();Screens._toggleTheme()", "Thème sombre") })}${menuRow("help", I18N.t("help"), "App.nav('help')")}${menuRow("settings", I18N.t("settings"), "App.nav('settings')")}</div></section>
           ${menuRow("logout", I18N.t("logout"), "Screens._logout()", { danger: true })}
-          <p class="t-caption text-ink-3 text-center">YOUSS CONNECT v2.0 · Portée par KYA CORPORATION</p>
+          <p class="t-caption text-center">YOUSS CONNECT v2.0 · KYA CORPORATION</p>
         </div>
       </div>`;
     Shell.render(container, { title: I18N.t("nav_profile"), subtitle: esc(u.fullName), body, nav: "profile" });
   };
   Screens._toggleTheme = () => { UI.setTheme(ACState.prefs.theme === "dark" ? "light" : "dark"); };
-  Screens._logout = () => UI.confirm({ title: "Se déconnecter ?", body: "Vous devrez vous reconnecter pour accéder à nouveau à YOUSS CONNECT. Vos données de démonstration sont conservées sur cet appareil.", okLabel: I18N.t("logout"), danger: true, icon: "logout", onOk: "Screens._confirmLogout()" });
+  Screens._logout = () => UI.confirm({ title: "Se déconnecter ?", body: "Les données de démo restent sur cet appareil.", okLabel: I18N.t("logout"), danger: true, icon: "logout", onOk: "Screens._confirmLogout()" });
   Screens._confirmLogout = () => { const done = () => { ACState.session.authenticated = false; ACStore.emit(); App.resetTo("login"); }; if (window.YCBackend) YCBackend.signOut().then(done, done); else done(); };
 
   /* ---------- Édition ---------- */
@@ -125,7 +125,7 @@
         ${menuRow("support_agent", "Assistance", "App.nav('help')", { sub: "Centre d'aide 24h/24" })}
         ${menuRow("sos", "SOS", "App.nav('sos')", { sub: "Alerte immédiate avec partage de position", danger: true })}
       </div></div>`;
-    Shell.render(container, { title: I18N.t("security"), subtitle: "Sécurité et confiance", back: true, body, nav: false, showNav: true });
+    Shell.render(container, { title: I18N.t("security"), subtitle: "PIN, biométrie, appareils", back: true, body, nav: false, showNav: true });
   };
   Screens._toggleBio = () => { ACState.prefs.biometric = ACState.prefs.biometric === false; ACStore.emit(); UI.toast("Biométrie " + (ACState.prefs.biometric === false ? "désactivée" : "activée") + ".", "success"); };
   Screens.verifyAccount = function (container) {
@@ -157,18 +157,18 @@
   Screens.languages = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="space-y-2.5">${I18N.LANGS.map((l) => { const on = I18N.lang === l.id; return `<button type="button" onclick="UI.setLang('${l.id}')" class="w-full card p-4 flex items-center gap-3 text-left ${on ? "ring-2 ring-gold" : ""}"><span class="menu-icon font-extrabold text-[13px]">${l.id.toUpperCase()}</span><span class="flex-1 min-w-0"><span class="t-title flex items-center gap-2">${l.label}${l.partial ? UI.badge("Partiel · démo", "warn") : ""}</span><span class="block t-small text-ink-2">${l.native} · interface traduite à ${l.coverage} %</span></span>${on ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`; }).join("")}</div>
-      <div class="card p-5"><p class="t-title">Autres langues africaines</p><p class="t-small text-ink-2 mt-1">L'architecture prévoit l'ajout progressif d'autres langues (yoruba, éwé, twi, haoussa, lingala…). Les traductions fon et wolof sont des exemples à valider par des locuteurs.</p><div class="flex flex-wrap gap-2 mt-3">${["Yoruba", "Éwé", "Twi", "Haoussa", "Bambara", "Lingala"].map((l) => `<span class="chip">${l} · bientôt</span>`).join("")}</div>${UI.secondaryButton("Proposer une langue ou contribuer", "UI.toast('Merci ! Votre proposition a été transmise à KYA CORPORATION.','success')", { icon: "translate", cls: "mt-4" })}</div></div>`;
+      <div class="card p-5"><p class="t-title">Autres langues</p><p class="t-small text-ink-2 mt-1">Fon et wolof sont des extraits de démo, à relire avec des locuteurs. Yoruba, éwé, twi, haoussa, lingala : pas encore.</p><div class="flex flex-wrap gap-2 mt-3">${["Yoruba", "Éwé", "Twi", "Haoussa", "Bambara", "Lingala"].map((l) => `<span class="chip">${l} · bientôt</span>`).join("")}</div>${UI.secondaryButton("Proposer une langue ou contribuer", "UI.toast('Merci ! Votre proposition a été transmise à KYA CORPORATION.','success')", { icon: "translate", cls: "mt-4" })}</div></div>`;
     Shell.render(container, { title: "Langues", subtitle: "Français · English · Wolof · Fon", back: true, body, nav: false, showNav: true });
   };
 
   /* ---------- Aide ---------- */
   Screens.help = function (container) {
-    const faq = [["Comment payer une course ?", "Choisissez Youss Wallet, espèces ou paiement mobile lors de la confirmation. Le prix est fixe, calculé sur l'itinéraire."], ["Où retrouver mes billets ?", "Dans Profil → Mes billets, ou depuis la fiche de l'événement. Chaque billet a un QR Code à présenter à l'entrée."], ["Comment fonctionne Youss Bonus ?", "Chaque course, commande, achat ou billet crédite des points échangeables contre des récompenses."], ["Youss Wallet est-il un vrai portefeuille ?", "Dans cette maquette, Youss Wallet est conceptuel. Son déploiement réel dépend des autorisations réglementaires et de partenariats financiers."], ["Comment devenir vendeur ?", "Ouvrez Youss Business, créez votre profil professionnel et publiez vos produits ou services."]];
+    const faq = [["Comment payer une course ?", "Wallet, espèces ou paiement mobile, au moment de confirmer. Le prix vient de l'itinéraire."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Course, commande, achat ou billet : vous gagnez des points. Vous les échangez ensuite."], ["Le wallet est-il réel ?", "Non, c'est de la démo. Un vrai lancement dépendrait des licences du pays."], ["Vendre sur l'app ?", "Ouvrez Youss Business, remplissez le profil, ajoutez des produits ou des prestations."]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="grid grid-cols-2 gap-3">${[["chat", "Chat avec l'assistance", "Réponse en quelques minutes", "UI.toast('Un conseiller vous répond dans quelques instants (démo).','success')"], ["call", "Appeler", "Du lundi au samedi, 8h – 20h", "UI.toast('Appel du support (démo).','info')"], ["play_circle", I18N.t("demo_tour"), "5 parcours guidés", "Demo.openMenu()"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]].map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
       <section><p class="t-caption text-ink-3 mb-2">Questions fréquentes</p><div class="card divide-y divide-line">${faq.map((q, i) => `<details class="group"><summary class="flex items-center justify-between gap-3 p-4 cursor-pointer list-none t-title">${q[0]}${icon("expand_more", "text-ink-3 transition-transform group-open:rotate-180")}</summary><p class="px-4 pb-4 t-body text-ink-2">${q[1]}</p></details>`).join("")}</div></section>
-      <div class="card p-5"><p class="t-caption text-ink-3">À propos</p><p class="t-title mt-1">YOUSS CONNECT · version 2.0 (maquette)</p><p class="t-small text-ink-2 mt-1">Une seule application pour vivre l'Afrique au quotidien. Portée par KYA CORPORATION. Données de démonstration · aucun partenaire officiel.</p><div class="flex gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "UI.toast('CGU disponibles dans la version finale.','info')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
-    Shell.render(container, { title: I18N.t("help"), subtitle: "Assistance YOUSS CONNECT", back: true, body, nav: false, showNav: true });
+      <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT v2.0</p><p class="t-small text-ink-2 mt-1">Maquette KYA CORPORATION. Données fictives, aucun partenaire officiel.</p><div class="flex gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "UI.toast('CGU disponibles dans la version finale.','info')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
+    Shell.render(container, { title: I18N.t("help"), subtitle: "FAQ et contact", back: true, body, nav: false, showNav: true });
   };
 
   /* ---------- Paramètres ---------- */

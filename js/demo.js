@@ -56,7 +56,7 @@
       id: "culture", label: "Parcours Culture", icon: "account_balance", sub: "Explorer → Culture → Destination → Monument → Scanner → Résultat → À proximité",
       steps: [
         { screen: "explorer", hint: "Le moteur de découverte de YOUSS CONNECT." },
-        { screen: "culture", hint: "Découvrez l'Afrique : destinations, monuments, traditions." },
+        { screen: "culture", hint: "Destinations, monuments, visites." },
         { screen: "destination", params: { city: "Cotonou" }, hint: "Page destination : lieux, restaurants, événements, infos pratiques." },
         { screen: "cultureDetail", params: { id: "c3" }, hint: "Fiche du monument : histoire, visite, audio-guide." },
         { screen: "culturalScanner", hint: "Scanner culturel : caméra ou mode démo." },
@@ -90,7 +90,7 @@
   function prev() { if (active && active.index > 0) goStep(active.index - 1); }
   function stop(done) {
     active = null;
-    if (done) UI.toast("Parcours terminé. Les services sont reliés par un seul écosystème.", "success");
+    if (done) UI.toast("Parcours terminé.", "success");
     if (App.current) App.replace(App.current.id, App.current.params);
   }
 
@@ -117,7 +117,7 @@
 
   function openMenu() {
     UI.openSheet(`<h3 class="t-h3 mb-1">${I18N.t("demo_tour")}</h3>
-      <p class="t-small text-ink-2 mb-4">Pour une présentation : chaque parcours enchaîne les écrans réels et prépare les données nécessaires.</p>
+      <p class="t-small text-ink-2 mb-4">Chaque parcours ouvre les vrais écrans, avec les données déjà remplies.</p>
       <div class="space-y-2">${TOURS.map((tr) => `<button type="button" onclick="Demo.start('${tr.id}')" class="menu-row">
         <span class="flex items-center gap-3 min-w-0"><span class="menu-icon">${UI.icon(tr.icon)}</span><span class="min-w-0"><span class="block t-title">${tr.label}</span><span class="block t-small text-ink-2 truncate">${tr.sub}</span></span></span>${UI.icon("play_circle", "text-gold flex-shrink-0")}
       </button>`).join("")}</div>`);

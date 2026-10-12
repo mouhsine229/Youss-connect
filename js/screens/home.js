@@ -6,12 +6,12 @@
   const IMG = YCData.IMG;
 
   const SERVICES = [
-    { id: "transport", label: "svc_transport", icon: "directions_car", img: IMG + "services/svc-transport.jpg", sub: "Course en 2 min" },
-    { id: "delivery", label: "svc_delivery", icon: "local_shipping", img: IMG + "services/svc-delivery.jpg", sub: "Colis, repas, documents" },
-    { id: "restaurants", label: "svc_restaurants", icon: "restaurant", img: IMG + "food/rest-maman-benin.jpg", sub: "Commandez, suivez" },
-    { id: "events", label: "svc_events", icon: "confirmation_number", img: IMG + "services/svc-events.jpg", sub: "Billets avec QR Code" },
-    { id: "market", label: "svc_market", icon: "storefront", img: IMG + "services/svc-market.jpg", sub: "Produits locaux" },
-    { id: "culture", label: "svc_culture", icon: "account_balance", img: IMG + "places/site-amazone.jpg", sub: "Scanner un monument" }
+    { id: "transport", label: "svc_transport", icon: "directions_car", img: IMG + "services/svc-transport.jpg", sub: "Voiture ou moto" },
+    { id: "delivery", label: "svc_delivery", icon: "local_shipping", img: IMG + "services/svc-delivery.jpg", sub: "Colis et repas" },
+    { id: "restaurants", label: "svc_restaurants", icon: "restaurant", img: IMG + "food/rest-maman-benin.jpg", sub: "Menu et livraison" },
+    { id: "events", label: "svc_events", icon: "confirmation_number", img: IMG + "services/svc-events.jpg", sub: "Billets QR" },
+    { id: "market", label: "svc_market", icon: "storefront", img: IMG + "services/svc-market.jpg", sub: "Artisanat, produits" },
+    { id: "culture", label: "svc_culture", icon: "account_balance", img: IMG + "places/site-amazone.jpg", sub: "Sites et visites" }
   ];
 
   function serviceCard(s) {
@@ -26,26 +26,24 @@
   function recommendations() {
     const city = ACState.user.city;
     const recos = [];
-    const lastRest = ACState.activities.find((a) => a.service === "restaurant");
     const rest = YCData.restaurantsIn(city)[0];
-    if (rest) recos.push({ icon: "restaurant", img: rest.img, title: lastRest ? "Recommander chez " + rest.name : rest.name, sub: rest.cat + " · " + rest.time, onclick: go("restaurantDetail", { id: rest.id }) });
+    if (rest) recos.push({ icon: "restaurant", img: rest.img, title: rest.name, sub: rest.cat + " · " + rest.time, onclick: go("restaurantDetail", { id: rest.id }) });
     const ticket = ACState.tickets[0];
-    if (ticket) recos.push({ icon: "directions_car", img: ticket.img, title: "Course vers " + ticket.place.split(",")[0], sub: "Billet " + YCData.fmtDateShort(ticket.date) + " · arrivez à l'heure", onclick: `Screens._transportPreset({toName:${UI.js(ticket.place)}});App.nav('transport')` });
+    if (ticket) recos.push({ icon: "directions_car", img: ticket.img, title: "Course vers " + ticket.place.split(",")[0], sub: "Billet " + YCData.fmtDateShort(ticket.date), onclick: `Screens._transportPreset({toName:${UI.js(ticket.place)}});App.nav('transport')` });
     const site = YCData.sitesIn(city)[0];
     if (site) recos.push({ icon: "qr_code_scanner", img: site.img, title: "Scanner " + site.name, sub: "Histoire, audio-guide, lieux à proximité", onclick: go("culturalScanner") });
     const prod = YCData.PRODUCTS.find((p) => p.old);
-    if (prod) recos.push({ icon: "storefront", img: prod.img, title: prod.name, sub: "Offre Youss Market · " + ACStore.fmtFCFA(prod.price), onclick: go("productDetail", { id: prod.id }) });
+    if (prod) recos.push({ icon: "storefront", img: prod.img, title: prod.name, sub: ACStore.fmtFCFA(prod.price), onclick: go("productDetail", { id: prod.id }) });
     return recos.slice(0, 4);
   }
 
   Screens.home = function (container) {
     const city = ACState.user.city;
-    const cityData = YCData.cityOf(city);
     const nearbyList = []
       .concat(YCData.restaurantsIn(city).slice(0, 2).map((r) => ({ img: r.img, title: r.name, meta: "Restaurant · " + r.km + " km · " + r.rating + " ★", onclick: go("restaurantDetail", { id: r.id }) })))
       .concat(YCData.sitesIn(city).slice(0, 1).map((s) => ({ img: s.img, title: s.name, meta: YCData.siteType(s.type).label + " · " + s.place, onclick: go("cultureDetail", { id: s.id }) })))
       .concat(YCData.eventsIn(city).slice(0, 1).map((e) => ({ img: e.img, title: e.name, meta: "Événement · " + YCData.fmtDateShort(e.date), onclick: go("eventDetail", { id: e.id }) })));
-    const events = YCData.EVENTS.slice().sort((a, b) => a.date.localeCompare(b.date)).filter((e) => e.date >= "2026-10-07").slice(0, 4);
+    const events = YCData.allEvents().slice().sort((a, b) => a.date.localeCompare(b.date)).filter((e) => e.date >= "2026-10-07").slice(0, 4);
     const recos = recommendations();
     const active = ACState.orders.filter((o) => !ACStore.orderStep(o).done)[0];
 
@@ -63,18 +61,18 @@
       <section class="grid lg:grid-cols-[1fr_340px] gap-6 lg:gap-8">
         <div class="space-y-6 lg:space-y-8 min-w-0">
           <div>
-            <div class="hidden lg:block mb-4"><h2 class="t-h1">Que souhaitez-vous faire aujourd'hui ?</h2><p class="t-body text-ink-2 mt-1">${esc(cityData.tagline)}</p></div>
+            <div class="hidden lg:block mb-4"><h2 class="t-h1">Services</h2><p class="t-body text-ink-2 mt-1">${esc(city)}</p></div>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3 lg:gap-4">${SERVICES.map(serviceCard).join("")}</div>
           </div>
 
-          <div>${UI.sectionTitle(I18N.t("nearby"), I18N.t("see_all"), go("explorer", { near: 1 }), "Autour de vous à " + esc(city))}
+          <div>${UI.sectionTitle(I18N.t("nearby"), I18N.t("see_all"), go("explorer", { near: 1 }))}
             <div class="grid sm:grid-cols-2 gap-3">${nearbyList.map((n) => `<button type="button" onclick="${n.onclick}" class="card card-press p-2.5 flex items-center gap-3 text-left">
               <span class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-card-high">${UI.img(n.img, n.title)}</span>
               <span class="min-w-0 flex-1"><span class="block t-title truncate">${n.title}</span><span class="block t-small text-ink-2 truncate">${n.meta}</span></span>${icon("chevron_right", "text-ink-3")}
             </button>`).join("")}</div>
           </div>
 
-          <div>${UI.sectionTitle(I18N.t("recos"), null, null, "Selon vos habitudes et votre ville")}
+          <div>${UI.sectionTitle(I18N.t("recos"))}
             <div class="hscroll lg:grid lg:grid-cols-2 xl:grid-cols-4 gap-3">${recos.map((r) => `<button type="button" onclick="${r.onclick}" class="card card-press overflow-hidden text-left w-[230px] lg:w-auto">
               <span class="block h-24 lg:h-28 bg-card-high relative">${UI.img(r.img, "")}<span class="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/95 text-ink flex items-center justify-center">${icon(r.icon, "text-[18px]")}</span></span>
               <span class="block p-3"><span class="block t-title truncate">${r.title}</span><span class="block t-small text-ink-2 truncate">${r.sub}</span></span>
@@ -85,17 +83,16 @@
             <div class="hscroll lg:grid lg:grid-cols-2 gap-3 lg:gap-4">${events.map((e) => UI.eventCard(e, true)).join("")}</div>
           </div>
 
-          <div>${UI.sectionTitle(I18N.t("discover"), I18N.t("explore"), "App.nav('culture')", "Destinations, monuments et expériences culturelles")}
+          <div>${UI.sectionTitle(I18N.t("discover"), I18N.t("explore"), "App.nav('culture')")}
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, false)).join("")}</div>
           </div>
         </div>
 
         <!-- Colonne latérale desktop : Wallet, Bonus, Business -->
         <aside class="space-y-4 lg:sticky lg:top-24 self-start">
-          <button type="button" onclick="App.nav('wallet')" class="w-full card-dark p-5 text-left relative overflow-hidden">
-            <span class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-gold/20 blur-2xl"></span>
+          <button type="button" onclick="App.nav('wallet')" class="w-full card-dark p-5 text-left">
             <span class="t-caption text-gold">${I18N.t("wallet")}</span>
-            <span class="block t-h1 mt-1">${ACStore.fmtFCFA(ACState.wallet.balance)}</span>
+            <span class="block t-h1 mt-1 break-words leading-tight">${ACStore.fmtFCFA(ACState.wallet.balance)}</span>
             <span class="block t-small text-white/70 mt-1">${I18N.t("balance")} · ${esc(ACState.user.fullName)}</span>
             <span class="mt-4 wallet-quick-grid">${[["north_east", "Envoyer", "walletSend"], ["qr_code_scanner", "QR Pay", "walletQrPay"], ["add", "Recharger", "walletTopup"]].map((a) => `<span role="button" tabindex="0" onclick="event.stopPropagation();App.nav('${a[2]}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();App.nav('${a[2]}')}" class="wallet-quick-btn">${icon(a[0])}<span class="truncate max-w-full">${a[1]}</span></span>`).join("")}</span>
           </button>
@@ -105,7 +102,7 @@
           </button>
           <button type="button" onclick="App.nav('business')" class="w-full card p-4 text-left flex items-center gap-3">
             <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("business_center", "text-[24px]")}</span>
-            <span class="min-w-0 flex-1"><span class="block t-title">Youss Business</span><span class="block t-small text-ink-2">Gérez votre activité : produits, commandes, statistiques</span></span>${icon("chevron_right", "text-ink-3")}
+            <span class="min-w-0 flex-1"><span class="block t-title">Youss Business</span><span class="block t-small text-ink-2">Produits, commandes, stats</span></span>${icon("chevron_right", "text-ink-3")}
           </button>
           <button type="button" onclick="Demo.openMenu()" class="hidden lg:flex w-full card p-4 text-left items-center gap-3 border-dashed">
             <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("play_circle", "text-[24px]")}</span>

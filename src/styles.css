@@ -33,7 +33,7 @@
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
-  body { @apply bg-surface text-ink font-sans antialiased; -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-surface text-ink font-sans antialiased overflow-x-hidden; -webkit-tap-highlight-color: transparent; }
   button, [role="button"] { @apply select-none; }
   :focus-visible { @apply outline-none ring-2 ring-gold/60 ring-offset-2 ring-offset-surface rounded-lg; }
   img { @apply max-w-full; }
@@ -74,7 +74,7 @@
   .icon-btn { @apply w-10 h-10 rounded-full bg-card border border-line flex items-center justify-center text-ink shadow-sm transition-transform duration-150 active:scale-95 hover:bg-surface-low; }
 
   /* Entrées */
-  .input { @apply w-full h-12 rounded-xl border border-line bg-card px-4 t-body text-ink placeholder:text-ink-3 focus:border-gold focus:ring-2 focus:ring-gold/25 focus:outline-none transition-colors; }
+  .input { @apply w-full h-12 rounded-xl border border-line bg-card px-4 text-[16px] leading-[22px] text-ink placeholder:text-ink-3 focus:border-gold focus:ring-2 focus:ring-gold/25 focus:outline-none transition-colors; }
   .input-lg { @apply h-14; }
   .label { @apply t-label text-ink-2 mb-1.5 block; }
   .select { @apply input appearance-none bg-no-repeat pr-10; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2371717A'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E"); background-position: right .75rem center; background-size: 1.25rem; }
@@ -141,15 +141,17 @@
 
   /* Youss Wallet — grilles (3×2 actions, KPI solde, montants recharge) */
   .wallet-kpi-grid { @apply grid grid-cols-2 gap-2 sm:gap-3 min-w-0; }
-  .wallet-kpi-cell { @apply rounded-xl bg-white/10 p-2.5 sm:p-3 min-w-0; }
-  .wallet-action-grid { @apply grid grid-cols-3 gap-2 sm:gap-3 min-w-0 max-w-full; grid-auto-rows: 1fr; }
-  .wallet-action-btn { @apply card card-press flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 min-h-[84px] sm:min-h-[92px] min-w-0 h-full text-center; }
-  .wallet-action-btn__icon { @apply w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center flex-shrink-0; }
-  .wallet-action-btn__label { @apply t-caption sm:t-small font-semibold leading-tight truncate w-full px-0.5 normal-case tracking-normal; }
-  .wallet-quick-grid { @apply grid grid-cols-3 gap-1.5 sm:gap-2 min-w-0; }
-  .wallet-quick-btn { @apply min-w-0 h-10 sm:h-11 rounded-xl bg-white/10 hover:bg-white/15 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-2 t-caption sm:t-small font-semibold text-white; }
+  .wallet-kpi-cell { @apply rounded-xl bg-white/10 p-2.5 sm:p-3 min-w-0 overflow-hidden; }
+  .wallet-action-grid { @apply grid grid-cols-3 gap-1.5 sm:gap-3 min-w-0 max-w-full; grid-auto-rows: 1fr; }
+  .wallet-action-btn { @apply card card-press flex flex-col items-center justify-center gap-1 p-1.5 sm:p-3 min-h-[72px] sm:min-h-[92px] min-w-0 h-full text-center overflow-hidden; }
+  .wallet-action-btn__icon { @apply w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center flex-shrink-0; }
+  .wallet-action-btn__label { @apply text-[10px] sm:text-[12.5px] font-semibold leading-tight w-full px-0.5 normal-case tracking-normal whitespace-normal break-words; }
+  .wallet-quick-grid { @apply grid grid-cols-3 gap-1 sm:gap-2 min-w-0; }
+  .wallet-quick-btn { @apply min-w-0 min-h-[44px] sm:h-11 rounded-xl bg-white/10 hover:bg-white/15 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-2 text-[10px] sm:text-[12.5px] font-semibold text-white text-center leading-tight; }
   .wallet-quick-btn .ms { @apply text-[16px] sm:text-[18px]; }
   .amount-pick-grid { @apply grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0; }
+  .ops-nav { @apply flex items-center gap-3 h-10 px-3 rounded-lg t-small font-semibold text-white/70 hover:bg-white/10 hover:text-white; }
+  .ops-nav.on { @apply bg-white/10 text-white; }
 
   /* Carte Leaflet */
   .leaflet-container { font-family: "Plus Jakarta Sans", system-ui, sans-serif; background: rgb(var(--c-surface-low)); }
@@ -191,8 +193,8 @@
 }
 
 @layer utilities {
-  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
-  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px); }
+  .safe-top { padding-top: env(safe-area-inset-top, 0px); }
   .text-balance { text-wrap: balance; }
   .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

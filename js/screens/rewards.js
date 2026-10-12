@@ -11,7 +11,7 @@
     const body = `
       <div class="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8 items-start">
         <div class="space-y-4 lg:sticky lg:top-24">
-          <section class="card-dark p-6 relative overflow-hidden"><span class="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-gold/25 blur-3xl"></span>
+          <section class="card-dark p-6">
             <div class="flex items-center justify-between"><span class="t-caption text-gold">Mes points</span><span class="badge badge-gold">${icon("workspace_premium", "text-[14px]", true)}Niveau ${tier.id}</span></div>
             <p class="t-display mt-2">${pts.toLocaleString("fr-FR")} <span class="t-h3 text-white/60">pts</span></p>
             <div class="mt-4 flex justify-between t-small text-white/80"><span>${tier.id}</span><span>${next ? next.id : "Niveau max"}</span></div>
@@ -23,7 +23,7 @@
           ${UI.secondaryButton("Mes récompenses (" + r.redeemed.length + ")", "App.nav('myRewards')", { icon: "redeem" })}
         </div>
         <div class="space-y-6">
-          <section>${UI.sectionTitle("Récompenses disponibles", null, null, "Échangez vos points dans tous les services")}
+          <section>${UI.sectionTitle("Récompenses")}
             <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">${YCData.REWARDS.map((c) => { const ok = pts >= c.cost; return `<button type="button" onclick="${go("rewardRedeem", { id: c.id })}" class="card card-press p-4 text-left flex flex-col ${ok ? "" : "opacity-80"}">
               <div class="flex items-start justify-between"><span class="w-12 h-12 rounded-2xl ${ok ? "bg-gold text-[#0A0A0A]" : "bg-surface-low text-ink-3"} flex items-center justify-center">${icon(c.icon, "text-[24px]")}</span><span class="t-h3">${c.cost} <span class="t-small text-ink-3 font-normal">pts</span></span></div>
               <h3 class="t-title mt-3">${c.label}</h3><p class="t-small text-ink-2 mt-0.5 flex-1">${c.sub}</p>
@@ -31,7 +31,7 @@
           <section>${UI.sectionTitle("Historique des points")}<div class="card divide-y divide-line">${r.history.slice(0, 10).map((h) => `<div class="flex items-center justify-between p-3.5"><div><p class="t-title">${esc(h.label)}</p><p class="t-small text-ink-2">${esc(h.date)}</p></div><span class="t-title font-extrabold ${h.points >= 0 ? "text-success" : "text-ink"}">${h.points >= 0 ? "+" : ""}${h.points} pts</span></div>`).join("")}</div></section>
         </div>
       </div>`;
-    Shell.render(container, { title: "Youss Bonus", subtitle: "Programme de fidélité de l'écosystème", back: "App.nav('home')", body, nav: false, showNav: true });
+    Shell.render(container, { title: "Youss Bonus", subtitle: "Points et réductions", back: "App.nav('home')", body, nav: false, showNav: true });
   };
 
   Screens.rewardRedeem = function (container, params) {
@@ -62,7 +62,7 @@
     const body = list.length ? `<div class="grid md:grid-cols-2 gap-3">${list.map((r) => { const c = YCData.REWARDS.find((x) => x.id === r.rewardId) || {}; return `<div class="card p-4 ${r.used ? "opacity-60" : ""}"><div class="flex items-start gap-3"><span class="w-12 h-12 rounded-2xl bg-gold text-[#0A0A0A] flex items-center justify-center flex-shrink-0">${icon(c.icon || "redeem", "text-[24px]")}</span><div class="flex-1 min-w-0"><p class="t-title">${esc(r.label)}</p><p class="t-small text-ink-2">${r.used ? "Utilisée" : "Expire le " + new Date(r.expires).toLocaleDateString("fr-FR")}</p></div>${UI.badge(r.used ? "Utilisée" : "Active", r.used ? "neutral" : "success")}</div>
       <div class="mt-3 flex items-center justify-between rounded-xl bg-surface-low p-3"><span class="t-title tracking-[0.2em]">${r.code}</span><button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText('${r.code}');UI.toast('Code copié.','success')" class="t-small font-bold text-gold-deep dark:text-gold">Copier</button></div>
       ${!r.used ? `<button type="button" onclick="Screens._useReward('${r.id}')" class="btn btn-sm btn-dark mt-3">Utiliser maintenant</button>` : ""}</div>`; }).join("")}</div>`
-      : UI.emptyState({ icon: "redeem", title: "Aucune récompense échangée", body: "Échangez vos points Youss Bonus contre des courses, des réductions et des expériences.", actionLabel: "Voir le catalogue", actionOnclick: "App.resetTo('rewards')" });
+      : UI.emptyState({ icon: "redeem", title: "Aucune récompense", body: "Les points s'échangent contre une course, une réduction resto ou un billet.", actionLabel: "Voir les récompenses", actionOnclick: "App.resetTo('rewards')" });
     Shell.render(container, { title: "Mes récompenses", subtitle: ACState.rewards.points.toLocaleString("fr-FR") + " points disponibles", back: true, body, nav: false, showNav: true });
   };
   Screens._useReward = (id) => { const r = ACState.rewards.redeemed.find((x) => x.id === id); if (!r) return; const c = YCData.REWARDS.find((x) => x.id === r.rewardId); r.used = true; ACStore.emit(); UI.toast("Récompense appliquée à votre prochain paiement " + (c ? c.service : "") + ".", "success"); const routes = { transport: "transport", market: "market", restaurant: "restaurants", evenement: "events", livraison: "delivery", culture: "culture" }; App.nav(routes[c && c.service] || "home"); };

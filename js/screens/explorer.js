@@ -24,7 +24,7 @@
     if (params.near) { f.maxKm = 5; f.city = ACState.user.city; }
     const body = `
       <div class="flex flex-col lg:flex-row gap-3">
-        <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="ex-q" type="search" value="${esc(f.q)}" placeholder="Rechercher dans YOUSS CONNECT" oninput="Screens._exType(this.value)" class="input input-lg pl-12 pr-12" autocomplete="off"/>${f.q ? `<button type="button" onclick="Screens._exClear()" class="absolute right-3 top-1/2 -translate-y-1/2 icon-btn w-8 h-8 border-0 shadow-none" aria-label="Effacer">${icon("close", "text-[18px]")}</button>` : ""}</label>
+        <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="ex-q" type="search" value="${esc(f.q)}" placeholder="Restaurant, concert, monument…" oninput="Screens._exType(this.value)" class="input input-lg pl-12 pr-12" autocomplete="off"/>${f.q ? `<button type="button" onclick="Screens._exClear()" class="absolute right-3 top-1/2 -translate-y-1/2 icon-btn w-8 h-8 border-0 shadow-none" aria-label="Effacer">${icon("close", "text-[18px]")}</button>` : ""}</label>
         <div class="flex gap-2">
           <button type="button" onclick="Screens._exFilters()" class="btn btn-outline !w-auto relative">${icon("tune", "text-[20px]")}Filtres${activeFilters().length ? `<span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-[#0A0A0A] text-[10px] font-extrabold flex items-center justify-center">${activeFilters().length}</span>` : ""}</button>
           <div class="flex rounded-2xl border border-line overflow-hidden"><button type="button" onclick="Screens._exView('list')" class="h-12 px-4 ${f.view === "list" ? "bg-inverse text-inverse-ink" : "bg-card"}" aria-label="Liste">${icon("view_list")}</button><button type="button" onclick="Screens._exView('map')" class="h-12 px-4 ${f.view === "map" ? "bg-inverse text-inverse-ink" : "bg-card"}" aria-label="Carte">${icon("map")}</button></div>
@@ -33,7 +33,7 @@
       <div class="hscroll">${KINDS.map((k) => UI.chip(k[1], `Screens._exKind('${k[0]}')`, f.kind === k[0], { icon: k[2] })).join("")}</div>
       ${activeFilters().length ? `<div class="flex flex-wrap items-center gap-2 t-small"><span class="text-ink-2">Filtres :</span>${activeFilters().map((x) => `<span class="badge badge-dark">${x}</span>`).join("")}<button type="button" onclick="Screens._exResetFilters()" class="font-bold text-gold-deep dark:text-gold">Effacer</button></div>` : ""}
       <div id="ex-results"></div>`;
-    Shell.render(container, { title: I18N.t("nav_explorer"), subtitle: "Moteur de découverte · " + esc(ACState.user.city), body, nav: "explorer", hideSearch: true, onMount: () => { renderResults(); if (params.focus) { const el = document.getElementById("ex-q"); if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; } } } });
+    Shell.render(container, { title: I18N.t("nav_explorer"), subtitle: esc(ACState.user.city), body, nav: "explorer", hideSearch: true, onMount: () => { renderResults(); if (params.focus) { const el = document.getElementById("ex-q"); if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; } } } });
   };
   Screens.search = (container, params) => Screens.explorer(container, Object.assign({ focus: 1 }, params || {}));
 

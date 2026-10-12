@@ -292,7 +292,7 @@
       if (offline && !banner) {
         banner = document.createElement("div");
         banner.className = "fixed top-0 left-0 right-0 z-[1000] bg-inverse text-inverse-ink text-center t-small font-semibold py-2";
-        banner.textContent = "Hors ligne — certaines actions sont temporairement indisponibles.";
+        banner.textContent = "Hors ligne. Certaines actions sont indisponibles.";
         document.body.appendChild(banner);
       } else if (!offline && banner) { banner.remove(); banner = null; }
     }

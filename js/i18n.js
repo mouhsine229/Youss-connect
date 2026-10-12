@@ -14,7 +14,7 @@
     // Services
     svc_transport: "Transport", svc_delivery: "Livraison", svc_restaurants: "Restaurants", svc_events: "Événements", svc_market: "Youss Market", svc_culture: "Culture & Tourisme",
     // Accueil
-    hello: "Bonjour", search: "Que recherchez-vous ?", nearby: "À proximité", recos: "Recommandé pour vous", upcoming: "Événements à venir", discover: "Découvrez l'Afrique",
+    hello: "Bonjour", search: "Rechercher", nearby: "À proximité", recos: "Pour vous", upcoming: "Événements", discover: "Culture et tourisme",
     see_all: "Voir tout", explore: "Explorer", your_city: "Votre ville",
     // Actions
     back: "Retour", next: "Suivant", skip: "Passer", start: "Commencer", confirm: "Confirmer", cancel: "Annuler", add: "Ajouter", save: "Enregistrer", continue: "Continuer",
@@ -25,25 +25,25 @@
     wallet: "Youss Wallet", balance: "Solde disponible", send: "Envoyer", receive: "Recevoir", topup: "Recharger", withdraw: "Retirer", qrpay: "QR Pay", recent: "Transactions récentes",
     // Divers
     lang_title: "Langue", lang_done: "Langue : Français", settings: "Paramètres", notifications: "Notifications", security: "Sécurité", help: "Aide", logout: "Déconnexion",
-    theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démonstration", next_steps: "Et ensuite ?",
-    empty_results: "Aucun résultat", empty_results_body: "Essayez un autre mot-clé ou une autre catégorie.",
-    conceptual: "Fonctionnalité conceptuelle de l'écosystème — déploiement soumis au cadre réglementaire."
+    theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démo", next_steps: "Aussi près d'ici",
+    empty_results: "Aucun résultat", empty_results_body: "Changez le mot-clé ou la catégorie.",
+    conceptual: "Fonction démo. Le lancement réel dépend des autorisations du pays."
   };
 
   const EN = {
     nav_home: "Home", nav_explorer: "Explore", nav_activities: "Activity", nav_wallet: "Wallet", nav_profile: "Profile",
     nav_services: "Services", nav_more: "More", nav_tickets: "My tickets", nav_business: "Youss Business", nav_rewards: "Youss Bonus", nav_about: "Overview",
     svc_transport: "Rides", svc_delivery: "Delivery", svc_restaurants: "Restaurants", svc_events: "Events", svc_market: "Youss Market", svc_culture: "Culture & Tourism",
-    hello: "Hello", search: "What are you looking for?", nearby: "Nearby", recos: "Recommended for you", upcoming: "Upcoming events", discover: "Discover Africa",
+    hello: "Hello", search: "Search", nearby: "Nearby", recos: "For you", upcoming: "Events", discover: "Culture and tourism",
     see_all: "See all", explore: "Explore", your_city: "Your city",
     back: "Back", next: "Next", skip: "Skip", start: "Get started", confirm: "Confirm", cancel: "Cancel", add: "Add", save: "Save", continue: "Continue",
     pay: "Pay", order: "Order", close: "Close", retry: "Retry", share: "Share", call: "Call", message: "Message", home_btn: "Back to home",
     login: "Log in", signup: "Create an account", phone: "Phone number", password: "Password", forgot: "Forgot password", otp: "OTP verification",
     wallet: "Youss Wallet", balance: "Available balance", send: "Send", receive: "Receive", topup: "Top up", withdraw: "Withdraw", qrpay: "QR Pay", recent: "Recent transactions",
     lang_title: "Language", lang_done: "Language: English", settings: "Settings", notifications: "Notifications", security: "Security", help: "Help", logout: "Log out",
-    theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo journeys", next_steps: "What's next?",
+    theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo walkthroughs", next_steps: "Nearby",
     empty_results: "No results", empty_results_body: "Try another keyword or category.",
-    conceptual: "Conceptual feature of the ecosystem — rollout subject to regulatory approval."
+    conceptual: "Demo only. Real launch depends on local licences."
   };
 
   /* Fon — traduction partielle de démonstration */
