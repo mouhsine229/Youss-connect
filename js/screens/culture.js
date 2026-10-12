@@ -5,6 +5,18 @@
   const { icon, esc, go } = UI;
 
   const f = { type: "all", city: "all" };
+  const TYPE_INTRO = {
+    monument: "Statues, places et édifices publics.",
+    palais: "Anciennes cours royales et palais.",
+    musee: "Musées et collections.",
+    histoire: "Lieux de mémoire et sites historiques.",
+    tradition: "Marchés, temples et pratiques locales.",
+    nature: "Plages, lacs et parcs.",
+    activite: "Spectacles et activités culturelles."
+  };
+  function cultureQuery() {
+    return { type: f.type === "all" ? "" : f.type, city: f.city === "all" ? "" : f.city };
+  }
 
   // Hub
   Screens.culture = function (container, params) {
@@ -12,9 +24,18 @@
     if (params && params.type) f.type = params.type;
     const sites = YCData.SITES.filter((s) => (f.type === "all" || s.type === f.type) && (f.city === "all" || s.city === f.city));
     const city = ACState.user.city;
-    const near = YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES, 3);
+    const typeMeta = f.type !== "all" ? YCData.SITE_TYPES.find((t) => t.id === f.type) : null;
+    const filtered = !!typeMeta;
+    const near = filtered ? [] : YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES, 3);
+    const catalogTitle = typeMeta ? typeMeta.label : "Monuments, musées et traditions";
+    const catalogSub = sites.length + (sites.length > 1 ? " lieux" : " lieu") + (f.city !== "all" ? " · " + f.city : "");
+    const chips = `<div class="flex flex-col lg:flex-row gap-3 mb-4">
+          <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
+          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Ville"><option value="all" ${f.city === "all" ? "selected" : ""}>Toutes les villes</option>${YCData.DESTINATIONS.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+        </div>
+        ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuType('all');" })}`;
     const body = `
-      <section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[200px] lg:min-h-[280px] flex items-end">
+      ${filtered ? "" : `<section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[200px] lg:min-h-[280px] flex items-end">
         ${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}<div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent"></div>
         <div class="relative p-5 lg:p-8 w-full flex flex-col lg:flex-row lg:items-end gap-4">
           <div class="flex-1"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body text-white/80 mt-1 max-w-[560px]">Monuments, musées et sites à Cotonou, Dakar, Lomé et Accra.</p></div>
@@ -22,18 +43,14 @@
         </div>
       </section>
       <section>${UI.sectionTitle("Villes")}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div></section>
-      <section>${UI.sectionTitle("Près de " + esc(city), "Carte", go("exploreAround", {}))}<div class="grid sm:grid-cols-3 gap-3">${near.map((s) => UI.siteCard(s)).join("")}</div></section>
-      <section>${UI.sectionTitle("Monuments, musées et traditions")}
-        <div class="flex flex-col lg:flex-row gap-3 mb-4">
-          <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
-          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Ville"><option value="all" ${f.city === "all" ? "selected" : ""}>Toutes les villes</option>${YCData.DESTINATIONS.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
-        </div>
-        ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuType('all');" })}
+      <section>${UI.sectionTitle("Près de " + esc(city), "Carte", go("exploreAround", {}))}<div class="grid sm:grid-cols-3 gap-3">${near.map((s) => UI.siteCard(s)).join("")}</div></section>`}
+      <section id="cu-catalog">${UI.sectionTitle(catalogTitle, "", "", catalogSub)}${typeMeta && TYPE_INTRO[typeMeta.id] ? `<p class="t-body text-ink-2 mb-4">${TYPE_INTRO[typeMeta.id]}</p>` : ""}
+        ${chips}
       </section>`;
-    Shell.render(container, { title: "Culture & tourisme", subtitle: esc(city), back: "App.nav('home')", body, nav: false, showNav: true });
+    Shell.render(container, { title: "Culture & tourisme", subtitle: filtered ? typeMeta.label : esc(city), back: filtered ? "Screens._cuType('all')" : "App.nav('home')", body, nav: false, showNav: true });
   };
-  Screens._cuType = (t) => { f.type = t; App.replace("culture"); };
-  Screens._cuCity = (c) => { f.city = c; App.replace("culture"); };
+  Screens._cuType = (t) => { f.type = t; App.replace("culture", cultureQuery()); };
+  Screens._cuCity = (c) => { f.city = c; App.replace("culture", cultureQuery()); };
 
   // Page destination
   Screens.destination = function (container, params) {
