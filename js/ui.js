@@ -271,12 +271,15 @@
     document.body.style.overflow = "";
   }
   function confirm(o) {
+    // onOk peut contenir des guillemets (JSON.stringify). Sans échappement,
+    // l'attribut onclick="..." se coupe et le clic ne fait rien.
+    const run = ("UI.closeSheet();" + (o.onOk || "")).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
     openSheet(`<div class="text-center lg:text-left">
       ${o.icon ? `<div class="w-14 h-14 rounded-full ${o.danger ? "bg-danger-soft text-danger" : "bg-gold-soft text-gold-deep"} flex items-center justify-center mx-auto lg:mx-0 mb-3">${icon(o.icon, "text-[28px]")}</div>` : ""}
-      <h3 class="t-h3 mb-1.5">${o.title}</h3><p class="t-body text-ink-2 mb-5">${o.body || ""}</p>
+      <h3 class="t-h3 mb-1.5">${esc(o.title)}</h3><p class="t-body text-ink-2 mb-5">${o.body || ""}</p>
       <div class="flex flex-col sm:flex-row gap-2.5">
         ${button(o.cancelLabel || t("cancel"), "UI.closeSheet()", { variant: "outline" })}
-        ${button(o.okLabel || t("confirm"), "UI.closeSheet();" + o.onOk, { variant: o.danger ? "danger" : "primary" })}
+        ${button(o.okLabel || t("confirm"), run, { variant: o.danger ? "danger" : "primary" })}
       </div></div>`);
   }
 
