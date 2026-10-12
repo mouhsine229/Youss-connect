@@ -1,14 +1,6 @@
-/* =========================================================
-   YOUSS CONNECT — SCANNER QR
-   Caméra réelle (getUserMedia) + décodage QR :
-     1. BarcodeDetector natif (Chrome / Android) quand disponible
-     2. Sinon jsQR (chargé à la demande) — iOS Safari, desktop
-   Génération de QR (qrcode-generator, chargé à la demande).
-   Formats reconnus :
-     youss:site:<id>                  → site culturel
-     youss:pay?to=<tel>&name=..&amount=..  → paiement Youss Wallet
-     https://…?site=<id>  ou  …#/culture/<id>
-   ========================================================= */
+// Scanner QR : caméra via getUserMedia, décodage par BarcodeDetector quand il existe,
+// sinon jsQR chargé à la demande (iOS Safari, desktop). Génération via qrcode-generator.
+// Formats lus : youss:site:<id>, youss:pay?to=..&name=..&amount=.., URL avec ?site=<id> ou #/culture/<id>.
 (function () {
   "use strict";
 
@@ -185,7 +177,7 @@
     return torchOn;
   }
 
-  /* Décodage d'une image (galerie / fichier) — fallback sans caméra. */
+  // Décodage d'une image choisie dans la galerie, quand il n'y a pas de caméra.
   async function scanFile(file) {
     if (!file) return null;
     const url = URL.createObjectURL(file);

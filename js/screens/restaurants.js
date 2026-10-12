@@ -1,4 +1,4 @@
-/* Restaurants — liste, fiche (menu / avis / infos), panier, commande */
+// Restaurants : liste, fiche (menu / avis / infos), panier, commande
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -71,7 +71,7 @@
     return `<button type="button" onclick="App.nav('cartRestaurant')" class="icon-btn relative" aria-label="Panier">${icon("shopping_bag")}${n ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-[#0A0A0A] text-[10px] font-extrabold flex items-center justify-center">${n}</span>` : ""}</button>`;
   }
 
-  /* ---------- Fiche restaurant ---------- */
+  // Fiche restaurant
   const tabState = { tab: "menu" };
   Screens.restaurantDetail = function (container, params) {
     const r = YCData.restaurant(params.id) || YCData.RESTAURANTS[0];
@@ -117,7 +117,7 @@
     const items = ACState.cart.restaurant === r.id ? ACState.cart.items : [];
     const sub = items.reduce((s, i) => s + i.price * i.qty, 0);
     if (!items.length) return `<div class="hidden lg:block card p-5 text-center"><div class="w-14 h-14 rounded-full bg-surface-low text-gold flex items-center justify-center mx-auto mb-3">${icon("shopping_bag", "text-[28px]")}</div><p class="t-title">Votre panier est vide</p><p class="t-small text-ink-2 mt-1">Ajoutez des plats depuis le menu.</p></div>`;
-    return `<div class="fixed bottom-[72px] lg:bottom-auto inset-x-4 lg:inset-x-auto lg:static z-20 card lg:p-5 p-3 shadow-float lg:shadow-card">
+    return `<div class="fixed bottom-[72px] lg:bottom-auto inset-x-4 lg:inset-x-auto lg:static z-20 card lg:p-5 p-3">
       <div class="hidden lg:block"><p class="t-h3 mb-3">Votre panier</p><div class="space-y-2 mb-3 max-h-[260px] overflow-y-auto">${items.map((i) => `<div class="flex items-center justify-between gap-2 t-small"><span class="truncate">${i.qty} × ${esc(i.name)}</span><span class="font-semibold whitespace-nowrap">${ACStore.fmtFCFA(i.price * i.qty)}</span></div>`).join("")}</div>${UI.row("Sous-total", ACStore.fmtFCFA(sub))}${UI.row("Livraison", ACStore.fmtFCFA(r.fee))}<div class="divider my-2"></div>${UI.row("Total", ACStore.fmtFCFA(sub + r.fee), true)}</div>
       ${UI.primaryButton(`Voir le panier · ${ACStore.fmtFCFA(sub + r.fee)}`, "App.nav('cartRestaurant')", { icon: "shopping_bag", cls: "lg:mt-3" })}</div>`;
   }
@@ -139,7 +139,7 @@
     ACStore.emit(); UI.toast("Table réservée · " + when, "success");
   };
 
-  /* ---------- Panier ---------- */
+  // Panier
   Screens._addToCart = function (restId, dishId) {
     const r = YCData.restaurant(restId), d = r.menu.find((x) => x.id === dishId); if (!d) return;
     if (ACState.cart.restaurant && ACState.cart.restaurant !== restId && ACState.cart.items.length) {
@@ -179,7 +179,7 @@
   };
   Screens._clearCart = () => { ACState.cart.items = []; ACState.cart.restaurant = null; ACState.cart.note = ""; ACStore.emit(); App.replace("cartRestaurant"); };
 
-  /* ---------- Commande : adresse → paiement → confirmation ---------- */
+  // Commande : adresse, paiement, confirmation
   const co = { step: 0, address: null, method: null, mode: "delivery" };
   Screens.checkoutRestaurant = function (container, params) {
     const r = YCData.restaurant(ACState.cart.restaurant), items = ACState.cart.items;
@@ -195,7 +195,7 @@
       <div class="card p-4 space-y-3">
         <div class="flex gap-2">${[["delivery", "Livraison", "local_shipping"], ["pickup", "À emporter", "storefront"]].map((m) => `<button type="button" onclick="Screens._coMode('${m[0]}')" class="chip flex-1 justify-center h-11 ${co.mode === m[0] ? "on" : ""}">${icon(m[2], "text-[16px]")}${m[1]}</button>`).join("")}</div>
         ${co.mode === "delivery" ? `<p class="t-caption text-ink-3 pt-1">Choisir l'adresse</p><div class="space-y-2">${ACState.addresses.map((a) => `<button type="button" onclick="Screens._coAddress('${a.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.address === a.id ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(a.icon || "place")}</span><span class="flex-1 min-w-0"><span class="block t-title">${esc(a.label)}</span><span class="block t-small text-ink-2 truncate">${esc(a.detail)}</span></span>${co.address === a.id ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}
-          <button type="button" onclick="App.nav('addAddress',{back:'checkoutRestaurant'})" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left text-ink-2"><span class="menu-icon">${icon("add")}</span><span class="t-title">Nouvelle adresse</span></button></div>` : `<p class="t-small text-ink-2">Retrait chez ${esc(r.name)} · ${r.area}, ${r.city} · prêt en ${r.time.split("–")[0].trim()} min.</p>`}
+          <button type="button" onclick="App.nav('addAddress',{back:'checkoutRestaurant'})" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left text-ink-2"><span class="menu-icon">${icon("add")}</span><span class="t-title">Nouvelle adresse</span></button></div>` : `<p class="t-small text-ink-2">Retrait chez ${esc(r.name)} · ${r.area}, ${r.city} · prêt en ${r.time.split("-")[0].trim()} min.</p>`}
         <label class="block pt-1"><span class="label">Horaire</span><div class="flex gap-2">${["Dès que possible", "Dans 30 min", "Dans 1 h"].map((h, i) => `<button type="button" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" class="chip ${i === 0 ? "on" : ""}">${h}</button>`).join("")}</div></label>
       </div>
       ${UI.primaryButton(I18N.t("continue"), "Screens._coStep(1)", { size: "lg", iconRight: "arrow_forward" })}`;

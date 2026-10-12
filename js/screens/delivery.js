@@ -1,4 +1,4 @@
-/* Livraison — catégories, adresses, estimation, livreur, suivi sur carte, preuve */
+// Livraison : catégories, adresses, estimation, livreur, suivi sur carte, preuve
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -52,7 +52,7 @@
             <p class="t-caption text-ink-3">Adresses</p>
             ${addrField("from", "Adresse de récupération", parcel.from.name, "radio_button_checked", "text-gold")}
             ${addrField("to", "Adresse de livraison", parcel.to.name, "location_on", "text-ink")}
-            <div id="dl-suggest" class="hidden absolute left-4 right-4 card shadow-float z-20 max-h-[240px] overflow-y-auto"></div>
+            <div id="dl-suggest" class="hidden absolute left-4 right-4 card z-20 max-h-[240px] overflow-y-auto"></div>
             <div class="flex gap-2 overflow-x-auto no-scrollbar">${ACState.addresses.map((a) => `<button type="button" onclick="Screens._dlUseAddress('${a.id}')" class="chip">${icon(a.icon || "place", "text-[15px]")}Livrer à ${esc(a.label)}</button>`).join("")}<button type="button" onclick="Screens._dlSwap()" class="chip">${icon("swap_vert", "text-[15px]")}Inverser</button></div>
           </section>
           <section class="card p-4 space-y-3">
@@ -67,7 +67,7 @@
           </section>
           <section><p class="t-caption text-ink-3 mb-2">Véhicule</p>
             <div class="grid sm:grid-cols-3 gap-2.5">${VEHICLES.filter((v) => cat.vehicles.indexOf(v.id) >= 0).map((v) => `<button type="button" onclick="Screens._dlVehicle('${v.id}')" class="rounded-2xl border p-3.5 text-left ${parcel.vehicle === v.id ? "border-gold bg-gold/10" : "border-line bg-card"}">
-              <span class="flex items-center justify-between"><span class="w-10 h-10 rounded-xl ${parcel.vehicle === v.id ? "bg-gold text-[#0A0A0A]" : "bg-surface-low"} flex items-center justify-center">${icon(v.icon, "text-[22px]")}</span><span class="t-title font-extrabold">${parcel.km ? ACStore.fmtFCFA(Math.max(800, Math.round((v.base + parcel.km * v.perKm + (parcel.size === "L" ? 500 : 0) + (parcel.fragile ? 300 : 0)) / 100) * 100)) : "—"}</span></span>
+              <span class="flex items-center justify-between"><span class="w-10 h-10 rounded-xl ${parcel.vehicle === v.id ? "bg-gold text-[#0A0A0A]" : "bg-surface-low"} flex items-center justify-center">${icon(v.icon, "text-[22px]")}</span><span class="t-title font-extrabold">${parcel.km ? ACStore.fmtFCFA(Math.max(800, Math.round((v.base + parcel.km * v.perKm + (parcel.size === "L" ? 500 : 0) + (parcel.fragile ? 300 : 0)) / 100) * 100)) : "..."}</span></span>
               <span class="block t-title mt-2">${v.label}</span><span class="block t-small text-ink-2">${v.note} · ≈ ${Math.round((parcel.km / v.speed) * 60) + 8} min</span></button>`).join("")}</div>
           </section>
         </div>
@@ -95,7 +95,7 @@
   }
   function addrField(role, label, value, ic, cls) {
     return `<label class="block"><span class="label">${label}</span><span class="relative block"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 ${cls}">${icon(ic, "text-[20px]")}</span>
-      <input id="dl-${role}" value="${esc(value)}" placeholder="Quartier, lieu, adresse…" autocomplete="off" class="input pl-11" onfocus="Screens._dlFocus('${role}')" oninput="Screens._dlInput('${role}', this.value)" onblur="Screens._dlBlur()" onkeydown="if(event.key==='Escape')this.blur()"/></span></label>`;
+      <input id="dl-${role}" value="${esc(value)}" placeholder="Quartier, lieu, adresse…" autocomplete="off" spellcheck="false" enterkeyhint="done" class="input pl-11" onfocus="Screens._dlFocus('${role}')" oninput="Screens._dlInput('${role}', this.value)" onblur="Screens._dlBlur('${role}')" onkeydown="Screens._dlKey(event, '${role}')"/></span></label>`;
   }
   function saveFields() {
     const r = document.getElementById("dl-recipient"), p = document.getElementById("dl-phone"), n = document.getElementById("dl-note");
@@ -112,14 +112,58 @@
   function showSuggest(list) {
     const box = document.getElementById("dl-suggest"); if (!box) return;
     lastList = list;
-    const field = document.getElementById("dl-" + activeField); if (field) box.style.top = (field.offsetTop + field.offsetHeight + 6) + "px";
-    box.innerHTML = list.length ? list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlPick(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0"><span class="menu-icon !w-9 !h-9">${icon(s.icon || "place", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span></button>`).join("") : `<p class="px-4 py-3 t-small text-ink-2">Aucun lieu trouvé</p>`;
+    // le champ est dans un span.relative, donc on mesure par rapport à la section
+    const field = document.getElementById("dl-" + activeField);
+    if (field) { const sec = box.offsetParent || box.parentElement; const fr = field.getBoundingClientRect(), sr = sec.getBoundingClientRect(); box.style.top = (fr.bottom - sr.top + 6) + "px"; }
+    box.innerHTML = list.length ? list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlPick(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0"><span class="menu-icon !w-9 !h-9">${icon(s.icon || "place", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span></button>`).join("") : `<p class="px-4 py-3 t-small text-ink-2">Aucun lieu connu. Validez avec Entrée pour garder l'adresse telle quelle.</p>`;
     box.classList.remove("hidden");
   }
-  Screens._dlFocus = (role) => { activeField = role; showSuggest(M().localPlaces("", ACState.user.city)); };
+  const hideSuggest = () => { const b = document.getElementById("dl-suggest"); if (b) b.classList.add("hidden"); };
+  Screens._dlFocus = (role) => { activeField = role; const f = document.getElementById("dl-" + role); if (f) f.select(); showSuggest(M().localPlaces("", ACState.user.city)); };
   Screens._dlInput = (role, v) => { activeField = role; clearTimeout(suggestTimer); const local = M().localPlaces(v, ACState.user.city); showSuggest(local); if (v.trim().length >= 2) suggestTimer = setTimeout(() => M().geocode(v, ACState.user.city).then((remote) => { if (activeField === role) showSuggest(local.concat(remote).slice(0, 7)); }), 350); };
-  Screens._dlBlur = () => { setTimeout(() => { const b = document.getElementById("dl-suggest"); if (b) b.classList.add("hidden"); const f = document.getElementById("dl-" + activeField); if (f && parcel[activeField]) f.value = parcel[activeField].name; }, 160); };
-  Screens._dlPick = (i) => { const s = lastList[i]; if (!s) return; parcel[activeField] = { name: s.name, lat: s.lat, lng: s.lng, city: ACState.user.city }; parcel.route = null; rerender(); };
+  Screens._dlKey = (ev, role) => {
+    if (ev.key === "Escape") { hideSuggest(); ev.target.blur(); return; }
+    if (ev.key !== "Enter") return;
+    ev.preventDefault();
+    if (lastList.length) { Screens._dlPick(0); return; }
+    const v = ev.target.value; picking = true; ev.target.blur(); picking = false; hideSuggest();
+    commitTyped(role, v);
+  };
+  // Si l'utilisateur a tapé une adresse sans choisir de suggestion, on la garde quand même.
+  let pendingRerender = false;
+  function commitTyped(role, text) {
+    const t = String(text || "").trim();
+    const cur = parcel[role];
+    const otherFocused = () => { const a = document.activeElement; return a && /^dl-(from|to)$/.test(a.id) && a.id !== "dl-" + role; };
+    if (!t || (cur && t === cur.name)) {
+      const f = document.getElementById("dl-" + role); if (f && cur) f.value = cur.name;
+      if (pendingRerender && !otherFocused()) { pendingRerender = false; rerender(); }
+      return;
+    }
+    const before = cur ? cur.name : null;
+    M().resolveTyped(t, ACState.user.city).then((p) => {
+      if (!p || !App.current || App.current.id !== "delivery") return;
+      if ((parcel[role] ? parcel[role].name : null) !== before) return; // choisi ailleurs entre-temps
+      parcel[role] = { name: p.name, lat: p.lat, lng: p.lng, city: ACState.user.city, approx: !!p.approx };
+      parcel.route = null;
+      if (p.approx) UI.toast("Adresse enregistrée. Le livreur confirmera la position exacte avec vous.", "info");
+      // si l'utilisateur est déjà en train de taper dans l'autre champ, on ne casse pas sa saisie
+      if (otherFocused()) { pendingRerender = true; const f = document.getElementById("dl-" + role); if (f) f.value = p.name; estimate(); drawMiniMap(); return; }
+      pendingRerender = false; rerenderKeepFocus();
+    });
+  }
+  // Re-rendu sans perdre le champ en cours de saisie (nom, téléphone, note)
+  function rerenderKeepFocus() {
+    const a = document.activeElement; const id = a && /^(INPUT|TEXTAREA)$/.test(a.tagName) ? a.id : null;
+    const pos = id ? a.selectionStart : null;
+    rerender();
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el) { el.focus(); try { if (pos != null) el.setSelectionRange(pos, pos); } catch (e) {} }
+  }
+  let picking = false;
+  Screens._dlBlur = (role) => { clearTimeout(suggestTimer); if (picking) return; setTimeout(() => { hideSuggest(); const f = document.getElementById("dl-" + role); if (f) commitTyped(role, f.value); }, 160); };
+  Screens._dlPick = (i) => { const s = lastList[i]; if (!s) return; hideSuggest(); picking = true; parcel[activeField] = { name: s.name, lat: s.lat, lng: s.lng, city: ACState.user.city }; parcel.route = null; rerender(); picking = false; };
 
   Screens._deliveryContinue = function () {
     saveFields();
@@ -128,7 +172,7 @@
     estimate(); App.nav("deliveryConfirm");
   };
 
-  /* ---------- Récapitulatif + paiement ---------- */
+  // Récapitulatif + paiement
   Screens.deliveryConfirm = function (container) {
     if (!parcel.from || !parcel.to) { App.resetTo("delivery"); return; }
     estimate();
@@ -161,7 +205,7 @@
     if (!parcel.from || !parcel.to) { App.resetTo("delivery"); return; }
     const body = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto">
       <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center"><div class="absolute inset-0 rounded-full animate-pulse-ring"></div>${icon("local_shipping", "text-gold text-[52px]")}</div>
-      <h2 class="t-h1 mt-8">Recherche d'un livreur…</h2><p class="t-body text-ink-2 mt-2">Demande créée · ${esc(parcel.from.name.split("·")[0])} → ${esc(parcel.to.name.split("·")[0])}</p>
+      <h2 class="t-h1 mt-8">Recherche d'un livreur…</h2><p class="t-body text-ink-2 mt-2">Demande créée · de ${esc(parcel.from.name.split("·")[0])} vers ${esc(parcel.to.name.split("·")[0])}</p>
       <div class="mt-8 w-full max-w-[360px] text-left">${UI.timeline([{ label: "Demande créée", icon: "check" }, { label: "Recherche d'un livreur", icon: "search" }, { label: "Livreur trouvé", icon: "person" }, { label: "Colis récupéré", icon: "inventory_2" }, { label: "Livraison en cours", icon: "near_me" }, { label: "Livraison terminée", icon: "home" }], 1)}</div>
     </div>`;
     Shell.render(container, { title: "Recherche d'un livreur", back: "App.nav('home')", body, nav: false, hideSearch: true });
@@ -183,7 +227,7 @@
     Shell.render(container, { title: "Livreur trouvé", back: "App.nav('home')", body, nav: false, hideSearch: true });
   };
 
-  /* ---------- Suivi sur carte ---------- */
+  // Suivi sur carte
   const STEPS = [{ label: "Demande créée", icon: "check" }, { label: "Recherche d'un livreur", icon: "search" }, { label: "Livreur trouvé", icon: "person" }, { label: "Colis récupéré", icon: "inventory_2" }, { label: "Livraison en cours", icon: "near_me" }, { label: "Livraison terminée", icon: "home" }];
   Screens.deliveryTracking = function (container) {
     if (!parcel.courier) { App.resetTo("delivery"); return; }
@@ -196,7 +240,7 @@
       <button type="button" id="dl-confirm" onclick="App.nav('deliveryDone')" class="btn btn-lg btn-dark btn-block opacity-50" disabled>Confirmer la réception</button>
     </div>`;
     const body = `<div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
-      <aside class="absolute bottom-0 inset-x-0 z-20 max-h-[62%] overflow-y-auto bg-card rounded-t-3xl shadow-float lg:static lg:max-h-none lg:rounded-none lg:shadow-none lg:border-r lg:border-line lg:h-full"><div class="w-10 h-1.5 bg-line rounded-full mx-auto mt-2 lg:hidden"></div>${sheet}</aside>
+      <aside class="absolute bottom-0 inset-x-0 z-20 max-h-[62%] overflow-y-auto bg-card border-t border-line rounded-t-3xl lg:static lg:max-h-none lg:rounded-none lg:border-t-0 lg:border-r lg:border-line lg:h-full"><div class="w-10 h-1.5 bg-line rounded-full mx-auto mt-2 lg:hidden"></div>${sheet}</aside>
       <div class="absolute inset-0 lg:static lg:h-full"><div id="dl-track-map" class="absolute inset-0 lg:relative lg:h-full w-full"></div></div></div>`;
     Shell.render(container, { title: "Suivi de livraison", back: "App.nav('home')", body, nav: false, fill: true, hideSearch: true, onMount: startTracking });
   };

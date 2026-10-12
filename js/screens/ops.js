@@ -1,4 +1,4 @@
-/* Console KYA — back-office interne. Accès : #/kya-ops */
+// Console KYA, le back-office interne. Accessible sur #/kya-ops
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -300,7 +300,7 @@
   };
   Screens._opsSiteSave = function () {
     if (!val("os-name")) { UI.toast("Nom requis.", "error"); return; }
-    Screens._opsPush("sites", { id: ACStore.uid("site"), name: val("os-name"), place: val("os-place") || "—" }, "Lieu ajouté.");
+    Screens._opsPush("sites", { id: ACStore.uid("site"), name: val("os-name"), place: val("os-place") || "Lieu à préciser" }, "Lieu ajouté.");
   };
 
   Screens.opsWallet = function () {
@@ -355,7 +355,7 @@
   };
   Screens._opsCitySave = function () {
     if (!val("oc-name")) { UI.toast("Ville requise.", "error"); return; }
-    Screens._opsPush("cities", { id: ACStore.uid("c"), name: val("oc-name"), country: val("oc-country") || "—", fare: val("oc-fare") || "Tarif à définir" }, "Ville ajoutée.");
+    Screens._opsPush("cities", { id: ACStore.uid("c"), name: val("oc-name"), country: val("oc-country") || "Pays à préciser", fare: val("oc-fare") || "Tarif à définir" }, "Ville ajoutée.");
   };
 
   Screens.opsSettings = function () {

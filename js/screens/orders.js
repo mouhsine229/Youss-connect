@@ -1,4 +1,4 @@
-/* Commandes (restaurants & Youss Market) — confirmation et suivi en direct */
+// Commandes (restaurants & Youss Market) : confirmation et suivi en direct
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -23,7 +23,7 @@
       </div>
       ${UI.primaryButton("Suivre ma commande", go("orderTracking", { id: o.id }), { size: "lg", icon: "near_me" })}
       ${UI.nextSteps(isMarket ? [
-        { icon: "local_shipping", label: "Suivre la livraison", sub: "Préparation → expédition → livrée", onclick: go("orderTracking", { id: o.id }) },
+        { icon: "local_shipping", label: "Suivre la livraison", sub: "De la préparation jusqu'à la remise", onclick: go("orderTracking", { id: o.id }) },
         { icon: "workspace_premium", label: "+" + points + " points gagnés", sub: "Youss Bonus", onclick: "App.nav('rewards')" },
         { icon: "storefront", label: "Continuer mes achats", sub: "Youss Market", onclick: "App.nav('market')" }
       ] : [

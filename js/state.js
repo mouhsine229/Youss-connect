@@ -1,9 +1,5 @@
-/* =========================================================
-   YOUSS CONNECT — ÉTAT CENTRAL
-   Une seule source de vérité partagée par tous les services :
-   payer une course débite le Wallet, crédite Youss Bonus, crée une
-   activité et une notification. L'état démo est persisté en local.
-   ========================================================= */
+// État partagé par tous les services. Payer une course débite le wallet,
+// crédite les points, ajoute une activité et une notification. Persisté en localStorage.
 (function () {
   "use strict";
 
@@ -81,7 +77,7 @@
       favorites: [],
       trip: null,
       business: {
-        profile: { name: "Atelier Ayélé", category: "Mode & artisanat", city: "Cotonou", address: "Haie Vive, Cotonou", phone: "+229 97 00 00 00", hours: "09h00 – 19h00", desc: "Mode contemporaine en wax, pièces cousues à la main.", verified: true },
+        profile: { name: "Atelier Ayélé", category: "Mode & artisanat", city: "Cotonou", address: "Haie Vive, Cotonou", phone: "+229 97 00 00 00", hours: "09h00 - 19h00", desc: "Mode contemporaine en wax, pièces cousues à la main.", verified: true },
         products: [
           { id: "bp1", name: "Robe wax contemporaine", price: 12000, stock: 7 },
           { id: "bp2", name: "Collier perles de traite", price: 5000, stock: 12 },
@@ -106,7 +102,7 @@
     };
   }
 
-  /* ---------- Persistance locale ---------- */
+  // Persistance locale
   let State;
   function load() {
     try {
@@ -141,7 +137,7 @@
     emit();
   }
 
-  /* ---------- Abonnements ---------- */
+  // Abonnements
   function emit() {
     persist();
     listeners.forEach((fn) => { try { fn(State); } catch (e) { console.error(e); } });
@@ -151,7 +147,7 @@
     return () => { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); };
   }
 
-  /* ---------- Opérations transverses ---------- */
+  // Opérations transverses
   function addNotification(title, body, service, route) {
     const prefs = State.prefs.notif;
     const key = { transport: "transport", restaurant: "orders", market: "orders", livraison: "delivery", evenement: "events", wallet: "wallet", rewards: "rewards", promo: "promos" }[service];
@@ -191,10 +187,8 @@
     }).catch(function () { if (onFail) onFail({ ok: false, reason: "error" }); });
   }
 
-  /**
-   * Paiement unifié utilisé par tous les services.
-   * opts: { amount, label, service, pointsEarned, method ('wallet'|'cash'|'mobile'), meta, activity:{...} }
-   */
+  // Paiement commun à tous les services.
+  // opts: { amount, label, service, pointsEarned, method ('wallet'|'cash'|'mobile'), meta, activity:{...} }
   function pay(opts) {
     opts = opts || {};
     const amount = Math.round(opts.amount || 0);
@@ -233,7 +227,7 @@
     return { ok: true };
   }
 
-  /* ---------- Commandes (restaurants & market) ---------- */
+  // Commandes (restaurants & market)
   const ORDER_STEPS = {
     restaurant: [
       { id: "confirmed", label: "Commande confirmée", icon: "check_circle", after: 0 },

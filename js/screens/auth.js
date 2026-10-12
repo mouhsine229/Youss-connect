@@ -1,4 +1,4 @@
-/* Splash, onboarding, connexion, inscription, OTP, présentation */
+// Splash, onboarding, connexion, inscription, OTP et page de présentation
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -6,14 +6,14 @@
   const IMG = YCData.IMG;
 
   const ONBOARD = [
-    { title: "Se déplacer facilement", body: "Voiture, moto ou véhicule premium. Une course, un itinéraire réel, un suivi en direct et un paiement — dans toute la ville.", img: IMG + "onboarding/onb-mobility.jpg", tag: "Mobilité" },
+    { title: "Se déplacer facilement", body: "Voiture, moto ou véhicule premium. Vous commandez, vous suivez le trajet en direct et vous payez depuis l'application, partout en ville.", img: IMG + "onboarding/onb-mobility.jpg", tag: "Mobilité" },
     { title: "Livraison, restaurants, commerce", body: "Faites livrer un colis, commandez un repas ou achetez un produit local depuis la même application, avec le même compte.", img: IMG + "onboarding/onb-services.jpg", tag: "Services" },
-    { title: "Événements et activités", body: "Concerts, festivals, conférences, spectacles et sport : découvrez, réservez, puis retrouvez votre billet numérique.", img: IMG + "onboarding/onb-events.jpg", tag: "Événements" },
-    { title: "Culture et tourisme africain", body: "Destinations, monuments, musées et scanner culturel pour vivre l'histoire de l'Afrique, pas seulement la traverser.", img: IMG + "onboarding/onb-culture.jpg", tag: "Culture" },
-    { title: "Un seul écosystème", body: "Transport, services, commerce, événements, culture, Wallet et Bonus. YOUSS CONNECT relie tout, à Cotonou, Dakar, Lomé et Accra.", img: IMG + "onboarding/onb-ecosystem.jpg", tag: "Écosystème" }
+    { title: "Événements et activités", body: "Concerts, festivals, conférences, spectacles et sport. Vous réservez et votre billet numérique vous attend dans l'application.", img: IMG + "onboarding/onb-events.jpg", tag: "Événements" },
+    { title: "Culture et tourisme africain", body: "Destinations, monuments, musées et un scanner culturel qui raconte l'histoire de chaque lieu que vous visitez.", img: IMG + "onboarding/onb-culture.jpg", tag: "Culture" },
+    { title: "Tout au même endroit", body: "Transport, services, commerce, événements, culture, Wallet et Bonus. YOUSS CONNECT réunit tout cela à Cotonou, Dakar, Lomé et Accra.", img: IMG + "onboarding/onb-ecosystem.jpg", tag: "Écosystème" }
   ];
 
-  /* ---------- Splash ---------- */
+  // Splash
   Screens.splash = function (container) {
     container.innerHTML = `
       <div id="yc-splash" class="min-h-dvh bg-white flex flex-col items-center justify-center text-center px-6 relative overflow-hidden select-none">
@@ -43,7 +43,7 @@
     }, 260);
   };
 
-  /* ---------- Onboarding ---------- */
+  // Onboarding
   Screens.onboarding = function (container, params) {
     const i = Math.min(ONBOARD.length - 1, Math.max(0, parseInt(params && params.i, 10) || 0));
     const last = i === ONBOARD.length - 1;
@@ -80,7 +80,7 @@
     App.resetTo(target || "login");
   };
 
-  /* ---------- Cadre d'authentification (split desktop) ---------- */
+  // Cadre d'authentification (split desktop)
   function authFrame(formHtml, opts) {
     opts = opts || {};
     return `
@@ -91,7 +91,7 @@
         <div class="relative flex items-center gap-3"><img src="./assets/youss-logo-transparent.png" alt="" class="w-12 h-12 object-contain bg-white rounded-2xl p-1.5"/><div><p class="font-extrabold tracking-tight text-lg leading-tight">YOUSS CONNECT</p><p class="t-caption text-white/60">KYA CORPORATION</p></div></div>
         <div class="relative max-w-[460px]">
           <h2 class="t-display text-balance">Une seule application pour vivre l'Afrique au quotidien.</h2>
-          <p class="t-body text-white/70 mt-4 leading-relaxed">Transport, livraison, restaurants, événements, Youss Market, culture & tourisme, Youss Wallet, Youss Bonus et Youss Business — un compte unique, des services connectés.</p>
+          <p class="t-body text-white/70 mt-4 leading-relaxed">Transport, livraison, restaurants, événements, Youss Market, culture et tourisme, Youss Wallet, Youss Bonus et Youss Business. Un seul compte pour tout, et chaque service parle aux autres.</p>
           <div class="flex flex-wrap gap-2 mt-6">${["Cotonou", "Dakar", "Lomé", "Accra"].map((c) => `<span class="badge bg-white/10 text-white">${icon("location_on", "text-gold text-[14px]", true)}${c}</span>`).join("")}</div>
         </div>
         <p class="relative t-caption text-white/40">Maquette interactive · données de démonstration</p>
@@ -113,9 +113,9 @@
       <h1 class="t-h1">${title}</h1><p class="t-body text-ink-2 mt-1.5">${sub}</p>
     </div>`;
 
-  /* ---------- Connexion ---------- */
+  // Connexion
   Screens.login = function (container) {
-    const form = `${brand(I18N.t("login"), "Heureux de vous revoir. Compte démo : n'importe quel numéro, code OTP 1234.")}
+    const form = `${brand(I18N.t("login"), "Pour la démo, entrez n'importe quel numéro. Le code OTP est 1234.")}
       <form onsubmit="event.preventDefault();Screens._doLogin()" class="space-y-4" novalidate>
         ${phoneField("li-phone", ACState.user.phone)}
         ${UI.field("li-pass", I18N.t("password"), { type: "password", placeholder: "••••••••", autocomplete: "current-password" })}
@@ -161,11 +161,11 @@
   Screens._enterDemo = function () {
     ACState.session.authenticated = true; ACState.session.onboardingSeen = true;
     ACStore.emit();
-    UI.toast("Bienvenue " + ACState.user.name + " · mode démonstration", "success");
+    UI.toast("Bienvenue " + ACState.user.name + ", vous êtes en mode démo.", "success");
     App.resetTo("home");
   };
 
-  /* ---------- Mot de passe oublié ---------- */
+  // Mot de passe oublié
   Screens.forgotPassword = function (container) {
     const form = `${brand(I18N.t("forgot"), "Un code de réinitialisation sera envoyé par SMS. En démo, le code reste 1234.")}
       <form onsubmit="event.preventDefault();Screens._doForgot()" class="space-y-4" novalidate>
@@ -181,7 +181,7 @@
     App.nav("otp", { next: "login", mode: "reset" });
   };
 
-  /* ---------- Inscription ---------- */
+  // Inscription
   Screens.signup = function (container, params) {
     const code = (params && params.country) || ACState.user.countryCode || "BJ";
     const c = YCData.countryOf(code);
@@ -236,7 +236,7 @@
     App.nav("otp", { next: "home" });
   };
 
-  /* ---------- OTP ---------- */
+  // OTP
   let otpTimer = null;
   Screens.otp = function (container, params) {
     params = params || {};
@@ -296,7 +296,7 @@
     App.resetTo(next || "home");
   }
 
-  /* ---------- Présentation (landing investisseurs, accessible sans compte) ---------- */
+  // Présentation (landing investisseurs, accessible sans compte)
   Screens.about = function (container) {
     const pillars = [
       { icon: "directions_car", t: "Transport", d: "Voiture, moto, premium. Itinéraire réel, suivi, SOS." },
@@ -325,14 +325,14 @@
       </section>
       <section class="grid lg:grid-cols-2 gap-6">
         <div class="card p-6"><h2 class="t-h2 mb-3">Le problème</h2><p class="t-body text-ink-2 leading-relaxed">Pour se déplacer, commander, acheter, trouver un événement ou visiter un lieu, l'utilisateur multiplie les applications, les comptes et les moyens de paiement. Les services ne communiquent pas et les acteurs locaux restent peu visibles.</p></div>
-        <div class="card-dark p-6"><h2 class="t-h2 mb-3 text-gold">La réponse YOUSS CONNECT</h2><p class="t-body text-white/80 leading-relaxed">Un compte unique, une interface unique et surtout l'interconnexion : événement → billet → transport → restaurant → commande → retour. Tourisme → monument → scanner → histoire → restaurant → course. Chaque service renforce les autres.</p></div>
+        <div class="card-dark p-6"><h2 class="t-h2 mb-3 text-gold">La réponse YOUSS CONNECT</h2><p class="t-body text-white/80 leading-relaxed">Un seul compte, une seule interface, et surtout des services qui s'enchaînent. Vous achetez un billet de concert, l'application vous propose la course pour y aller et le restaurant à côté pour après. Vous scannez un monument, vous lisez son histoire, puis vous réservez votre retour. Rien à ressaisir d'un service à l'autre.</p></div>
       </section>
       <section>${UI.sectionTitle("Quatre villes de démonstration")}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div>
       </section>
       <section class="card p-5 lg:p-6"><p class="t-caption">Espaces internes (démo)</p><p class="t-small text-ink-2 mt-1">Pas dans le menu client. Console KYA : #/kya-ops · Cuisine resto : invitation YC-PRO-MAMAN.</p>
         <div class="flex flex-wrap gap-2 mt-3">${UI.button("Console KYA", "App.nav('opsLogin')", { variant: "dark", block: false, size: "sm" })}${UI.button("Cuisine restaurant", "App.nav('proJoin',{t:'YC-PRO-MAMAN'})", { variant: "outline", block: false, size: "sm" })}</div></section>
-      <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Une seule application pour vivre l'Afrique au quotidien.</p><p class="t-small text-ink-3 mt-3">Maquette interactive — données fictives. Aucune banque, opérateur ou entreprise n'est présenté comme partenaire officiel.</p></section>`;
+      <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Une seule application pour vivre l'Afrique au quotidien.</p><p class="t-small text-ink-3 mt-3">Maquette interactive avec des données fictives. Aucune banque, aucun opérateur ni aucune entreprise n'est présenté comme partenaire officiel.</p></section>`;
     if (!ACState.session.authenticated) {
       container.innerHTML = `<div class="min-h-dvh"><header class="sticky top-0 z-30 bg-surface/90 backdrop-blur border-b border-line"><div class="max-w-content mx-auto px-5 lg:px-10 h-16 flex items-center justify-between"><button type="button" onclick="App.back()" class="icon-btn" aria-label="Retour">${icon("arrow_back")}</button><span class="font-extrabold tracking-tight">YOUSS CONNECT</span>${UI.primaryButton(I18N.t("login"), "App.nav('login')", { block: false, size: "sm" })}</div></header><main class="max-w-content mx-auto px-5 lg:px-10 py-6 lg:py-10 space-y-8">${body}</main></div>`;
       return;

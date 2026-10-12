@@ -1,4 +1,4 @@
-/* Événements — liste, fiche, billetterie, billets numériques avec QR Code */
+// Événements : liste, fiche, billetterie, billets numériques avec QR Code
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -41,7 +41,7 @@
   Screens._evCity = (c) => { f.city = c; App.replace("events"); };
   Screens._evReset = () => { f.cat = "Tous"; f.city = "Toutes"; f.q = ""; App.replace("events"); };
 
-  /* ---------- Fiche ---------- */
+  // Fiche
   Screens.eventDetail = function (container, params) {
     const e = YCData.event(params.id) || YCData.EVENTS[0];
     if (!sel.ticket || !e.tickets.find((t) => t.id === sel.ticket)) { sel.ticket = e.tickets[0].id; sel.qty = 1; }
@@ -83,9 +83,9 @@
   Screens._pickTicket = (id, eid) => { sel.ticket = id; App.replace("eventDetail", { id: eid }); };
   Screens._ticketQty = (d, eid) => { sel.qty = Math.min(10, Math.max(1, sel.qty + d)); App.replace("eventDetail", { id: eid }); };
   Screens._ticketPreset = (eid, tid, qty) => { sel.ticket = tid; sel.qty = qty || 1; };
-  Screens._shareEvent = (id) => { const e = YCData.event(id); const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + " — sur YOUSS CONNECT"; if (navigator.share) navigator.share({ title: e.name, text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien copié.", "success")); };
+  Screens._shareEvent = (id) => { const e = YCData.event(id); const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + ". Vu sur YOUSS CONNECT."; if (navigator.share) navigator.share({ title: e.name, text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien copié.", "success")); };
 
-  /* ---------- Achat ---------- */
+  // Achat
   Screens.eventCheckout = function (container, params) {
     const e = YCData.event(params.id); const t = e && e.tickets.find((x) => x.id === sel.ticket);
     if (!e || !t) { App.resetTo("events"); return; }
@@ -124,7 +124,7 @@
   const _origParamsFor = Screens._demoParamsFor;
   Screens._demoParamsFor = function (screen) { if ((screen === "ticketConfirmed" || screen === "ticketDetail") && Screens._demoTicketId) return { id: Screens._demoTicketId }; return _origParamsFor ? _origParamsFor(screen) : {}; };
 
-  /* ---------- Confirmation ---------- */
+  // Confirmation
   Screens.ticketConfirmed = function (container, params) {
     const tk = ACState.tickets.find((x) => x.id === params.id) || ACState.tickets[0];
     if (!tk) { App.resetTo("events"); return; }
@@ -160,7 +160,7 @@
       </div></div>`;
   }
 
-  /* ---------- Mes billets ---------- */
+  // Mes billets
   Screens.myTickets = function (container, params) {
     const today = new Date().toISOString().slice(0, 10);
     const up = ACState.tickets.filter((t) => t.date >= today).sort((a, b) => a.date.localeCompare(b.date)), past = ACState.tickets.filter((t) => t.date < today);

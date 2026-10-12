@@ -1,5 +1,5 @@
-# GitHub Pages está configurado sobre la rama gh-pages.
-# Cada push a main replica el sitio ahí para que #/kya-ops y #/pro funcionen en vivo.
+# GitHub Pages sert la branche gh-pages.
+# Chaque push sur main y recopie le site, pour que #/kya-ops et #/pro soient à jour en ligne.
 name: Sync GitHub Pages
 on:
   push:

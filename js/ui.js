@@ -1,9 +1,5 @@
-/* =========================================================
-   YOUSS CONNECT — KIT UI PARTAGÉ
-   Identité : noir, blanc, or, gris. Portée par KYA CORPORATION.
-   Tous les composants retournent du HTML (chaînes) ; les données
-   utilisateur passent par esc() / escAttr().
-   ========================================================= */
+// Composants UI partagés. Tout retourne des chaînes HTML,
+// les données utilisateur passent par esc() / escAttr().
 (function () {
   "use strict";
 
@@ -21,7 +17,7 @@
     return `<span class="ms ${fill ? "fill" : ""} ${cls || ""}" aria-hidden="true">${name}</span>`;
   }
 
-  /* ---------- Boutons ---------- */
+  // Boutons
   function button(label, onclick, opts) {
     opts = opts || {};
     const variant = opts.variant || "primary";
@@ -37,7 +33,7 @@
     return `<button type="button" onclick="${onclick}" class="icon-btn ${cls || ""}" aria-label="${escAttr(label || name)}" title="${escAttr(label || "")}">${icon(name)}</button>`;
   }
 
-  /* ---------- Badges, puces ---------- */
+  // Badges, puces
   function badge(text, tone) {
     const map = { success: "badge-success", primary: "badge-dark", dark: "badge-dark", gold: "badge-gold", warn: "badge-warn", danger: "badge-danger", neutral: "badge-neutral" };
     return `<span class="badge ${map[tone] || "badge-neutral"}">${text}</span>`;
@@ -56,7 +52,7 @@
     return `<span class="inline-flex items-center gap-1 t-small font-semibold">${icon("star", "text-gold text-[15px]", true)}${value}${count != null ? `<span class="text-ink-3 font-normal">(${count})</span>` : ""}</span>`;
   }
 
-  /* ---------- Images & avatars ---------- */
+  // Images & avatars
   function img(src, alt, cls, opts) {
     opts = opts || {};
     return `<img src="${escAttr(src)}" alt="${escAttr(alt || "")}" class="${cls || "img-cover"} ${opts.fade === false ? "" : "img-fade"}" loading="${opts.eager ? "eager" : "lazy"}" decoding="async" onerror="this.onerror=null;this.src='./assets/img/brand/placeholder.svg'"/>`;
@@ -70,7 +66,7 @@
     return `<span class="${size} rounded-full bg-inverse text-inverse-ink flex items-center justify-center font-bold flex-shrink-0" aria-hidden="true">${initials}</span>`;
   }
 
-  /* ---------- Titres de section ---------- */
+  // Titres de section
   function sectionTitle(title, action, onclick, sub) {
     return `<div class="flex items-end justify-between gap-3 mb-3">
       <div><h2 class="t-h2">${title}</h2>${sub ? `<p class="t-small text-ink-2 mt-0.5">${sub}</p>` : ""}</div>
@@ -78,7 +74,7 @@
     </div>`;
   }
 
-  /* ---------- Cartes métier réutilisées sur Accueil / Explorer / Destination ---------- */
+  // Cartes métier réutilisées sur Accueil / Explorer / Destination
   function restaurantCard(r, compact) {
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[240px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(r.img, r.name)}
@@ -144,7 +140,7 @@
     </button>`;
   }
 
-  /* ---------- « Et ensuite ? » : ponts entre services ---------- */
+  // Bloc "et ensuite", les suggestions qui relient un service au suivant
   function nextSteps(items, title) {
     if (!items || !items.length) return "";
     return `<section class="card-dark p-4 lg:p-5">
@@ -159,7 +155,7 @@
     </section>`;
   }
 
-  /* ---------- Étapes / timeline ---------- */
+  // Étapes / timeline
   function stepper(labels, current) {
     return `<ol class="flex items-center gap-2 t-small">${labels.map((l, i) => `
       <li class="flex items-center gap-2 ${i < labels.length - 1 ? "flex-1" : ""}">
@@ -180,7 +176,7 @@
     }).join("")}</ol>`;
   }
 
-  /* ---------- Formulaires ---------- */
+  // Formulaires
   function field(id, label, opts) {
     opts = opts || {};
     const type = opts.type || "text";
@@ -188,7 +184,7 @@
       <span class="relative block">
         ${opts.icon ? `<span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none">${icon(opts.icon, "text-[20px]")}</span>` : ""}
         <input id="${id}" type="${type}" value="${escAttr(opts.value || "")}" placeholder="${escAttr(opts.placeholder || "")}" ${opts.inputmode ? `inputmode="${opts.inputmode}"` : ""} ${opts.maxlength ? `maxlength="${opts.maxlength}"` : ""} ${opts.autocomplete ? `autocomplete="${opts.autocomplete}"` : ""} ${opts.attrs || ""} class="input ${opts.icon ? "pl-11" : ""} ${opts.cls || ""}"/>
-        ${type === "password" ? `<button type="button" onclick="UI.togglePassword('${id}', this)" class="absolute right-2 top-1/2 -translate-y-1/2 icon-btn w-8 h-8 border-0 shadow-none" aria-label="Afficher le mot de passe">${icon("visibility", "text-[18px]")}</button>` : ""}
+        ${type === "password" ? `<button type="button" onclick="UI.togglePassword('${id}', this)" class="absolute right-2 top-1/2 -translate-y-1/2 icon-btn w-8 h-8 border-0" aria-label="Afficher le mot de passe">${icon("visibility", "text-[18px]")}</button>` : ""}
       </span>${opts.hint ? `<span class="t-small text-ink-3 mt-1 block">${opts.hint}</span>` : ""}</label>`;
   }
   function togglePassword(id, btn) {
@@ -217,7 +213,7 @@
     return `<div class="flex items-center justify-between gap-4 py-1.5"><span class="t-body text-ink-2">${label}</span><span class="t-body text-right ${bold ? "font-bold" : ""}">${value}</span></div>`;
   }
 
-  /* ---------- États ---------- */
+  // États
   function emptyState(o) {
     return `<div class="flex-1 flex flex-col items-center justify-center text-center px-6 py-14">
       <div class="w-20 h-20 rounded-full bg-surface-low flex items-center justify-center text-gold mb-4">${icon(o.icon || "inbox", "text-[40px]")}</div>
@@ -241,7 +237,7 @@
     </div>`;
   }
 
-  /* ---------- Toasts, feuilles, dialogues ---------- */
+  // Toasts, feuilles, dialogues
   let toastTimer = null;
   function toast(message, tone) {
     let el = document.getElementById("ac-toast");
@@ -284,7 +280,7 @@
       </div></div>`);
   }
 
-  /* ---------- Hors ligne ---------- */
+  // Hors ligne
   function initOfflineBanner() {
     let banner = null;
     function render() {
@@ -299,7 +295,7 @@
     window.addEventListener("online", render); window.addEventListener("offline", render); render();
   }
 
-  /* ---------- Thème ---------- */
+  // Thème
   function applyTheme(theme) {
     const dark = theme === "dark";
     document.documentElement.classList.toggle("dark", dark);
@@ -312,7 +308,7 @@
     ACStore.emit();
   }
 
-  /* ---------- Langue ---------- */
+  // Langue
   function setLang(id) {
     if (!I18N.set(id)) return;
     toast(I18N.t("lang_done"), "success");

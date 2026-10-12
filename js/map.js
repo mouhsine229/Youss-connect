@@ -1,10 +1,5 @@
-/* =========================================================
-   YOUSS CONNECT — MOTEUR CARTE (Leaflet)
-   Tuiles OpenStreetMap, itinéraires routiers OSRM (sans clé, repli
-   géodésique), géocodage Photon biaisé sur la ville courante,
-   animation de véhicule le long d'un tracé. Utilisé par Transport,
-   Livraison, Explorer et Culture.
-   ========================================================= */
+// Cartes Leaflet : tuiles OSM, itinéraires OSRM (repli géodésique si l'API ne répond pas),
+// géocodage Photon centré sur la ville courante, animation du véhicule le long du tracé.
 (function () {
   "use strict";
 
@@ -94,8 +89,22 @@
       return geocodeCache[key];
     }).catch(() => []);
   }
+  // Une adresse tapée à la main doit toujours donner un point utilisable :
+  // d'abord un lieu connu de la ville, sinon le géocodage, sinon un point
+  // approximatif dans la ville avec le texte saisi tel quel.
+  function resolveTyped(q, city) {
+    const c = YCData.cityOf(city);
+    const text = String(q || "").trim();
+    if (!text) return Promise.resolve(null);
+    const local = localPlaces(text, c.name);
+    if (local.length) { const s = local[0]; return Promise.resolve({ name: s.name, lat: s.lat, lng: s.lng }); }
+    return geocode(text, c.name).then((remote) => {
+      if (remote.length) { const s = remote[0]; return { name: s.name + (s.detail ? " · " + s.detail.split(",")[0] : ""), lat: s.lat, lng: s.lng }; }
+      return { name: text, lat: c.lat + (Math.random() - 0.5) * 0.01, lng: c.lng + (Math.random() - 0.5) * 0.01, approx: true };
+    });
+  }
 
-  /* ---------- Icônes ---------- */
+  // Icônes
   function pinIcon(role, letter) {
     return L.divIcon({ className: "", html: `<div class="yc-pin yc-pin--${role}"><span class="yc-pin__head">${letter || (role === "from" ? "A" : "B")}</span><span class="yc-pin__tip"></span></div>`, iconSize: [40, 52], iconAnchor: [20, 50], popupAnchor: [0, -44] });
   }
@@ -106,12 +115,12 @@
   function vehicleIcon(kind, bearing) {
     const rot = Math.round(bearing || 0);
     const svg = kind === "moto" || kind === "courier"
-      ? `<svg width="22" height="40" viewBox="0 0 22 40" style="filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))"><rect x="7" y="2" width="8" height="36" rx="4" fill="#0A0A0A"/><rect x="4" y="8" width="14" height="10" rx="3" fill="${kind === "courier" ? "#C9A227" : "#F4E4B3"}"/><rect x="8" y="20" width="6" height="10" rx="2" fill="#C9A227"/><circle cx="11" cy="4" r="2" fill="#F4E4B3"/></svg>`
-      : `<svg width="26" height="44" viewBox="0 0 26 44" style="filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))"><rect x="3" y="2" width="20" height="40" rx="7" fill="#0A0A0A"/><rect x="4.5" y="3.5" width="17" height="37" rx="6" fill="#171717"/><rect x="6" y="10" width="14" height="9" rx="2.5" fill="#F4E4B3" opacity=".95"/><rect x="6" y="26" width="14" height="7" rx="2.5" fill="#C9A227" opacity=".85"/><rect x="7" y="4" width="4" height="3" rx="1" fill="#F4E4B3"/><rect x="15" y="4" width="4" height="3" rx="1" fill="#F4E4B3"/></svg>`;
+      ? `<svg width="22" height="40" viewBox="0 0 22 40"><rect x="7" y="2" width="8" height="36" rx="4" fill="#0A0A0A"/><rect x="4" y="8" width="14" height="10" rx="3" fill="${kind === "courier" ? "#C9A227" : "#F4E4B3"}"/><rect x="8" y="20" width="6" height="10" rx="2" fill="#C9A227"/><circle cx="11" cy="4" r="2" fill="#F4E4B3"/></svg>`
+      : `<svg width="26" height="44" viewBox="0 0 26 44"><rect x="3" y="2" width="20" height="40" rx="7" fill="#0A0A0A"/><rect x="4.5" y="3.5" width="17" height="37" rx="6" fill="#171717"/><rect x="6" y="10" width="14" height="9" rx="2.5" fill="#F4E4B3" opacity=".95"/><rect x="6" y="26" width="14" height="7" rx="2.5" fill="#C9A227" opacity=".85"/><rect x="7" y="4" width="4" height="3" rx="1" fill="#F4E4B3"/><rect x="15" y="4" width="4" height="3" rx="1" fill="#F4E4B3"/></svg>`;
     return L.divIcon({ className: "", html: `<div class="yc-vehicle" style="transform:rotate(${rot}deg)">${svg}</div>`, iconSize: [44, 44], iconAnchor: [22, 22] });
   }
 
-  /* ---------- Instance de carte ---------- */
+  // Instance de carte
   function create(elId, opts) {
     opts = opts || {};
     const el = document.getElementById(elId);
@@ -258,5 +267,5 @@
   document.addEventListener("yc:navigate", destroyAll);
   window.addEventListener("resize", () => instances.forEach((i) => i.invalidate()));
 
-  window.YCMap = { create, destroyAll, fetchRoute, straightRoute, geocode, localPlaces, locate, bearingDeg, destinationPoint, haversineKm, fmtKm, fmtEta, clockIn, URBAN_SPEED_KMH };
+  window.YCMap = { create, destroyAll, fetchRoute, straightRoute, geocode, localPlaces, resolveTyped, locate, bearingDeg, destinationPoint, haversineKm, fmtKm, fmtEta, clockIn, URBAN_SPEED_KMH };
 })();

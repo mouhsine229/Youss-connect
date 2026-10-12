@@ -1,4 +1,4 @@
-/* Youss Bonus — points, niveaux, catalogue de récompenses, mes récompenses */
+// Youss Bonus : points, niveaux, catalogue de récompenses, mes récompenses
 (function () {
   "use strict";
   window.Screens = window.Screens || {};

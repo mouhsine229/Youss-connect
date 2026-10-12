@@ -1,9 +1,6 @@
-/* =========================================================
-   YOUSS CONNECT — I18N
-   Français (référence), English (complet), Fon et Wolof (partiels :
-   navigation, accueil et actions courantes — à valider par des locuteurs).
-   Toute clé absente retombe sur le français.
-   ========================================================= */
+// Traductions. Le français est la référence, l'anglais est complet.
+// Fon et wolof ne couvrent que la navigation et les actions courantes, à faire relire par des locuteurs.
+// Une clé absente retombe sur le français.
 (function () {
   "use strict";
 
@@ -27,7 +24,7 @@
     lang_title: "Langue", lang_done: "Langue : Français", settings: "Paramètres", notifications: "Notifications", security: "Sécurité", help: "Aide", logout: "Déconnexion",
     theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démo", next_steps: "Aussi près d'ici",
     empty_results: "Aucun résultat", empty_results_body: "Changez le mot-clé ou la catégorie.",
-    conceptual: "Fonction démo. Le lancement réel dépend des autorisations du pays."
+    conceptual: "Fonction de démonstration. Son lancement réel dépendra des agréments obtenus dans chaque pays."
   };
 
   const EN = {
@@ -43,17 +40,17 @@
     lang_title: "Language", lang_done: "Language: English", settings: "Settings", notifications: "Notifications", security: "Security", help: "Help", logout: "Log out",
     theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo walkthroughs", next_steps: "Nearby",
     empty_results: "No results", empty_results_body: "Try another keyword or category.",
-    conceptual: "Demo only. Real launch depends on local licences."
+    conceptual: "Demo feature. Going live depends on the licences granted in each country."
   };
 
-  /* Fon — traduction partielle de démonstration */
+  // Fon, partiel
   const FON = {
     nav_home: "Aigba", nav_explorer: "Kpɔ́n", nav_activities: "Azɔ lɛɛ", nav_wallet: "Wallet", nav_profile: "Nyɛ",
     hello: "Nú mi", search: "Étɛ wè nɔ ɖi ?", nearby: "Ɖo nɔwiwa", recos: "Nú ɖó wè", upcoming: "Hunxwé lɛɛ", discover: "Kpɔ́n Afrika",
     lang_title: "Gbè", lang_done: "Gbè : Fon", back: "Lɛkɔ", next: "Bɔ dó", confirm: "Yí gbè", cancel: "Jó dó"
   };
 
-  /* Wolof — traduction partielle de démonstration */
+  // Wolof, partiel
   const WO = {
     nav_home: "Kër", nav_explorer: "Seet", nav_activities: "Jëf", nav_wallet: "Wallet", nav_profile: "Profil",
     hello: "Salaam", search: "Looy wut ?", nearby: "Ci wetu", recos: "Ngir yaw", upcoming: "Ay eveneman", discover: "Xam Afrik",

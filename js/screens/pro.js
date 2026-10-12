@@ -1,4 +1,4 @@
-/* Espace restaurant — inscription par lien d'invitation. Accès : #/pro/rejoindre?t=YC-PRO-MAMAN */
+// Espace restaurant. On y entre par un lien d'invitation, par ex. #/pro/rejoindre?t=YC-PRO-MAMAN
 (function () {
   "use strict";
   window.Screens = window.Screens || {};

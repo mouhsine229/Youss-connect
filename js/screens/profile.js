@@ -38,7 +38,7 @@
   Screens._logout = () => UI.confirm({ title: "Se déconnecter ?", body: "Les données de démo restent sur cet appareil.", okLabel: I18N.t("logout"), danger: true, icon: "logout", onOk: "Screens._confirmLogout()" });
   Screens._confirmLogout = () => { const done = () => { ACState.session.authenticated = false; ACStore.emit(); App.resetTo("login"); }; if (window.YCBackend) YCBackend.signOut().then(done, done); else done(); };
 
-  /* ---------- Édition ---------- */
+  // Édition
   Screens.editProfile = function (container) {
     const u = ACState.user; const c = YCData.countryOf(u.countryCode);
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -65,7 +65,7 @@
     finish();
   };
 
-  /* ---------- Adresses ---------- */
+  // Adresses
   Screens.addresses = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="space-y-2.5">${ACState.addresses.map((a) => `<div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon(a.icon || "place")}</span><div class="flex-1 min-w-0"><p class="t-title flex items-center gap-2">${esc(a.label)}${a.isDefault ? UI.badge("Par défaut", "gold") : ""}</p><p class="t-small text-ink-2 truncate">${esc(a.detail)}</p></div>
@@ -88,12 +88,17 @@
   Screens._saveAddress = (back) => {
     const label = document.getElementById("na-label").value.trim(), detail = document.getElementById("na-detail").value.trim(), city = document.getElementById("na-city").value, note = document.getElementById("na-note").value.trim();
     if (!label || !detail) { UI.toast("Nom et adresse requis.", "error"); return; }
-    const p = Screens._naPicked && Screens._naPicked(); const c = YCData.cityOf(city);
-    ACState.addresses.push({ id: ACStore.uid("addr"), label, detail: detail + ", " + city + (note ? " · " + note : ""), icon: document.getElementById("na-icon").value || "place", lat: p ? p.lat : c.lat + (Math.random() - 0.5) * 0.02, lng: p ? p.lng : c.lng + (Math.random() - 0.5) * 0.02 });
-    ACStore.emit(); UI.toast("Adresse ajoutée.", "success"); App.resetTo(back || "addresses");
+    const picked = Screens._naPicked && Screens._naPicked(); const iconName = document.getElementById("na-icon").value || "place";
+    const save = (p) => {
+      ACState.addresses.push({ id: ACStore.uid("addr"), label, detail: detail + ", " + city + (note ? " · " + note : ""), icon: iconName, lat: p.lat, lng: p.lng });
+      ACStore.emit(); UI.toast("Adresse ajoutée.", "success"); App.resetTo(back || "addresses");
+    };
+    // position tapée sur la carte en priorité, sinon on cherche l'adresse écrite
+    if (picked) { save(picked); return; }
+    YCMap.resolveTyped(detail, city).then((p) => save(p || YCData.cityOf(city)));
   };
 
-  /* ---------- Moyens de paiement ---------- */
+  // Moyens de paiement
   Screens.paymentMethods = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="space-y-2.5">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._defaultMethod('${m.type}')" class="w-full card p-4 flex items-center gap-3 text-left ${ACState.prefs.paymentMethod === m.type ? "ring-2 ring-gold" : ""}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1 min-w-0"><span class="t-title flex items-center gap-2">${m.label}${ACState.prefs.paymentMethod === m.type ? UI.badge("Par défaut", "gold") : ""}</span><span class="block t-small text-ink-2">${m.sub}${m.type === "wallet" ? " · " + ACStore.fmtFCFA(ACState.wallet.balance) : ""}</span></span>${ACState.prefs.paymentMethod === m.type ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`).join("")}</div>
@@ -104,14 +109,14 @@
   Screens._defaultMethod = (t) => { ACState.prefs.paymentMethod = t; ACStore.emit(); UI.toast("Moyen de paiement par défaut mis à jour.", "success"); };
   Screens._addPaymentInfo = () => UI.openSheet(`<h3 class="t-h3 mb-1">Ajouter un moyen de paiement</h3><p class="t-small text-ink-2 mb-4">L'ajout de cartes et de comptes mobiles sera disponible après vérification d'identité (KYC) et selon les partenariats financiers de chaque pays.</p>${UI.field("pm-card", "Numéro de carte (démo)", { placeholder: "•••• •••• •••• ••••", icon: "credit_card", inputmode: "numeric" })}<div class="mt-4">${UI.primaryButton("Vérifier mon identité", "UI.closeSheet();App.nav('verifyAccount')", { icon: "verified_user" })}</div>`);
 
-  /* ---------- Lieux sauvegardés ---------- */
+  // Lieux sauvegardés
   Screens.savedPlaces = function (container) {
     const sites = ACState.saved.map((id) => YCData.site(id)).filter(Boolean), favs = ACState.favorites.map((id) => YCData.restaurant(id) || YCData.product(id)).filter(Boolean);
     const body = sites.length || favs.length ? `${sites.length ? `<section>${UI.sectionTitle("Lieux culturels")}<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">${sites.map((s) => UI.siteCard(s)).join("")}</div></section>` : ""}${favs.length ? `<section>${UI.sectionTitle("Favoris")}<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">${favs.map((x) => x.menu ? UI.restaurantCard(x) : UI.productCard(x)).join("")}</div></section>` : ""}` : UI.emptyState({ icon: "bookmark", title: "Aucun lieu sauvegardé", body: "Sauvegardez des monuments, restaurants et produits pour les retrouver ici.", actionLabel: "Découvrir l'Afrique", actionOnclick: "App.nav('culture')" });
     Shell.render(container, { title: "Lieux sauvegardés", back: true, body, nav: false, showNav: true });
   };
 
-  /* ---------- Sécurité ---------- */
+  // Sécurité
   Screens.security = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">Élevé</p><p class="t-small text-white/70">Compte vérifié, PIN actif, biométrie ${ACState.prefs.biometric === false ? "désactivée" : "activée"}</p></div></div>
@@ -153,7 +158,7 @@
   };
   Screens._sendReport = () => { const d = document.getElementById("rp-desc").value.trim(); if (d.length < 10) { UI.toast("Décrivez le problème en quelques mots.", "error"); return; } ACStore.addNotification("Signalement reçu", "Référence YC-SR-" + Math.floor(1000 + Math.random() * 8999) + ". Notre équipe vous répond sous 24 h.", "wallet", "help"); ACStore.emit(); UI.toast("Signalement transmis. Merci.", "success"); App.back(); };
 
-  /* ---------- Langues ---------- */
+  // Langues
   Screens.languages = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="space-y-2.5">${I18N.LANGS.map((l) => { const on = I18N.lang === l.id; return `<button type="button" onclick="UI.setLang('${l.id}')" class="w-full card p-4 flex items-center gap-3 text-left ${on ? "ring-2 ring-gold" : ""}"><span class="menu-icon font-extrabold text-[13px]">${l.id.toUpperCase()}</span><span class="flex-1 min-w-0"><span class="t-title flex items-center gap-2">${l.label}${l.partial ? UI.badge("Partiel · démo", "warn") : ""}</span><span class="block t-small text-ink-2">${l.native} · interface traduite à ${l.coverage} %</span></span>${on ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`; }).join("")}</div>
@@ -161,17 +166,17 @@
     Shell.render(container, { title: "Langues", subtitle: "Français · English · Wolof · Fon", back: true, body, nav: false, showNav: true });
   };
 
-  /* ---------- Aide ---------- */
+  // Aide
   Screens.help = function (container) {
     const faq = [["Comment payer une course ?", "Wallet, espèces ou paiement mobile, au moment de confirmer. Le prix vient de l'itinéraire."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Course, commande, achat ou billet : vous gagnez des points. Vous les échangez ensuite."], ["Le wallet est-il réel ?", "Non, c'est de la démo. Un vrai lancement dépendrait des licences du pays."], ["Vendre sur l'app ?", "Ouvrez Youss Business, remplissez le profil, ajoutez des produits ou des prestations."]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="grid grid-cols-2 gap-3">${[["chat", "Chat avec l'assistance", "Réponse en quelques minutes", "UI.toast('Un conseiller vous répond dans quelques instants (démo).','success')"], ["call", "Appeler", "Du lundi au samedi, 8h – 20h", "UI.toast('Appel du support (démo).','info')"], ["play_circle", I18N.t("demo_tour"), "5 parcours guidés", "Demo.openMenu()"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]].map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
+      <div class="grid grid-cols-2 gap-3">${[["chat", "Chat avec l'assistance", "Réponse en quelques minutes", "UI.toast('Un conseiller vous répond dans quelques instants (démo).','success')"], ["call", "Appeler", "Du lundi au samedi, 8h - 20h", "UI.toast('Appel du support (démo).','info')"], ["play_circle", I18N.t("demo_tour"), "5 parcours guidés", "Demo.openMenu()"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]].map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
       <section><p class="t-caption text-ink-3 mb-2">Questions fréquentes</p><div class="card divide-y divide-line">${faq.map((q, i) => `<details class="group"><summary class="flex items-center justify-between gap-3 p-4 cursor-pointer list-none t-title">${q[0]}${icon("expand_more", "text-ink-3 transition-transform group-open:rotate-180")}</summary><p class="px-4 pb-4 t-body text-ink-2">${q[1]}</p></details>`).join("")}</div></section>
       <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT v2.0</p><p class="t-small text-ink-2 mt-1">Maquette KYA CORPORATION. Données fictives, aucun partenaire officiel.</p><div class="flex gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "UI.toast('CGU disponibles dans la version finale.','info')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
     Shell.render(container, { title: I18N.t("help"), subtitle: "FAQ et contact", back: true, body, nav: false, showNav: true });
   };
 
-  /* ---------- Paramètres ---------- */
+  // Paramètres
   Screens.settings = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <section><p class="t-caption text-ink-3 mb-2">Apparence</p><div class="card divide-y divide-line">

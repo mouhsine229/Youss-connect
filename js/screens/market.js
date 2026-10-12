@@ -1,4 +1,4 @@
-/* Youss Market — marketplace, fiche produit, vendeur, panier, commande */
+// Youss Market : marketplace, fiche produit, vendeur, panier, commande
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -55,10 +55,10 @@
   function cartBtn() { const n = ACStore.marketCount(); return `<button type="button" onclick="App.nav('cartMarket')" class="icon-btn relative" aria-label="Panier Market">${icon("shopping_cart")}${n ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-[#0A0A0A] text-[10px] font-extrabold flex items-center justify-center">${n}</span>` : ""}</button>`; }
   function marketCartBar() {
     const n = ACStore.marketCount(); if (!n) return "";
-    return `<div class="fixed bottom-[72px] lg:bottom-6 inset-x-4 lg:inset-x-auto lg:right-6 lg:w-[380px] z-20">${UI.primaryButton(`Panier Market (${n}) · ${ACStore.fmtFCFA(total())}`, "App.nav('cartMarket')", { size: "lg", icon: "shopping_cart", cls: "shadow-float" })}</div>`;
+    return `<div class="fixed bottom-[72px] lg:bottom-6 inset-x-4 lg:inset-x-auto lg:right-6 lg:w-[380px] z-20">${UI.primaryButton(`Panier Market (${n}) · ${ACStore.fmtFCFA(total())}`, "App.nav('cartMarket')", { size: "lg", icon: "shopping_cart" })}</div>`;
   }
 
-  /* ---------- Fiche produit ---------- */
+  // Fiche produit
   const gal = { idx: 0 };
   Screens.productDetail = function (container, params) {
     const p = YCData.product(params.id) || YCData.PRODUCTS[0];
@@ -122,7 +122,7 @@
     Shell.render(container, { title: s.name, subtitle: "Vendeur " + (s.verified ? "vérifié" : ""), back: true, body, nav: false, showNav: true, right: cartBtn() });
   };
 
-  /* ---------- Panier ---------- */
+  // Panier
   Screens.cartMarket = function (container) {
     const items = ACState.cart.market, sub = total();
     const sellers = {}; items.forEach((i) => { (sellers[i.seller] = sellers[i.seller] || []).push(i); });
@@ -134,7 +134,7 @@
     Shell.render(container, { title: "Panier Market", subtitle: items.length ? ACStore.marketCount() + " article(s)" : "", back: true, body, nav: false, showNav: true });
   };
 
-  /* ---------- Commande : Adresse → Livraison → Paiement → Confirmation ---------- */
+  // Commande : adresse, livraison, paiement, confirmation
   const co = { step: 0, address: null, shipping: "standard", method: null };
   Screens.checkoutMarket = function (container, params) {
     const items = ACState.cart.market;

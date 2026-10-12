@@ -1,4 +1,4 @@
-/* Youss Business — tableau de bord professionnel, profil, produits, services, commandes, réservations, statistiques */
+// Youss Business : tableau de bord professionnel, profil, produits, services, commandes, réservations, statistiques
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -76,7 +76,7 @@
       <div class="card p-5 space-y-3"><p class="t-caption text-ink-3">Ajouter un service</p>${UI.field("ns-name", "Intitulé", { placeholder: "Ex. Livraison express" })}<div class="grid grid-cols-2 gap-3">${UI.field("ns-price", "Prix (FCFA)", { type: "number", placeholder: "0" })}${UI.field("ns-dur", "Délai", { placeholder: "Ex. 48 h" })}</div>${UI.primaryButton("Ajouter", "Screens._bizAddService()", { icon: "add" })}</div></div>`;
     Shell.render(container, { title: "Services", subtitle: "Prestations proposées", back: true, body, nav: false, showNav: true });
   };
-  Screens._bizAddService = () => { const name = document.getElementById("ns-name").value.trim(), price = parseInt(document.getElementById("ns-price").value, 10), duration = document.getElementById("ns-dur").value.trim() || "—"; if (!name || !price) { UI.toast("Intitulé et prix requis.", "error"); return; } B().services.push({ id: ACStore.uid("bs"), name, price, duration }); ACStore.emit(); UI.toast("Service ajouté.", "success"); };
+  Screens._bizAddService = () => { const name = document.getElementById("ns-name").value.trim(), price = parseInt(document.getElementById("ns-price").value, 10), duration = document.getElementById("ns-dur").value.trim() || "Sur devis"; if (!name || !price) { UI.toast("Intitulé et prix requis.", "error"); return; } B().services.push({ id: ACStore.uid("bs"), name, price, duration }); ACStore.emit(); UI.toast("Service ajouté.", "success"); };
 
   Screens.businessOrders = function (container, params) {
     const b = B(); const f = params.f || "Toutes";

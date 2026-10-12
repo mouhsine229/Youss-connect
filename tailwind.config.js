@@ -1,6 +1,5 @@
-/** YOUSS CONNECT — design tokens.
- *  Les couleurs sont des variables CSS (voir src/styles.css) pour permettre
- *  le thème sombre sans dupliquer les classes dans les écrans. */
+// Les couleurs pointent vers des variables CSS (src/styles.css),
+// ce qui permet le thème sombre sans dupliquer les classes dans les écrans.
 const v = (name) => `rgb(var(${name}) / <alpha-value>)`;
 
 module.exports = {
@@ -33,11 +32,6 @@ module.exports = {
         sans: ["Plus Jakarta Sans", "system-ui", "-apple-system", "Segoe UI", "sans-serif"]
       },
       borderRadius: { xl: "0.875rem", "2xl": "1.125rem", "3xl": "1.5rem" },
-      boxShadow: {
-        card: "0 1px 2px rgba(10,10,10,.04), 0 6px 20px rgba(10,10,10,.05)",
-        float: "0 12px 32px rgba(10,10,10,.16)",
-        gold: "0 8px 24px rgba(201,162,39,.32)"
-      },
       maxWidth: { content: "1200px", narrow: "680px" },
       keyframes: {
         "screen-in": { from: { opacity: 0, transform: "translateY(10px)" }, to: { opacity: 1, transform: "none" } },

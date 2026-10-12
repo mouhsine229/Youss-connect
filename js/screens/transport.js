@@ -1,4 +1,4 @@
-/* Transport — carte, destination, véhicule, confirmation, chauffeur, suivi, fin de course */
+// Transport : carte, destination, véhicule, confirmation, chauffeur, suivi, fin de course
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -70,7 +70,7 @@
     trip.route = null; trip.status = "idle"; trip.driver = null; updateDistance(); syncTrip();
   };
 
-  /* ---------- Écran principal ---------- */
+  // Écran principal
   Screens.transport = function (container) {
     const city = YCData.cityOf(ACState.user.city);
     if (!trip.from) Screens._transportPreset({});
@@ -91,7 +91,7 @@
             <input id="dest-input" value="${esc(trip.to ? trip.to.name : "")}" placeholder="Où allez-vous ?" autocomplete="off" spellcheck="false" enterkeyhint="search" onfocus="Screens._placeFocus('to')" oninput="Screens._placeInput('to', this.value)" onkeydown="Screens._placeKey(event)" onblur="Screens._placeBlur()" class="flex-1 bg-transparent t-title outline-none min-w-0"/>
             <button type="button" onclick="Screens._swapTripPoints()" class="text-ink-3 hover:text-ink flex-shrink-0" title="Inverser" aria-label="Inverser départ et destination">${icon("swap_vert", "text-[20px]")}</button>
           </div>
-          <div id="place-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 card overflow-hidden z-20 max-h-[280px] overflow-y-auto shadow-float"></div>
+          <div id="place-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 card overflow-hidden z-20 max-h-[280px] overflow-y-auto"></div>
         </div>
         <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0 lg:flex-wrap">${chips}</div>
         <p id="pick-hint" class="t-small text-ink-2 flex items-center gap-2">${icon("touch_app", "text-[16px] text-gold")}Touchez la carte pour placer ${trip.pickMode === "from" ? "le départ" : "la destination"}</p>
@@ -104,14 +104,14 @@
       </div>`;
     const body = `
       <div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
-        <aside id="tr-sheet" class="absolute bottom-0 inset-x-0 z-20 max-h-[min(58%,70dvh)] overflow-y-auto bg-card rounded-t-3xl shadow-float lg:static lg:max-h-none lg:rounded-none lg:shadow-none lg:border-r lg:border-line lg:overflow-y-auto lg:h-full">
+        <aside id="tr-sheet" class="absolute bottom-0 inset-x-0 z-20 max-h-[min(58%,70dvh)] overflow-y-auto bg-card border-t border-line rounded-t-3xl lg:static lg:max-h-none lg:rounded-none lg:border-t-0 lg:border-r lg:border-line lg:overflow-y-auto lg:h-full">
           <div class="w-10 h-1.5 bg-line rounded-full mx-auto mt-2 lg:hidden"></div>${panel}
         </aside>
         <div class="absolute inset-0 lg:static lg:h-full">
           <div id="tr-map" class="absolute inset-0 lg:relative lg:h-full w-full"></div>
           <div class="absolute top-3 right-3 z-10 flex flex-col gap-2">
-            <button type="button" onclick="Screens._useMyPosition()" class="icon-btn shadow-md" title="Ma position" aria-label="Ma position">${icon("my_location")}</button>
-            <button type="button" onclick="Shell.openCityPicker()" class="icon-btn shadow-md" title="Changer de ville" aria-label="Changer de ville">${icon("public")}</button>
+            <button type="button" onclick="Screens._useMyPosition()" class="icon-btn" title="Ma position" aria-label="Ma position">${icon("my_location")}</button>
+            <button type="button" onclick="Shell.openCityPicker()" class="icon-btn" title="Changer de ville" aria-label="Changer de ville">${icon("public")}</button>
           </div>
         </div>
       </div>`;
@@ -151,8 +151,8 @@
       const sel = trip.vehicle === v.id; const p = priceFor(v, trip.km);
       return `<button type="button" onclick="Screens._pickVehicle('${v.id}')" class="w-full rounded-2xl border p-3 flex items-center justify-between gap-3 text-left transition-colors ${sel ? "border-gold bg-gold/10" : "border-line bg-card hover:bg-surface-low"}" aria-pressed="${sel}">
         <span class="flex items-center gap-3 min-w-0"><span class="w-11 h-11 rounded-xl ${sel ? "bg-gold text-[#0A0A0A]" : "bg-surface-low text-ink"} flex items-center justify-center flex-shrink-0">${icon(v.icon, "text-[24px]")}</span>
-          <span class="min-w-0"><span class="block t-title">${v.label} <span class="t-small text-ink-3 font-normal">· ${v.sub}</span></span><span class="block t-small text-ink-2">${icon("schedule", "text-[13px]")} ${v.avail} · ${trip.km ? M().fmtEta(Math.round(etaSec(trip.km) * v.etaMult)) : "—"} · <span class="text-success font-semibold">Disponible</span></span></span></span>
-        <span class="t-title font-extrabold whitespace-nowrap tabular-nums">${trip.km ? ACStore.fmtFCFA(p) : "—"}</span></button>`;
+          <span class="min-w-0"><span class="block t-title">${v.label} <span class="t-small text-ink-3 font-normal">· ${v.sub}</span></span><span class="block t-small text-ink-2">${icon("schedule", "text-[13px]")} ${v.avail} · ${trip.km ? M().fmtEta(Math.round(etaSec(trip.km) * v.etaMult)) : "durée à calculer"} · <span class="text-success font-semibold">Disponible</span></span></span></span>
+        <span class="t-title font-extrabold whitespace-nowrap tabular-nums">${trip.km ? ACStore.fmtFCFA(p) : "..."}</span></button>`;
     }).join("");
     if (ops) ops.innerHTML = OPERATORS.map((o) => {
       const sel = trip.operator === o.id;
@@ -168,7 +168,7 @@
     if (di && document.activeElement !== di) di.value = trip.to ? trip.to.name : "";
   }
 
-  /* ---------- Saisie et suggestions ---------- */
+  // Saisie et suggestions
   function renderSuggestions(list, opts) {
     const box = document.getElementById("place-suggestions"); if (!box) return;
     lastSuggestions = list;
@@ -196,11 +196,35 @@
       renderSuggestions(merged.slice(0, 7), { query: q });
     }), 350);
   };
-  Screens._placeKey = function (ev) { if (ev.key === "Enter") { ev.preventDefault(); if (lastSuggestions.length) Screens._pickSuggestion(0); } else if (ev.key === "Escape") { hideSuggestions(); ev.target.blur(); } };
-  Screens._placeBlur = function () { clearTimeout(blurTimer); blurTimer = setTimeout(() => { hideSuggestions(); refreshPanel(); }, 180); };
+  Screens._placeKey = function (ev) {
+    if (ev.key === "Enter") { ev.preventDefault(); if (lastSuggestions.length) Screens._pickSuggestion(0); else commitTyped(suggestRole, ev.target.value, true); }
+    else if (ev.key === "Escape") { hideSuggestions(); ev.target.blur(); }
+  };
+  // Adresse tapée sans passer par une suggestion : on la garde au lieu de l'effacer.
+  function commitTyped(role, text, fromEnter) {
+    const t = String(text || "").trim();
+    const cur = role === "from" ? trip.from : trip.to;
+    if (!t || (cur && t === cur.name)) { refreshPanel(); return; }
+    const req = ++suggestReq, before = cur ? cur.name : null;
+    M().resolveTyped(t, ACState.user.city).then((p) => {
+      if (!p || req !== suggestReq || !App.current || App.current.id !== "transport") return;
+      // entre-temps l'utilisateur a pu choisir un lieu sur la carte ou dans les raccourcis
+      const now = role === "from" ? trip.from : trip.to; if ((now ? now.name : null) !== before) return;
+      if (p.approx) UI.toast("Adresse gardée telle quelle, position approximative. Vous pouvez l'ajuster sur la carte.", "info");
+      const el = document.getElementById(role === "from" ? "from-input" : "dest-input"); if (fromEnter && el) el.blur();
+      Screens._setTripPoint(role, { name: p.name, lat: p.lat, lng: p.lng });
+      if (fromEnter && role === "from" && !trip.to) { const d = document.getElementById("dest-input"); if (d) setTimeout(() => d.focus(), 60); }
+    });
+  }
+  Screens._placeBlur = function () {
+    clearTimeout(blurTimer); clearTimeout(suggestTimer);
+    const role = suggestRole, el = document.getElementById(role === "from" ? "from-input" : "dest-input"); const typed = el ? el.value : "";
+    blurTimer = setTimeout(() => { hideSuggestions(); commitTyped(role, typed, false); }, 180);
+  };
   Screens._pickSuggestion = function (i) {
     const s = lastSuggestions[i]; if (!s) return; hideSuggestions();
     const role = suggestRole; const el = document.getElementById(role === "from" ? "from-input" : "dest-input"); if (el) el.blur();
+    clearTimeout(blurTimer); ++suggestReq; // le blur ne doit pas re-résoudre le texte partiel
     Screens._setTripPoint(role, { name: s.name, lat: s.lat, lng: s.lng });
     if (role === "from" && !trip.to) { const d = document.getElementById("dest-input"); if (d) setTimeout(() => d.focus(), 60); }
   };
@@ -230,7 +254,7 @@
     loadRoute().then(finish, finish); setTimeout(finish, 4000);
   };
 
-  /* ---------- Confirmation ---------- */
+  // Confirmation
   Screens.transportConfirm = function (container) {
     if (!trip.from || !trip.to) { App.resetTo("transport"); return; }
     updateDistance();
@@ -285,13 +309,13 @@
     App.nav("transportSearching");
   };
 
-  /* ---------- Recherche ---------- */
+  // Recherche
   Screens.transportSearching = function (container) {
     if (!trip.to) { App.resetTo("transport"); return; }
     const body = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto">
       <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center"><div class="absolute inset-0 rounded-full animate-pulse-ring"></div><div class="absolute inset-4 rounded-full border-2 border-gold/30 animate-ping"></div>${icon(vehicleOf().icon, "text-gold text-[52px]")}</div>
       <h2 class="t-h1 mt-8">Recherche d'un chauffeur…</h2>
-      <p class="t-body text-ink-2 mt-2 max-w-[320px]">${esc(trip.from.name)} → ${esc(trip.to.name)}${trip.km ? " · " + M().fmtKm(trip.km) : ""}</p>
+      <p class="t-body text-ink-2 mt-2 max-w-[320px]">De ${esc(trip.from.name)} vers ${esc(trip.to.name)}${trip.km ? " · " + M().fmtKm(trip.km) : ""}</p>
       <p id="search-status" class="t-small text-ink-3 mt-6">Demande envoyée à ${operatorOf().label} · ${vehicleOf().label.toLowerCase()} à proximité…</p>
       <button type="button" onclick="Screens._cancelSearch()" class="btn btn-outline mt-10">Annuler la demande</button>
     </div>`;
@@ -309,7 +333,7 @@
     ACStore.emit();
   };
 
-  /* ---------- Chauffeur trouvé ---------- */
+  // Chauffeur trouvé
   Screens.transportDriverFound = function (container) {
     if (!trip.driver) { App.resetTo("transport"); return; }
     const d = trip.driver;
@@ -329,7 +353,7 @@
           <button type="button" onclick="Screens._tripChat()" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}${I18N.t("message")}</button>
         </div>
       </div>
-      <div class="card p-4 space-y-2">${UI.row("Trajet", esc(trip.from.name.split("(")[0]) + " → " + esc(trip.to.name.split("(")[0]))}${UI.row("Prix", ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0))), true)}${UI.row("Paiement", (ACState.paymentMethods.find((m) => m.type === trip.method) || {}).label || "Youss Wallet")}</div>
+      <div class="card p-4 space-y-2">${UI.row("Trajet", esc(trip.from.name.split("(")[0]) + " vers " + esc(trip.to.name.split("(")[0]))}${UI.row("Prix", ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0))), true)}${UI.row("Paiement", (ACState.paymentMethods.find((m) => m.type === trip.method) || {}).label || "Youss Wallet")}</div>
       ${UI.primaryButton("Suivre la course", "App.replace('transportInRide')", { size: "lg", icon: "near_me" })}
       <button type="button" onclick="Screens._cancelRide()" class="w-full t-small text-danger font-semibold py-2">Annuler la course</button>
     </div>`;
@@ -341,7 +365,7 @@
     UI.confirm({ title: "Annuler la course ?", body: "L'annulation est gratuite avant l'arrivée du chauffeur.", okLabel: "Annuler la course", danger: true, icon: "cancel", onOk: "Screens._cancelSearch()" });
   };
 
-  /* ---------- Messagerie ---------- */
+  // Messagerie
   Screens._tripChat = function () {
     const d = trip.driver || {};
     const canned = ["Je suis au point de départ", "J'arrive dans 2 minutes", "Pouvez-vous m'attendre ?", "Appelez-moi en arrivant"];
@@ -361,7 +385,7 @@
     setTimeout(() => { if (!document.getElementById("chat-log")) return; log.insertAdjacentHTML("beforeend", `<div class="max-w-[80%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">D'accord, à tout de suite 👍</div>`); log.scrollTop = log.scrollHeight; }, 900);
   };
 
-  /* ---------- Suivi en course ---------- */
+  // Suivi en course
   Screens.transportInRide = function (container) {
     if (!trip.driver || !trip.to) { App.resetTo("transport"); return; }
     const d = trip.driver;
@@ -379,7 +403,7 @@
         <button type="button" id="finish-btn" onclick="Screens._transportFinish()" class="btn btn-lg btn-dark btn-block">Terminer la course</button>
       </div>`;
     const body = `<div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
-      <aside id="tr-sheet" class="absolute bottom-0 inset-x-0 z-20 bg-card rounded-t-3xl shadow-float lg:static lg:rounded-none lg:shadow-none lg:border-r lg:border-line lg:h-full lg:overflow-y-auto"><div class="w-10 h-1.5 bg-line rounded-full mx-auto mt-2 lg:hidden"></div>${sheet}</aside>
+      <aside id="tr-sheet" class="absolute bottom-0 inset-x-0 z-20 bg-card border-t border-line rounded-t-3xl lg:static lg:rounded-none lg:border-t-0 lg:border-r lg:border-line lg:h-full lg:overflow-y-auto"><div class="w-10 h-1.5 bg-line rounded-full mx-auto mt-2 lg:hidden"></div>${sheet}</aside>
       <div class="absolute inset-0 lg:static lg:h-full"><div id="ride-map" class="absolute inset-0 lg:relative lg:h-full w-full"></div></div>
     </div>`;
     Shell.render(container, { title: "Suivi de la course", back: "App.nav('home')", body, nav: false, fill: true, hideSearch: true, onMount: startRide });
@@ -436,7 +460,7 @@
   Screens._transportMarkArrived = function () { trip.status = "arrived"; trip.fastDemo = true; syncTrip(); };
   Screens._transportFinish = function () { trip.status = "arrived"; syncTrip(); App.nav("transportEnd"); };
 
-  /* ---------- Fin de course ---------- */
+  // Fin de course
   Screens.transportEnd = function (container) {
     if (!trip.driver) { App.resetTo("transport"); return; }
     const d = trip.driver;
@@ -483,7 +507,7 @@
     }, function (res) { App.nav("paymentFailed", { retry: "transportEnd", amount: total, reason: res.reason }); });
   };
 
-  /* ---------- SOS (partagé avec Sécurité) ---------- */
+  // SOS (partagé avec Sécurité)
   Screens.sos = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full flex-1 flex flex-col items-center justify-center text-center py-8 space-y-5">
       <div class="w-24 h-24 rounded-full bg-danger-soft text-danger flex items-center justify-center animate-pulse-ring">${icon("sos", "text-[44px]")}</div>

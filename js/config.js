@@ -1,9 +1,8 @@
-/* YOUSS CONNECT — connexion Supabase
-   1. Créez un projet sur https://supabase.com (gratuit).
-   2. Project Settings → API : copiez Project URL et la clé anon (public).
-   3. Authentication → Providers → Phone : activez-le (compte Twilio).
-   4. SQL Editor : exécutez supabase/schema.sql.
-   Tant que ces deux champs sont vides, l'application reste en mode démo. */
+// Connexion Supabase. Pour brancher un vrai backend :
+// créer un projet sur supabase.com, copier Project URL et la clé anon depuis Project Settings > API,
+// activer le fournisseur Phone (Twilio) dans Authentication > Providers,
+// puis exécuter supabase/schema.sql dans le SQL Editor.
+// Tant que les deux champs sont vides, l'application reste en mode démo.
 window.YC_CONFIG = {
   supabaseUrl: "",
   supabaseAnonKey: ""

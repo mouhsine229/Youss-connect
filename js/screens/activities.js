@@ -1,4 +1,4 @@
-/* Activités — historique unifié de tous les services, filtrable, avec détail */
+// Activités : historique unifié de tous les services, filtrable, avec détail
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -18,7 +18,7 @@
     return `<button type="button" onclick="${go("activityDetail", { id: a.id })}" class="w-full flex items-center justify-between gap-3 p-3.5 text-left hover:bg-surface-low transition-colors">
       <span class="flex items-center gap-3 min-w-0"><span class="w-11 h-11 rounded-full ${live ? "bg-gold text-[#0A0A0A]" : "bg-surface-low text-ink"} flex items-center justify-center flex-shrink-0 ${live ? "animate-pulse-ring" : ""}">${icon(a.icon || ACStore.iconForService(a.service), "text-[22px]")}</span>
         <span class="min-w-0"><span class="block t-title truncate">${esc(a.title)}</span><span class="block t-small text-ink-2 truncate">${LABEL[a.service] || a.service} · ${esc(a.subtitle || "")}</span></span></span>
-      <span class="text-right flex-shrink-0">${a.amount != null ? `<span class="block t-title font-extrabold">${ACStore.fmtFCFA(a.amount)}</span>` : ""}${UI.badge(a.status || "—", live ? "gold" : a.status === "Annulé" ? "danger" : "success")}</span></button>`;
+      <span class="text-right flex-shrink-0">${a.amount != null ? `<span class="block t-title font-extrabold">${ACStore.fmtFCFA(a.amount)}</span>` : ""}${UI.badge(a.status || "En cours", live ? "gold" : a.status === "Annulé" ? "danger" : "success")}</span></button>`;
   }
 
   Screens.activities = function (container, params) {
@@ -55,7 +55,7 @@
       <div class="card p-6 text-center"><span class="w-16 h-16 rounded-full ${live ? "bg-gold text-[#0A0A0A]" : "bg-surface-low text-ink"} flex items-center justify-center mx-auto">${icon(a.icon || ACStore.iconForService(a.service), "text-[30px]")}</span><h2 class="t-h2 mt-3">${esc(a.title)}</h2><p class="t-small text-ink-2">${LABEL[a.service] || a.service} · ${esc(a.subtitle || "")}</p>${a.amount != null ? `<p class="t-display mt-2">${ACStore.fmtFCFA(a.amount)}</p>` : ""}<div class="mt-2">${UI.badge(a.status, live ? "gold" : "success")}</div></div>
       ${a.orderId ? UI.primaryButton("Suivre la commande en direct", go("orderTracking", { id: a.orderId }), { icon: "near_me" }) : ""}
       ${d.items ? `<div class="card p-4"><p class="t-caption text-ink-3 mb-2">Articles</p>${d.items.map((i) => `<p class="t-body py-1 border-b border-line last:border-0">${esc(i)}</p>`).join("")}</div>` : ""}
-      <div class="card p-4">${details}${UI.row("Référence", esc(tx ? tx.ref : a.id.toUpperCase()))}${UI.row("Paiement", a.method === "cash" ? "Espèces" : a.method === "mobile" ? "Paiement mobile" : a.amount != null ? "Youss Wallet" : "—")}</div>
+      <div class="card p-4">${details}${UI.row("Référence", esc(tx ? tx.ref : a.id.toUpperCase()))}${UI.row("Paiement", a.method === "cash" ? "Espèces" : a.method === "mobile" ? "Paiement mobile" : a.amount != null ? "Youss Wallet" : "Aucun")}</div>
       ${a.service === "transport" && d.from && d.to ? `<div class="card overflow-hidden"><div id="act-map" class="h-44 bg-surface-low"></div></div>` : ""}
       <div class="grid grid-cols-2 gap-3">${actions.map((x) => UI.button(x[1], x[2], { variant: x[0] === "cancel" ? "outline" : x[0] === "replay" || x[0] === "qr_code_2" ? "primary" : "outline", icon: x[0] })).join("")}</div>
       ${a.amount != null ? UI.secondaryButton("Télécharger le reçu", "UI.toast('Reçu envoyé par e-mail (démo).','success')", { icon: "receipt_long" }) : ""}</div>`;

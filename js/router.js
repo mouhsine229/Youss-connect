@@ -1,9 +1,5 @@
-/* =========================================================
-   YOUSS CONNECT — ROUTEUR (hash)
-   #/ecran?param=valeur — le bouton Retour du navigateur fonctionne,
-   chaque écran a une URL partageable, les QR « #/culture/<id> » ouvrent
-   directement une fiche.
-   ========================================================= */
+// Routeur hash : #/ecran?param=valeur. Le bouton Retour du navigateur marche,
+// chaque écran a une URL et les QR #/culture/<id> ouvrent directement une fiche.
 (function () {
   "use strict";
   const container = document.getElementById("app");
@@ -130,7 +126,7 @@
     show(current.id, current.params);
   });
 
-  /* Raccourci clavier « / » → recherche (desktop) */
+  // La touche "/" ouvre la recherche sur desktop
   document.addEventListener("keydown", function (e) {
     if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "")) {
       e.preventDefault(); nav("explorer", { focus: 1 });

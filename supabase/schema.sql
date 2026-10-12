@@ -1,5 +1,5 @@
--- YOUSS CONNECT — schéma Supabase (partie 2)
--- À coller dans SQL Editor du projet, puis Run.
+-- Schéma Supabase de YOUSS CONNECT.
+-- À coller dans le SQL Editor du projet, puis Run.
 -- Le solde n'est jamais modifiable par le client : uniquement via wallet_pay / wallet_topup.
 
 create table if not exists public.profiles (

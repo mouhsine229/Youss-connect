@@ -2,7 +2,7 @@
   "name": "youss-connect",
   "version": "2.0.0",
   "private": true,
-  "description": "YOUSS CONNECT — maquette interactive de la super application africaine portée par KYA CORPORATION.",
+  "description": "Maquette interactive de YOUSS CONNECT, la super application africaine de KYA CORPORATION.",
   "scripts": {
     "build:css": "node node_modules/tailwindcss/lib/cli.js -i ./src/styles.css -o ./css/app.css --minify",
     "watch:css": "node node_modules/tailwindcss/lib/cli.js -i ./src/styles.css -o ./css/app.css --watch",

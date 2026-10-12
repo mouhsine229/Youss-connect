@@ -1,15 +1,10 @@
-/* =========================================================
-   YOUSS CONNECT — MODE DÉMONSTRATION GUIDÉE
-   Cinq parcours reliés (transport, restaurant, événement, commerce,
-   culture) pilotés par une barre « coach » : chaque étape prépare
-   l'état nécessaire puis ouvre l'écran correspondant.
-   ========================================================= */
+// Parcours de démo guidés. Chaque étape prépare l'état nécessaire puis ouvre l'écran.
 (function () {
   "use strict";
 
   const TOURS = [
     {
-      id: "transport", label: "Parcours Transport", icon: "directions_car", sub: "Accueil → Destination → Véhicule → Chauffeur → Suivi → Fin de course",
+      id: "transport", label: "Parcours Transport", icon: "directions_car", sub: "De l'accueil à la fin de course : destination, véhicule, chauffeur, suivi",
       steps: [
         { screen: "home", hint: "Depuis l'accueil, le service Transport est à un tap." },
         { screen: "transport", hint: "Départ, destination, itinéraire réel et prix au kilomètre.", prepare: () => Screens._transportPreset && Screens._transportPreset({ from: "Haie Vive", to: "Aéroport de Cotonou (Cadjèhoun)", vehicle: "car" }) },
@@ -21,18 +16,18 @@
       ]
     },
     {
-      id: "restaurant", label: "Parcours Restaurant", icon: "restaurant", sub: "Restaurants → Fiche → Panier → Adresse → Paiement → Suivi",
+      id: "restaurant", label: "Parcours Restaurant", icon: "restaurant", sub: "Choisir un restaurant, remplir le panier, payer et suivre la livraison",
       steps: [
         { screen: "restaurants", hint: "Recherche, catégories et restaurants de la ville." },
         { screen: "restaurantDetail", params: { id: "rest1" }, hint: "Fiche : photos, horaires, avis, menu avec ajout au panier.", prepare: () => Screens._cartSeed && Screens._cartSeed("rest1", ["d1", "d2"]) },
         { screen: "cartRestaurant", hint: "Panier : quantités, frais de livraison, total." },
         { screen: "checkoutRestaurant", hint: "Adresse, moyen de paiement, confirmation." },
         { screen: "orderConfirmed", hint: "Commande confirmée, numéro et estimation.", prepare: () => Screens._demoOrder && Screens._demoOrder("restaurant") },
-        { screen: "orderTracking", hint: "Suivi en direct : préparation → livraison → livrée." }
+        { screen: "orderTracking", hint: "Suivi en direct, de la préparation jusqu'à la remise." }
       ]
     },
     {
-      id: "event", label: "Parcours Événement", icon: "confirmation_number", sub: "Événements → Fiche → Billet → Paiement → QR Code",
+      id: "event", label: "Parcours Événement", icon: "confirmation_number", sub: "Trouver un événement, acheter un billet et récupérer son QR Code",
       steps: [
         { screen: "events", hint: "Concerts, festivals, conférences, spectacles, sport." },
         { screen: "eventDetail", params: { id: "ev2" }, hint: "Affiche, programme, organisateur, catégories de billets." },
@@ -42,18 +37,18 @@
       ]
     },
     {
-      id: "market", label: "Parcours Commerce", icon: "storefront", sub: "Youss Market → Produit → Panier → Livraison → Paiement → Suivi",
+      id: "market", label: "Parcours Commerce", icon: "storefront", sub: "Acheter un produit local sur Youss Market et suivre sa livraison",
       steps: [
         { screen: "market", hint: "Marketplace : recherche, catégories, vendeurs notés." },
         { screen: "productDetail", params: { id: "p1" }, hint: "Galerie, vendeur, disponibilité, description.", prepare: () => Screens._marketSeed && Screens._marketSeed(["p1", "p2"]) },
         { screen: "cartMarket", hint: "Panier Market." },
-        { screen: "checkoutMarket", hint: "Adresse → mode de livraison → paiement → confirmation." },
+        { screen: "checkoutMarket", hint: "Adresse, mode de livraison, paiement, puis confirmation." },
         { screen: "orderConfirmed", hint: "Commande confirmée + points Youss Bonus.", prepare: () => Screens._demoOrder && Screens._demoOrder("market") },
         { screen: "orderTracking", hint: "Suivi : préparation, expédition, livraison." }
       ]
     },
     {
-      id: "culture", label: "Parcours Culture", icon: "account_balance", sub: "Explorer → Culture → Destination → Monument → Scanner → Résultat → À proximité",
+      id: "culture", label: "Parcours Culture", icon: "account_balance", sub: "Choisir une destination, visiter un monument, le scanner et découvrir les alentours",
       steps: [
         { screen: "explorer", hint: "Le moteur de découverte de YOUSS CONNECT." },
         { screen: "culture", hint: "Destinations, monuments, visites." },
@@ -98,7 +93,7 @@
     if (!active) return "";
     const s = active.tour.steps[active.index];
     const n = active.tour.steps.length;
-    return `<div class="fixed z-[800] left-3 right-3 bottom-[88px] lg:left-auto lg:right-6 lg:bottom-6 lg:w-[420px] card-dark p-3.5 shadow-float animate-screen-in" role="status">
+    return `<div class="fixed z-[800] left-3 right-3 bottom-[88px] lg:left-auto lg:right-6 lg:bottom-6 lg:w-[420px] card-dark p-3.5 animate-screen-in" role="status">
       <div class="flex items-start gap-3">
         <span class="w-10 h-10 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center flex-shrink-0">${UI.icon(active.tour.icon, "text-[22px]")}</span>
         <div class="min-w-0 flex-1">

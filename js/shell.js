@@ -1,9 +1,6 @@
-/* =========================================================
-   YOUSS CONNECT — SHELL RESPONSIVE
-   Mobile / tablette : en-tête + contenu défilant + navigation basse.
-   Desktop (≥ 1024 px) : barre latérale + en-tête de page + contenu large.
-   Un même écran fournit title/back/body ; le shell choisit la mise en page.
-   ========================================================= */
+// Shell responsive. Mobile : en-tête, contenu, barre basse.
+// Desktop (1024 px et plus) : barre latérale, en-tête de page, contenu large.
+// Les écrans fournissent title/back/body, le shell choisit la mise en page.
 (function () {
   "use strict";
 
@@ -128,10 +125,8 @@
       </div></nav>`;
   }
 
-  /**
-   * Rendu standard.
-   * o: { title, subtitle, back, right, body, nav, fill, full, narrow, homeHeader, hideSearch, onMount }
-   */
+  // Rendu standard d'un écran.
+  // o: { title, subtitle, back, right, body, nav, fill, full, narrow, homeHeader, hideSearch, onMount }
   function render(container, o) {
     o = o || {};
     const screenId = App.current ? App.current.id : "";
@@ -154,7 +149,7 @@
     if (o.onMount) requestAnimationFrame(() => o.onMount());
   }
 
-  /* ---------- Sélecteur de ville (change la base de tous les services) ---------- */
+  // Sélecteur de ville (change la base de tous les services)
   function openCityPicker() {
     UI.openSheet(`<h3 class="t-h3 mb-1">${t("your_city")}</h3><p class="t-small text-ink-2 mb-4">Change la ville des restos, des courses et de la carte.</p>
       <div class="grid grid-cols-2 gap-3">${YCData.DESTINATIONS.map((c) => {
@@ -170,7 +165,7 @@
     UI.closeSheet();
     if (ACState.user.city === name) return;
     ACStore.setCity(name);
-    UI.toast("Ville : " + name + " · services mis à jour", "success");
+    UI.toast("Vous êtes maintenant à " + name + ".", "success");
   }
 
   function openDemoMenu() { Demo.openMenu(); }

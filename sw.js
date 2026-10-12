@@ -1,9 +1,7 @@
-/* YOUSS CONNECT — service worker
-   - App shell (HTML, JS, CSS, vendors, icônes) précaché : démarrage hors ligne.
-   - Code : network-first (chaque déploiement est pris en compte immédiatement).
-   - Images locales : cache-first (photos des restaurants, produits, lieux).
-   - Polices Google et tuiles de carte : stale-while-revalidate avec plafond. */
-const VERSION = "youss-connect-v12";
+// Service worker. Le shell (HTML, JS, CSS, vendors, icônes) est précaché pour démarrer hors ligne.
+// Le code passe en network-first pour que chaque déploiement soit visible tout de suite,
+// les images locales en cache-first, les polices Google et les tuiles de carte en stale-while-revalidate.
+const VERSION = "youss-connect-v13";
 const SHELL = VERSION + "-shell";
 const IMAGES = VERSION + "-images";
 const RUNTIME = VERSION + "-runtime";

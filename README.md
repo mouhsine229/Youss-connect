@@ -1,81 +1,77 @@
-# YOUSS CONNECT — maquette interactive v2
+# YOUSS CONNECT
 
-**Une seule application pour vivre l'Afrique au quotidien.** Portée par KYA CORPORATION.
+Maquette interactive de la super application de KYA CORPORATION. Une seule app, un seul compte, pour se déplacer, se faire livrer, manger, sortir, acheter local, visiter et payer, à Cotonou, Dakar, Lomé et Accra.
 
-Maquette mobile-first et desktop de la super application africaine : Transport, Livraison, Restaurants, Événements, Youss Market, Culture & Tourisme, Youss Wallet, Youss Bonus et Youss Business, reliés par un seul compte et un état partagé (payer une course débite le Wallet, crédite des points, crée une activité et une notification).
+Tout tourne dans le navigateur, sans backend : les données sont fictives, l'état est gardé en localStorage, et les services se parlent entre eux. Payer une course débite le wallet, crédite des points, crée une activité et une notification.
 
-Villes de démonstration : **Cotonou** (ville de l'utilisateur), **Dakar**, **Lomé**, **Accra**. Données fictives mais réalistes ; aucune banque, opérateur ou entreprise n'est présenté comme partenaire officiel.
+Aucune banque, aucun opérateur ni aucune entreprise n'est présenté comme partenaire officiel.
 
 ## Lancer en local
 
 ```bash
-npm install          # une seule fois (Tailwind + vendors)
-npm run dev          # compile le CSS puis sert sur http://127.0.0.1:4173
+npm install
+npm run dev
 ```
 
-Ou simplement servir le dossier avec n'importe quel serveur statique (`npx serve .`, `python3 -m http.server`). Le CSS compilé (`css/app.css`) est versionné : le site fonctionne tel quel sur GitHub Pages sans étape de build.
+`npm run dev` compile le CSS puis sert le dossier sur http://127.0.0.1:4173. N'importe quel serveur statique fait aussi l'affaire (`npx serve .`, `python3 -m http.server`), le CSS compilé `css/app.css` est versionné.
 
-Après une modification de `src/styles.css`, de `tailwind.config.js` ou de classes dans `js/**`, relancer `npm run build:css` (ou `npm run watch:css` pendant le développement).
+Si vous touchez à `src/styles.css`, `tailwind.config.js` ou aux classes utilisées dans `js/**`, relancez `npm run build:css` (ou laissez `npm run watch:css` tourner).
 
-**Compte démo** : n'importe quel numéro · code OTP `1234` · code PIN `0000` · bouton « Explorer la démo sans compte » sur l'écran de connexion.
+Pour entrer : n'importe quel numéro de téléphone, code OTP `1234`, code PIN `0000`. Il y a aussi un bouton "Explorer la démo sans compte" sur l'écran de connexion.
 
-## Déploiement GitHub Pages
+## Déploiement
 
-Dépôt : https://github.com/mouhsine229/Youss-connect  
+Dépôt : https://github.com/mouhsine229/Youss-connect
 Site : https://mouhsine229.github.io/Youss-connect/
 
-GitHub Pages publie la branche **`gh-pages`**. Un workflow (`.github/workflows/gh-pages.yml`) copie `main` vers `gh-pages` à chaque push. Attendre 1–2 minutes, puis recharger sans cache.
+GitHub Pages sert la branche `gh-pages`. Le workflow `.github/workflows/gh-pages.yml` y recopie `main` à chaque push, comptez une ou deux minutes puis rechargez sans cache. Le `.nojekyll` évite que Jekyll ne touche aux fichiers.
 
-Liens internes (après déploiement) :
+Deux espaces internes ne sont pas dans le menu client :
 
-- Console admin KYA : https://mouhsine229.github.io/Youss-connect/#/kya-ops  
-- Cuisine restaurant : https://mouhsine229.github.io/Youss-connect/#/pro/rejoindre?t=YC-PRO-MAMAN  
+- la console KYA : https://mouhsine229.github.io/Youss-connect/#/kya-ops
+- la cuisine d'un restaurant, par lien d'invitation : https://mouhsine229.github.io/Youss-connect/#/pro/rejoindre?t=YC-PRO-MAMAN
 
-Le fichier `.nojekyll` désactive Jekyll. Tout est statique : pas de build côté GitHub.
+## Comment c'est organisé
 
-## Architecture
+Pas de bundler, pas de framework. Chaque fichier expose un objet global et `index.html` les charge dans l'ordre.
 
-| Fichier | Rôle |
-|---|---|
-| `index.html` | Coquille, chargement des scripts, thème avant premier rendu |
-| `src/styles.css` → `css/app.css` | Tokens de design (variables CSS, thème clair/sombre), composants (`.btn`, `.card`, `.chip`, `.input`…), Tailwind compilé |
-| `js/data.js` | Données de démonstration : pays, villes et points d'intérêt, restaurants et menus, produits et vendeurs, événements, sites culturels, chauffeurs, livreurs, récompenses, index de recherche |
-| `js/state.js` | État central persisté (`localStorage`) : session, utilisateur, Wallet, Youss Bonus, adresses, moyens de paiement, activités, notifications, paniers, commandes, billets, Youss Business ; paiement unifié `ACStore.pay()` |
-| `js/i18n.js` | Français, English (complets), Fon et Wolof (partiels, à valider par des locuteurs) |
-| `js/ui.js` | Kit UI : boutons, cartes métier, badges, formulaires, feuilles, toasts, états vides, squelettes, « Et ensuite ? » |
-| `js/shell.js` | Mise en page responsive : barre latérale + en-tête (desktop), en-tête + navigation basse (mobile), sélecteur de ville |
-| `js/router.js` | Routage par hash (`#/ecran?param=…`), bouton Retour du navigateur, liens profonds (`#/culture/<id>`), garde d'authentification |
-| `js/map.js` | Moteur carte Leaflet : tuiles OSM, itinéraires OSRM (repli hors ligne), géocodage Photon biaisé sur la ville, animation de véhicule |
-| `js/scanner.js` | Caméra + lecture QR (BarcodeDetector / jsQR), génération de QR |
-| `js/demo.js` | Parcours de démonstration guidés (transport, restaurant, événement, commerce, culture) |
-| `js/screens/*.js` | Un module par domaine : `auth`, `home`, `explorer`, `transport`, `delivery`, `restaurants`, `orders`, `events`, `market`, `culture`, `wallet`, `rewards`, `business`, `activities`, `notifications`, `profile` |
-| `sw.js` | Service worker : app shell précaché, images en cache, polices et tuiles en stale-while-revalidate |
-| `supabase/schema.sql`, `js/backend.js`, `js/config.js` | Backend optionnel (Supabase) : OTP SMS, wallet serveur, RPC sécurisées. Sans clés, la maquette reste 100 % locale |
+- `index.html` : la coquille. Charge les scripts et pose le thème sombre avant le premier rendu.
+- `src/styles.css` : variables de design, thème clair/sombre et composants (`.btn`, `.card`, `.chip`, `.input`...). Compilé par Tailwind vers `css/app.css`.
+- `js/data.js` : pays, villes, restaurants et menus, produits, événements, sites culturels, chauffeurs, livreurs, récompenses, index de recherche.
+- `js/state.js` : l'état central et sa persistance. Session, utilisateur, wallet, points, adresses, paniers, commandes, billets, espace pro. Le paiement commun passe par `ACStore.pay()`.
+- `js/i18n.js` : français et anglais complets, fon et wolof partiels.
+- `js/ui.js` : boutons, cartes, badges, formulaires, feuilles, toasts, états vides, squelettes.
+- `js/shell.js` : la mise en page. Barre latérale et en-tête sur desktop, en-tête et navigation basse sur mobile, sélecteur de ville.
+- `js/router.js` : routage par hash (`#/ecran?param=...`), bouton Retour, liens profonds comme `#/culture/<id>`, garde d'authentification.
+- `js/map.js` : Leaflet, tuiles OSM, itinéraires OSRM avec repli hors ligne, géocodage Photon, animation du véhicule.
+- `js/scanner.js` : caméra, lecture de QR (BarcodeDetector ou jsQR) et génération de QR.
+- `js/demo.js` : les parcours guidés.
+- `js/screens/*.js` : un fichier par domaine (`auth`, `home`, `explorer`, `transport`, `delivery`, `restaurants`, `orders`, `events`, `market`, `culture`, `wallet`, `rewards`, `business`, `activities`, `notifications`, `profile`, `ops`, `pro`).
+- `sw.js` : service worker. Shell précaché, images en cache, polices et tuiles en stale-while-revalidate.
+- `supabase/schema.sql`, `js/backend.js`, `js/config.js` : backend Supabase optionnel (OTP par SMS, wallet côté serveur). Tant que `js/config.js` est vide, tout reste local.
 
-## Parcours démontrables
+## Ce qu'on peut montrer
 
-- **Transport** : Accueil → Transport → Départ / Destination (carte, suggestions, itinéraire réel) → Véhicule → Confirmation (prix, paiement) → Recherche → Chauffeur trouvé → Suivi animé → Fin de course (durée, distance, notation, pourboire) → Paiement → Et ensuite ?
-- **Restaurant** : Restaurants → Fiche (menu, avis, infos) → Panier → Adresse → Paiement → Confirmation → Suivi en direct jusqu'à « Livrée ».
-- **Événement** : Événements → Fiche → Billet → Paiement → Billet confirmé → Billet numérique avec QR Code réel → Mes billets.
-- **Commerce** : Youss Market → Produit (galerie, vendeur, stock) → Panier → Adresse → Livraison → Paiement → Confirmation → Suivi.
-- **Culture** : Explorer → Culture → Destination → Monument (Aperçu / Histoire / Visite / Infos, audio-guide, vidéo) → Scanner → Résultat → Lieux à proximité → Explorer autour de moi.
-- **Livraison** : catégorie → adresses → estimation → paiement → recherche → livreur trouvé → suivi sur carte (étapes) → preuve de remise.
+Les parcours guidés se lancent depuis Paramètres, ou depuis le bouton dans la barre latérale. Ils enchaînent les écrans avec des données déjà préparées.
 
-Menu **Paramètres → Parcours de démonstration** (ou le bouton dans la barre latérale) enchaîne automatiquement les écrans de chaque parcours avec les données préparées.
+- Transport : départ et destination sur carte avec itinéraire réel, choix du véhicule, confirmation, recherche de chauffeur, suivi animé, fin de course avec notation et pourboire, paiement.
+- Restaurant : fiche avec menu et avis, panier, adresse, paiement, puis suivi en direct jusqu'à la livraison.
+- Événement : fiche, achat du billet, paiement, billet numérique avec un vrai QR Code dans "Mes billets".
+- Commerce : produit sur Youss Market, panier, adresse, mode de livraison, paiement, suivi.
+- Culture : destination, fiche du monument (histoire, visite, audio-guide, vidéo), scanner, résultat, lieux à proximité, exploration autour de soi.
+- Livraison : catégorie, adresses, estimation, paiement, recherche d'un livreur, suivi sur carte, preuve de remise.
 
-## États couverts
-
-Chargement, succès, erreur, paiement réussi / en attente / échoué (avec reprise), recherche chauffeur, chauffeur trouvé, commande confirmée, livraison en cours, commande livrée, panier vide, aucun résultat, aucune notification, aucune activité, hors ligne, écran introuvable.
+Les états intermédiaires sont couverts : chargement, erreur, paiement en attente ou échoué avec reprise, panier vide, aucun résultat, hors ligne, écran introuvable.
 
 ## Crédits
 
 - Photos de lieux réels : Wikimedia Commons, auteurs et licences dans `assets/img/CREDITS.md`.
-- Autres visuels (plats, produits, services, illustrations d'onboarding, portraits) : images de synthèse générées pour la maquette.
-- Cartes : © OpenStreetMap contributors ; itinéraires : OSRM ; géocodage : Photon (Komoot).
+- Plats, produits, illustrations d'onboarding et portraits : images de synthèse faites pour la maquette.
+- Cartes : © OpenStreetMap contributors. Itinéraires : OSRM. Géocodage : Photon (Komoot).
 
-## Limites assumées
+## Ce qui n'est pas réel
 
-- Youss Wallet est conceptuel : aucun flux financier réel, aucun partenaire engagé.
-- La reconnaissance d'image du scanner culturel est simulée ; la lecture de QR Code est réelle.
-- Les itinéraires et tuiles de carte nécessitent une connexion la première fois (mis en cache ensuite).
-- Fon et Wolof : traductions partielles de démonstration.
+- Youss Wallet est conceptuel. Aucun flux financier, aucun partenaire engagé.
+- Le scanner culturel lit vraiment les QR Codes, mais la reconnaissance d'image est simulée.
+- Les itinéraires et les tuiles de carte demandent une connexion la première fois, ils sont mis en cache ensuite.
+- Le fon et le wolof ne couvrent que la navigation et les actions courantes, et restent à faire relire par des locuteurs.

@@ -1,7 +1,6 @@
-/* YOUSS CONNECT — client Supabase (optionnel)
-   Session, OTP téléphone, wallet, courses et réservations.
-   Sans clés dans js/config.js, isLive() reste faux et la démo locale continue.
-   Le SDK n'est chargé que si une configuration est présente. */
+// Client Supabase, optionnel : session, OTP téléphone, wallet, courses et réservations.
+// Sans clés dans js/config.js, isLive() reste faux et tout tourne en local.
+// Le SDK n'est chargé que si une configuration existe.
 (function () {
   "use strict";
 
@@ -30,7 +29,7 @@
 
   function explain(error) {
     var msg = (error && (error.message || error.error_description)) || "Erreur inconnue";
-    if (/phone provider|unsupported phone|sms/i.test(msg)) return "Activez Phone (Twilio) dans Supabase → Authentication → Providers.";
+    if (/phone provider|unsupported phone|sms/i.test(msg)) return "Activez le fournisseur Phone (Twilio) dans Supabase, menu Authentication puis Providers.";
     if (/expired|invalid.*(otp|token)/i.test(msg)) return "Code incorrect ou expiré. Demandez-en un nouveau.";
     if (/rate limit/i.test(msg)) return "Trop de tentatives. Réessayez dans quelques minutes.";
     if (/schema|relation|PGRST|could not find/i.test(msg)) return "Exécutez supabase/schema.sql dans le SQL Editor Supabase.";

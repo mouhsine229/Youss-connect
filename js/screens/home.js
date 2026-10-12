@@ -1,4 +1,4 @@
-/* Accueil — centre de l'application */
+// Accueil : centre de l'application
 (function () {
   "use strict";
   window.Screens = window.Screens || {};

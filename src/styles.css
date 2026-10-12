@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------- Thèmes (variables RGB sans "rgb()" pour supporter l'opacité Tailwind) ---------- */
+/* Thèmes (variables RGB sans "rgb()" pour supporter l'opacité Tailwind) */
 :root {
   --c-surface: 250 250 250;
   --c-surface-low: 244 244 245;
@@ -55,8 +55,8 @@
   .t-caption { @apply text-[10.5px] leading-[13px] font-semibold uppercase tracking-[0.08em]; }
 
   /* Surfaces */
-  .card { @apply bg-card border border-line rounded-2xl shadow-card; }
-  .card-press { @apply transition-[transform,box-shadow] duration-150 active:scale-[.985] hover:shadow-float; }
+  .card { @apply bg-card border border-line rounded-2xl; }
+  .card-press { @apply transition-[transform,border-color] duration-150 active:scale-[.985] hover:border-ink-3/40; }
   .card-dark { @apply bg-inverse text-inverse-ink rounded-2xl; }
   .panel { @apply bg-card border border-line rounded-3xl; }
   .divider { @apply border-t border-line; }
@@ -65,13 +65,13 @@
   .btn { @apply inline-flex items-center justify-center gap-2 h-12 px-5 rounded-2xl t-title transition-all duration-150 active:scale-[.98] disabled:opacity-40 disabled:pointer-events-none; }
   .btn-sm { @apply h-9 px-3.5 rounded-xl text-[13px] font-semibold; }
   .btn-lg { @apply h-14 px-7 rounded-2xl text-[16px]; }
-  .btn-primary { @apply bg-gold text-[#0A0A0A] font-bold shadow-gold hover:brightness-[1.03]; }
+  .btn-primary { @apply bg-gold text-[#0A0A0A] font-bold hover:brightness-[1.03]; }
   .btn-dark { @apply bg-inverse text-inverse-ink font-bold hover:opacity-90; }
   .btn-outline { @apply bg-card border border-line text-ink font-semibold hover:bg-surface-low; }
   .btn-ghost { @apply bg-transparent text-ink font-semibold hover:bg-surface-low; }
   .btn-danger { @apply bg-danger text-white font-bold; }
   .btn-block { @apply w-full; }
-  .icon-btn { @apply w-10 h-10 rounded-full bg-card border border-line flex items-center justify-center text-ink shadow-sm transition-transform duration-150 active:scale-95 hover:bg-surface-low; }
+  .icon-btn { @apply w-10 h-10 rounded-full bg-card border border-line flex items-center justify-center text-ink transition-transform duration-150 active:scale-95 hover:bg-surface-low; }
 
   /* Entrées */
   .input { @apply w-full h-12 rounded-xl border border-line bg-card px-4 text-[16px] leading-[22px] text-ink placeholder:text-ink-3 focus:border-gold focus:ring-2 focus:ring-gold/25 focus:outline-none transition-colors; }
@@ -80,7 +80,7 @@
   .select { @apply input appearance-none bg-no-repeat pr-10; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2371717A'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E"); background-position: right .75rem center; background-size: 1.25rem; }
   .textarea { @apply input h-auto min-h-[96px] py-3 resize-none; }
   .switch { @apply relative inline-flex h-7 w-12 flex-shrink-0 rounded-full border border-line bg-card-high transition-colors; }
-  .switch::after { content: ""; @apply absolute top-0.5 left-0.5 h-[22px] w-[22px] rounded-full bg-card shadow transition-transform; }
+  .switch::after { content: ""; @apply absolute top-0.5 left-0.5 h-[22px] w-[22px] rounded-full bg-card border border-line transition-transform; }
   .switch.on { @apply bg-gold border-gold; }
   .switch.on::after { transform: translateX(20px); @apply bg-[#0A0A0A]; }
 
@@ -118,7 +118,7 @@
   .hscroll > * { @apply flex-shrink-0; }
 
   /* Icônes Material Symbols */
-  /* Ligature text (p. ex. arrow_back) must not flash as plain text before the icon font loads */
+  /* le nom de l'icône (arrow_back...) ne doit pas apparaître en texte brut avant le chargement de la police */
   .ms { font-family: 'Material Symbols Outlined', sans-serif; font-weight: normal; font-style: normal; font-size: 22px; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; flex-shrink: 0; direction: ltr; -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
   html:not(.fonts-ready) .ms { font-size: 0 !important; width: 1.375rem; height: 1.375rem; max-width: 1.375rem; max-height: 1.375rem; }
   .ms.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
@@ -139,7 +139,7 @@
   /* Tableau de bord */
   .kpi { @apply card p-4 flex flex-col gap-1; }
 
-  /* Youss Wallet — grilles (3×2 actions, KPI solde, montants recharge) */
+  /* Youss Wallet : grilles d'actions, KPI solde, montants de recharge */
   .wallet-kpi-grid { @apply grid grid-cols-2 gap-2 sm:gap-3 min-w-0; }
   .wallet-kpi-cell { @apply rounded-xl bg-white/10 p-2.5 sm:p-3 min-w-0 overflow-hidden; }
   .wallet-action-grid { @apply grid grid-cols-3 gap-1.5 sm:gap-3 min-w-0 max-w-full; grid-auto-rows: 1fr; }
@@ -156,12 +156,12 @@
   /* Carte Leaflet */
   .leaflet-container { font-family: "Plus Jakarta Sans", system-ui, sans-serif; background: rgb(var(--c-surface-low)); }
   .leaflet-tile-pane { filter: var(--map-filter); }
-  .leaflet-control-zoom { border: none !important; box-shadow: 0 6px 18px rgba(0,0,0,.14) !important; border-radius: 14px !important; overflow: hidden; margin: 12px !important; }
+  .leaflet-control-zoom { border: 1px solid rgb(var(--c-line)) !important; box-shadow: none !important; border-radius: 14px !important; overflow: hidden; margin: 12px !important; }
   .leaflet-control-zoom a { width: 40px !important; height: 40px !important; line-height: 40px !important; color: #0A0A0A !important; border: none !important; background: #fff !important; }
   .leaflet-control-attribution { font-size: 10px; background: rgba(255,255,255,.8) !important; border-radius: 8px; }
-  .leaflet-popup-content-wrapper { border-radius: 14px; box-shadow: 0 10px 28px rgba(0,0,0,.16); font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
+  .leaflet-popup-content-wrapper { border-radius: 14px; box-shadow: none; border: 1px solid rgb(var(--c-line)); font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
   .leaflet-popup-content { margin: 10px 12px; font-size: 13px; line-height: 1.35; }
-  .yc-pin { position: relative; width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 8px 14px rgba(0,0,0,.3)); }
+  .yc-pin { position: relative; width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center; }
   .yc-pin__head { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font: 800 13px/1 "Plus Jakarta Sans", sans-serif; background: #0A0A0A; color: #fff; }
   .yc-pin--from .yc-pin__head { background: #C9A227; color: #0A0A0A; }
   .yc-pin__tip { width: 0; height: 0; margin-top: -3px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 12px solid #0A0A0A; }
@@ -169,7 +169,7 @@
   .yc-pin--poi .yc-pin__head { width: 28px; height: 28px; background: #fff; color: #0A0A0A; border-color: #0A0A0A; }
   .yc-pin--poi .yc-pin__head .ms { font-size: 16px; }
   .yc-pin--poi .yc-pin__tip { border-top-color: #0A0A0A; }
-  .yc-map-user { width: 22px; height: 22px; border-radius: 50%; background: #0A0A0A; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(201,162,39,.28), 0 2px 8px rgba(0,0,0,.25); }
+  .yc-map-user { width: 22px; height: 22px; border-radius: 50%; background: #0A0A0A; border: 3px solid #fff; outline: 6px solid rgba(201,162,39,.28); }
   .yc-vehicle { transition: transform .12s linear; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
 
   /* Scanner */
@@ -184,8 +184,8 @@
 
   /* Feuille basse / modale */
   .sheet-overlay { @apply fixed inset-0 z-[900] flex items-end lg:items-center justify-center p-0 lg:p-6; }
-  .sheet { @apply relative w-full lg:max-w-[520px] bg-card rounded-t-3xl lg:rounded-3xl p-5 pb-8 lg:pb-6 shadow-float max-h-[88vh] overflow-y-auto; }
-  .toast { @apply fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-[999] px-4 py-3 rounded-2xl shadow-float t-small font-semibold text-center max-w-[360px] transition-all duration-200; }
+  .sheet { @apply relative w-full lg:max-w-[520px] bg-card border border-line rounded-t-3xl lg:rounded-3xl p-5 pb-8 lg:pb-6 max-h-[88vh] overflow-y-auto; }
+  .toast { @apply fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-[999] px-4 py-3 rounded-2xl t-small font-semibold text-center max-w-[360px] transition-all duration-200; }
 
   /* Entrée d'écran */
   .screen-enter { animation: screen-in .22s ease-out both; }

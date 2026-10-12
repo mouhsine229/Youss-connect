@@ -1,4 +1,4 @@
-/* Culture & Tourisme — Découvrez l'Afrique, destinations, sites, scanner culturel, exploration autour */
+// Culture et tourisme : destinations, fiches de sites, scanner culturel, exploration autour de soi
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
@@ -6,7 +6,7 @@
 
   const f = { type: "all", city: "all" };
 
-  /* ---------- Hub ---------- */
+  // Hub
   Screens.culture = function (container, params) {
     if (params && params.city) f.city = params.city;
     if (params && params.type) f.type = params.type;
@@ -35,7 +35,7 @@
   Screens._cuType = (t) => { f.type = t; App.replace("culture"); };
   Screens._cuCity = (c) => { f.city = c; App.replace("culture"); };
 
-  /* ---------- Page destination ---------- */
+  // Page destination
   Screens.destination = function (container, params) {
     const c = YCData.cityOf(params.city);
     const sites = YCData.sitesIn(c.name), rests = YCData.restaurantsIn(c.name), events = YCData.eventsIn(c.name), activities = sites.filter((s) => s.type === "nature" || s.type === "tradition" || s.type === "activite");
@@ -63,7 +63,7 @@
   Screens._cityRestaurants = (c) => { Shell.pickCity(c); App.nav("restaurants"); };
   Screens._cityEvents = (c) => { App.nav("events"); };
 
-  /* ---------- Fiche site (Aperçu / Histoire / Visite / Infos) ---------- */
+  // Fiche site (Aperçu / Histoire / Visite / Infos)
   const st = { tab: "overview" };
   const TABS = [["overview", "Aperçu"], ["history", "Histoire"], ["visit", "Visite"], ["info", "Infos"]];
   Screens.cultureDetail = function (container, params) {
@@ -155,7 +155,7 @@
     YCScanner.render("yc-site-qr", payload, { size: 184, cell: 6 });
   };
 
-  /* ---------- Scanner culturel ---------- */
+  // Scanner culturel
   const SCAN_MESSAGES = { unsupported: "Ce navigateur ne permet pas d'accéder à la caméra.", insecure: "La caméra nécessite une connexion sécurisée (HTTPS).", denied: "Accès à la caméra refusé. Vous pouvez utiliser le mode démo.", nocamera: "Aucune caméra détectée. Utilisez le mode démo.", busy: "La caméra est utilisée par une autre application.", error: "Impossible de démarrer la caméra." };
   function siteFromText(text) {
     const p = YCScanner.parse(text);
@@ -180,7 +180,7 @@
           <div class="absolute inset-0 flex flex-col items-center justify-center px-6 pointer-events-none">
             <div class="relative w-[260px] h-[260px] lg:w-[340px] lg:h-[340px]">
               <span class="scan-corner top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl"></span><span class="scan-corner top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl"></span><span class="scan-corner bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl"></span><span class="scan-corner bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl"></span>
-              <div id="yc-scan-line" class="absolute left-4 right-4 h-0.5 bg-gold shadow-[0_0_16px_#C9A227] animate-scan"></div>
+              <div id="yc-scan-line" class="absolute left-4 right-4 h-0.5 bg-gold animate-scan"></div>
               <div id="yc-scan-tag" class="absolute -bottom-12 inset-x-0 text-center hidden"><span class="badge badge-gold">${icon("check", "text-[14px]")}<span id="yc-scan-tag-txt">Monument détecté</span></span></div>
             </div>
             <p id="yc-scan-status" class="mt-16 text-center t-body text-white/90 max-w-[320px]">Démarrage de la caméra…</p>
@@ -262,7 +262,7 @@
   };
   Screens.scannerResult = function (container, params) { Screens.cultureDetail(container, Object.assign({}, params, { scanned: 1 })); };
 
-  /* ---------- Explorer autour de moi ---------- */
+  // Explorer autour de moi
   Screens.exploreAround = function (container, params) {
     const origin = params.id ? YCData.site(params.id) : null;
     const c = YCData.cityOf(params.city || (origin ? origin.city : ACState.user.city));
