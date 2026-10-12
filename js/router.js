@@ -147,7 +147,9 @@
       const d = decode(location.hash);
       if (d && (String(d.id).indexOf("ops") === 0 || String(d.id).indexOf("pro") === 0) && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && ACState.session.authenticated && window.Screens[d.id]) { replace(d.id, d.params); return; }
-      if (d && d.id !== "splash" && !ACState.session.authenticated && window.Screens[d.id]) sessionStorage.setItem("yc-after-login", location.hash);
+      if (d && d.id !== "splash" && !ACState.session.authenticated && window.Screens[d.id] && !AUTH_FREE[d.id]) {
+        sessionStorage.setItem("yc-after-login", location.hash);
+      }
       replace("splash", {});
     });
   });

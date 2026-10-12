@@ -38,7 +38,7 @@
         if (after) { sessionStorage.removeItem("yc-after-login"); location.hash = after; return; }
         App.replace("home");
       } else {
-        App.replace(ACState.session.onboardingSeen ? "login" : "onboarding", {});
+        App.replace("onboarding", { i: 0 });
       }
     }, 260);
   };
@@ -56,18 +56,18 @@
           <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/30 to-[#0A0A0A]/40 lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-[#0A0A0A]"></div>
           <header class="absolute top-0 inset-x-0 p-5 lg:p-8 flex items-center justify-between">
             <div class="flex items-center gap-2.5"><img src="./assets/youss-logo-transparent.png" alt="" class="w-9 h-9 object-contain bg-white rounded-xl p-1"/><span class="font-extrabold tracking-tight">YOUSS CONNECT</span></div>
-            <button type="button" onclick="Screens._finishOnboarding()" class="lg:hidden t-small font-semibold text-white/80 h-9 px-3 rounded-full bg-white/10">${I18N.t("skip")}</button>
+            ${i > 0 ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="lg:hidden t-small font-semibold text-white/80 h-9 px-3 rounded-full bg-white/10">${I18N.t("skip")}</button>` : `<span></span>`}
           </header>
         </div>
         <div class="relative px-6 pb-8 pt-2 lg:p-16 xl:p-24 flex flex-col justify-center lg:h-dvh">
-          <button type="button" onclick="Screens._finishOnboarding()" class="hidden lg:inline-flex absolute top-8 right-8 t-small font-semibold text-white/70 hover:text-white">${I18N.t("skip")}</button>
+          ${i > 0 ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="hidden lg:inline-flex absolute top-8 right-8 t-small font-semibold text-white/70 hover:text-white">${I18N.t("skip")}</button>` : ""}
           <span class="badge bg-gold/15 text-gold w-max mb-4">${s.tag} · ${i + 1}/${ONBOARD.length}</span>
           <h1 class="t-display text-balance animate-screen-in">${s.title}</h1>
           <p class="t-body lg:text-[17px] lg:leading-[28px] text-white/75 mt-4 max-w-[480px] animate-screen-in" style="animation-delay:.05s">${s.body}</p>
           <div class="flex items-center gap-1.5 mt-8">${dots}</div>
           <div class="flex flex-col sm:flex-row gap-3 mt-8 max-w-[480px]">
             ${i > 0 ? `<button type="button" onclick="App.replace('onboarding',{i:${i - 1}})" class="btn btn-lg bg-white/10 text-white sm:w-auto" aria-label="${I18N.t("back")}">${icon("arrow_back")}</button>` : ""}
-            <button type="button" onclick="${last ? "Screens._finishOnboarding()" : `App.replace('onboarding',{i:${i + 1}})`}" class="btn btn-lg btn-primary flex-1">${last ? I18N.t("start") : I18N.t("next")}${icon("arrow_forward", "text-[20px]")}</button>
+            <button type="button" onclick="${last ? "Screens._finishOnboarding('login')" : `App.replace('onboarding',{i:${i + 1}})`}" class="btn btn-lg btn-primary flex-1">${last ? I18N.t("start") : I18N.t("next")}${icon("arrow_forward", "text-[20px]")}</button>
           </div>
           ${last ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="mt-4 t-small text-white/70 hover:text-white text-left">J'ai déjà un compte · <span class="font-bold text-gold">Se connecter</span></button>` : ""}
           <p class="mt-10 t-caption text-white/35">Portée par KYA CORPORATION</p>
@@ -125,7 +125,7 @@
           <button type="button" onclick="App.nav('forgotPassword')" class="t-small font-bold text-gold-deep dark:text-gold">${I18N.t("forgot")}</button>
         </div>
         <button type="submit" class="btn btn-lg btn-primary btn-block">${I18N.t("login")}${icon("arrow_forward", "text-[20px]")}</button>
-        ${UI.secondaryButton(I18N.t("signup"), "App.nav('signup')", { size: "lg" })}
+        <p class="t-small text-center text-ink-2 mt-1">Pas encore de compte ? <button type="button" onclick="App.nav('signup')" class="font-bold text-gold-deep dark:text-gold">${I18N.t("signup")}</button></p>
       </form>
       <div class="flex items-center gap-3 my-6 t-small text-ink-3"><span class="flex-1 divider"></span>ou<span class="flex-1 divider"></span></div>
       ${UI.darkButton("Explorer la démo sans compte", "Screens._enterDemo()", { icon: "play_arrow", size: "lg" })}
