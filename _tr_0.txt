@@ -1,0 +1,342 @@
+(démo)
+(hors réseau)
+a reçu
+a reçu votre commande
+activité
+ajouté au panier
+ajouté au panier Market.
+arrive au point de récupération.
+arrive dans
+au total
+disponible dans Mes récompenses.
+du point de récupération
+en attente
+en direct
+en stock
+est arrivé au point de départ
+est arrivé à
+est à
+Le mode démo reconnaît les sites listés.
+Numéro
+points ajoutés à votre solde Youss Bonus.
+points avant le niveau
+points gagnés
+pour «
+produits en ligne
+prépare votre commande.
+Récompense disponible
+réglé via Youss Wallet (
+réglés via Youss Wallet.
+· bientôt
+· livraison et à emporter
+». Essayez un autre mot-clé, une autre catégorie ou retirez des filtres.
+à traiter
+élément
+) ajouté à votre solde.
++12 % vs semaine passée
++120 points Youss Bonus pour votre achat Youss Market.
++25 points Youss Bonus ajoutés. Merci
+, les détails de votre course et l'identité du chauffeur
+, vous êtes en mode démo.
+. Bon appétit !
+. Code de remise :
+. Essayez les 4 villes.
+. Notre équipe vous répond sous 24 h.
+. Préparation en cours.
+. Retrouvez votre QR Code dans Mes billets.
+. Votre guide vous attendra à l'entrée.
+. Vu sur YOUSS CONNECT.
+12 en attente cuisine
+3 chauffeurs contactés…
+8 caractères min.
+Accepter les réservations
+Accès ajouté.
+Accès caméra refusé. Importez une image ou simulez un scan.
+Accès à la caméra refusé. Vous pouvez utiliser le mode démo.
+Achat Youss Market · Beurre de karité
+Acheter un produit local sur Youss Market et suivre sa livraison
+Activez le fournisseur Phone (Twilio) dans Supabase, menu Authentication puis Providers.
+Activités et traditions
+activée
+Adresse ajoutée.
+Adresse de livraison
+Adresse de récupération
+Adresse enregistrée. Le livreur confirmera la position exacte avec vous.
+Adresse gardée telle quelle, position approximative. Vous pouvez l'ajuster sur la carte.
+Adresse par défaut mise à jour.
+Adresse supprimée.
+Adresse, mode de livraison, paiement, puis confirmation.
+Adresse, moyen de paiement, confirmation.
+Affiche, programme, organisateur, catégories de billets.
+Ajouter un accès
+Ajouter un lieu
+Ajouter un moyen de paiement
+Ajouter un prestataire
+Ajouter un produit
+Ajouter un retrait
+Ajouter un utilisateur
+Ajouter une adresse
+Ajouter une ville
+Ajouter à la file
+Ajouté par le restaurant
+Ajouté à la file.
+Ajouté.
+Alerte immédiate avec partage de position
+Alerte SOS envoyée
+Analyse de l'image…
+Analyse des formes et des textures…
+Analyse en cours…
+Annulée par l'utilisateur
+Appelez-moi en arrivant
+Argent envoyé
+Arrivée
+Arrivée prévue
+Assistance alertée. Restez en ligne.
+Atelier Ayélé
+Aucun accès.
+Aucun lieu sauvegardé
+Aucun lieu trouvé pour «
+Aucun QR Code trouvé dans cette image.
+Aucun restaurant ne correspond à
+Aucun résultat pour «
+Aucun événement.
+Aucune caméra détectée.
+Aucune caméra détectée. Utilisez le mode démo.
+Aucune demande de retrait.
+Aujourd'hui à
+Aujourd'hui à 08:40
+Autorisez la caméra dans la fenêtre du navigateur…
+Autour de
+Avec son code marchand à 6 chiffres
+Aéroport de Cotonou (Cadjèhoun)
+Aïcha B.
+Berline climatisée · 4 places
+Beurre de karité pur × 1
+Billet confirmé + ponts vers transport et restaurants.
+Billet numérique avec QR Code réel et numéro.
+Billet · Concert au Stade de l'Amitié
+Billets et rappels la veille
+Billetterie numérique avec QR Code.
+Biométrie
+Bloqué
+Bons plans des commerçants
+Boutique visible sur Youss Market
+Bénin
+Cadjèhoun, rue 12.034, Cotonou
+Cadrez le monument ou un QR Code YOUSS CONNECT, puis appuyez sur « Reconnaître ».
+Calcul de l'itinéraire du chauffeur…
+Calcul de l'itinéraire et du prix…
+Catégorie
+Ce navigateur ne permet pas d'accéder à la caméra.
+Ce QR n'est pas un code de paiement YOUSS CONNECT.
+Ce soir à
+Ce téléphone
+Cet appareil
+Cette semaine
+Changer de ville
+Chauffeur assigné
+Chauffeur trouvé : photo, note, véhicule, plaque, arrivée.
+Chauffeur trouvé, arrivée, fin de course
+Chez Maman Bénin
+Chez Maman Bénin prépare votre poisson braisé. Livraison estimée : 35 min.
+Choisir un restaurant, remplir le panier, payer et suivre la livraison
+Choisir une destination, visiter un monument, le scanner et découvrir les alentours
+Code envoyé au <b>
+Code incorrect ou expiré. Demandez-en un nouveau.
+Code incorrect. Réessayez (démo : 1234).
+Code validé. Choisissez un nouveau mot de passe (démo).
+Code à 6 chiffres
+Code à 6 chiffres et montant requis.
+Colis non reçu
+Colis récupéré par
+Collier perles de traite
+Collier perles de traite × 2
+Commande Chez Maman Bénin
+Commande confirmée + points Youss Bonus.
+Commande confirmée, numéro et estimation.
+Commande livrée
+Commande terminée
+Commander sur Youss Market
+Commander un transport
+Commandes récentes
+Comment payer une course ?
+Comparaison avec la base patrimoniale…
+Comparaison avec les sites de
+Comportement d'un chauffeur
+Compte professionnel déjà vérifié.
+compte vérifié
+Comptes de la console
+Conceptuel · opérateur à définir
+Concert au Stade de l'Amitié
+Concert au Stade de l'Amitié · 20h00. Votre billet est dans Mes billets.
+Concerts, festivals, conférences, spectacles, sport.
+Confirmation sécurisée
+Confirmer l'échange
+Confirmer la commande ·
+Confirmer la course
+Confirmer la livraison
+Confirmer le paiement
+Confirmer le retrait
+Confirmé
+Confirmée
+Conforme à la photo, emballage soigné.
+Contacter l'établissement
+Contacter le client
+Coopérative Femmes du Nord
+Cotonou · Dakar · Lomé · Accra
+Course, commande, achat ou billet : vous gagnez des points. Vous les échangez ensuite.
+Création sur commande
+Dans 1 h
+Dans 30 min
+Dans mes activités
+De l'accueil à la fin de course : destination, véhicule, chauffeur, suivi
+De la préparation jusqu'à la remise
+de la semaine
+Demande ajoutée.
+Demande annulée. Aucun montant débité.
+Demande créée
+Demande de retrait
+Depuis l'accueil, le service Transport est à un tap.
+Depuis un restaurant ou un domicile
+Dernière : aujourd'hui,
+Domicile · Cadjèhoun, Cotonou
+Dossier accepté (démo). Cuisine ouverte.
+Dossier de vérification envoyé à KYA CORPORATION.
+du mois
+Durée
+Durée estimée
+durée à calculer
+dès 1 000 F
+dès 1 000 FCFA
+Dès demain
+Dès que possible
+Déconnecter tous les autres appareils
+Découvrir l'Afrique
+Découvrir Youss Business
+Définir par défaut
+Délai
+Départ :
+Départ = votre position
+Départ, destination, itinéraire réel et prix au kilomètre.
+Dépôt chez un agent
+Dépôt en attente
+désactivée
+Détail
+Détails
+E-mail confirmé
+Eau, électricité, abonnements (conceptuel)
+Empreinte ou visage pour les paiements
+En cours
+En course
+En cours…
+En livraison
+En revue
+En traitement
+en-GB
+Entrée
+Envoi en attente
+Envoi à
+Envoi à Fatou D.
+Envoyer à un contact
+Espoir D. a récupéré votre colis à Dantokpa, direction Ganhi.
+Espèces
+Essayer la démo
+estimés
+Ex. Amiwo au poulet
+Ex. Colis non reçu
+Ex. Commande en retard
+Ex. Remboursement déjeuner
+Ex. Sac en raphia
+Expire le
+Explorer autour de moi : carte et lieux proches.
+Exporter le rapport (CSV)
+Expédiée
+Extraction des points caractéristiques…
+Exécutez supabase/schema.sql dans le SQL Editor Supabase.
+FAQ et contact
+Fermé
+Fiche : photos, horaires, avis, menu avec ajout au panier.
+Fiche du monument : histoire, visite, audio-guide.
+Fiches, menus, panier, commande et suivi.
+Fin de course : prix, durée, distance, notation, paiement Wallet.
+Flotte YOUSS. Suivi et paiement dans l'app.
+Français
+Français, English
+Félicitations, vous passez au niveau
+Gagner des points : commander
+Galerie, vendeur, disponibilité, description.
+Gorée
+Gratuit · sur rendez-vous
+Hier à 09:12
+Hier à 14:20
+Hier à 20:15
+Historique des points
+Identité vérifiée
+Igname pilée
+Il disparaît du catalogue client et de la console.
+Importez une image du QR ou utilisez la simulation.
+Impossible de démarrer la caméra.
+Indiquez d'où vous partez.
+Indiquez le montant.
+Indiquez le nom du destinataire.
+Indiquez où vous allez.
+Indiquez un numéro de téléphone valide (8 chiffres minimum).
+Indiquez un numéro de téléphone valide.
+Indiquez un numéro valide.
+Indiquez un téléphone valide pour le destinataire.
+Indiquez votre mot de passe.
+Indiquez votre prénom et votre nom.
+Informations, horaires, visibilité
+Instructions pour le livreur (étage, code, horaire…)
+Intitulé
+Intitulé et prix requis.
+Intitulé requis.
+Inverser départ et destination
+J'arrive dans 2 minutes
+Je suis au point de départ
+Je suis en course YOUSS CONNECT avec
+Jusqu'à 25 kg
+Karité
+KYC en cours
+L'assistance YOUSS CONNECT a été notifiée et vous rappelle immédiatement.
+L'opération est confirmée.
+La caméra est utilisée par une autre application.
+La caméra nécessite une connexion sécurisée (HTTPS).
+La confirmation arrivera dès que le réseau sera disponible.
+la destination
+La ligne disparaît de la console. En maquette, rien n'est envoyé à un serveur.
+le colis
+Le destinataire n'est pas encore sur YOUSS CONNECT : il recevra un SMS pour retirer les fonds sous 72 h.
+le départ
+Le livreur est arrivé. Code :
+Le mot de passe doit contenir au moins 8 caractères.
+Le moteur de découverte de YOUSS CONNECT.
+Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible.
+Le plus rapide
+Le prénom est requis.
+le repas
+Le transfert vers votre compte mobile sera confirmé sous quelques minutes.
+Le vendeur prépare votre commande.
+Le wallet est-il réel ?
+les documents
+Les mots de passe ne correspondent pas.
+Les plus proches
+Lien détecté :
+Lieu ajouté.
+Lieu à préciser
+Ligne supprimée.
+Livraison en cours
+Livraison estimée ·
+Livraison prévue
+Livraisons et points de départ
+Livreur arrivé
+Livreur, récupération, remise
+Livrée
+Localisation en cours…
+Lomé
+Lundi à 10:02
+Lundi à 11:05
+Ma position (estimée)
+Marketplace : recherche, catégories, vendeurs notés.
+Marketplace de produits locaux et artisanat.
+Matière, dimensions, origine…
