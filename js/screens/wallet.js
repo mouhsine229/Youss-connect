@@ -38,22 +38,22 @@
       <div class="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8 items-start min-w-0 max-w-full">
         <div class="space-y-4 lg:sticky lg:top-24 min-w-0 max-w-full">
           <section class="card-dark p-5 sm:p-6 min-w-0">
-            <div class="flex items-center justify-between gap-2"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white flex-shrink-0" aria-label="Masquer le solde">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
+            <div class="flex items-center justify-between gap-2"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white flex-shrink-0" aria-label="${wf.masked ? "Afficher les informations" : "Masquer les informations"}">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
             <p class="t-h1 sm:t-display mt-2 break-words leading-tight">${wf.masked ? "•••••• FCFA" : ACStore.fmtFCFA(ACState.wallet.balance)}</p>
-            <p class="t-small text-white/70 mt-1 truncate">${esc(ACState.user.fullName)} · ${esc(ACState.user.phone)}</p>
-            <p class="t-caption text-white/50 mt-4">30 derniers jours</p>
-            <div class="wallet-kpi-grid mt-2"><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Entrées</p><p class="t-small sm:t-title text-success truncate tabular-nums">+${ACStore.fmtFCFA(m.inn)}</p></div><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Sorties</p><p class="t-small sm:t-title truncate tabular-nums">−${ACStore.fmtFCFA(m.out)}</p></div></div>
+            <p class="t-small text-white/70 mt-1 truncate">${wf.masked ? "•••••••• · ••••••••" : esc(ACState.user.fullName) + " · " + esc(ACState.user.phone)}</p>
+            <p class="t-caption text-white/50 mt-4">${I18N.t("wallet_period")}</p>
+            <div class="wallet-kpi-grid mt-2"><div class="wallet-kpi-cell"><p class="t-caption text-white/60">${I18N.t("wallet_in")}</p><p class="t-small sm:t-title text-success truncate tabular-nums">${wf.masked ? "+••••••" : "+" + ACStore.fmtFCFA(m.inn)}</p></div><div class="wallet-kpi-cell"><p class="t-caption text-white/60">${I18N.t("wallet_out")}</p><p class="t-small sm:t-title truncate tabular-nums">${wf.masked ? "−••••••" : "−" + ACStore.fmtFCFA(m.out)}</p></div></div>
           </section>
           <section class="wallet-action-grid" aria-label="Actions Wallet">${actions.map(walletActionBtn).join("")}</section>
           <p class="t-small text-ink-3 flex gap-2 min-w-0">${icon("info", "text-[16px] flex-shrink-0 mt-0.5")}<span class="min-w-0">${I18N.t("conceptual")}</span></p>
         </div>
         <section class="min-w-0 max-w-full">
           ${UI.sectionTitle(I18N.t("recent"), "Relevé", "UI.toast('Relevé PDF envoyé par e-mail (démo).','success')")}
-          <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-0.5 -mx-1 px-1 sm:mx-0 sm:px-0">${[["all", "Tout"], ["in", "Entrées"], ["out", "Sorties"], ["pending", "En attente"]].map((x) => UI.chip(x[1], `Screens._wFilter('${x[0]}')`, wf.filter === x[0])).join("")}</div>
+          <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-0.5 -mx-1 px-1 sm:mx-0 sm:px-0">${[["all", "Tout"], ["in", I18N.t("wallet_in")], ["out", I18N.t("wallet_out")], ["pending", "En attente"]].map((x) => UI.chip(x[1], `Screens._wFilter('${x[0]}')`, wf.filter === x[0])).join("")}</div>
           ${tx.length ? `<div class="card divide-y divide-line">${tx.slice(0, 20).map(txRow).join("")}</div>` : UI.emptyState({ icon: "receipt_long", title: "Aucune transaction", body: "Vos opérations apparaîtront ici." })}
         </section>
       </div>`;
-    Shell.render(container, { title: I18N.t("wallet"), subtitle: "Solde de démo", body, nav: "wallet" });
+    Shell.render(container, { title: I18N.t("wallet"), subtitle: I18N.t("wallet_demo"), body, nav: "wallet" });
   };
   Screens._wMask = () => { wf.masked = !wf.masked; App.replace("wallet"); };
   Screens._wFilter = (f) => { wf.filter = f; App.replace("wallet"); };

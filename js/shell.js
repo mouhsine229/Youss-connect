@@ -80,6 +80,8 @@
   function header(o, screenId) {
     const unread = ACStore.unread();
     const user = ACState.user;
+    const en = I18N.lang === "en";
+    const langBtn = `<button type="button" onclick="UI.setLang('${en ? "fr" : "en"}')" class="h-10 min-w-10 px-2.5 rounded-full border border-line bg-card inline-flex items-center justify-center gap-1 text-[12px] font-extrabold tracking-wide hover:bg-surface-low flex-shrink-0" aria-label="${en ? "Language: English. Switch to French" : "Langue : français. Passer en anglais"}" title="${en ? "English" : "Français"}"><span class="ms text-[18px]" aria-hidden="true">language</span>${en ? "EN" : "FR"}</button>`;
     const bell = `<button type="button" onclick="App.nav('notifications')" class="icon-btn relative" aria-label="${t("notifications")}">${icon("notifications")}${unread ? `<span class="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-[#0A0A0A] text-[10px] font-extrabold flex items-center justify-center">${unread}</span>` : ""}</button>`;
     const cityBtn = `<button type="button" onclick="Shell.openCityPicker()" class="hidden sm:inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full border border-line bg-card t-small font-semibold hover:bg-surface-low">${icon("location_on", "text-gold text-[18px]", true)}${UI.esc(user.city)}${icon("expand_more", "text-[18px] text-ink-3")}</button>`;
     const searchBtn = `<button type="button" onclick="App.nav('explorer', {focus:1})" class="hidden lg:flex items-center gap-2 h-10 w-[300px] xl:w-[360px] px-4 rounded-full border border-line bg-surface-low text-ink-3 t-body hover:border-ink-3 text-left"><span class="ms text-[20px]">search</span><span class="truncate">${t("search")}</span><kbd class="ml-auto t-caption px-1.5 py-0.5 rounded border border-line bg-card">/</kbd></button>`;
@@ -94,7 +96,7 @@
               <button type="button" onclick="Shell.openCityPicker()" class="t-small text-ink-2 flex items-center gap-1 truncate">${icon("location_on", "text-[15px] text-gold", true)}${UI.esc(user.city)}, ${UI.esc(user.country)}${icon("expand_more", "text-[16px]")}</button>
             </div>
           </div>
-          <div class="flex items-center gap-2">${searchBtn}${cityBtn}${bell}</div>
+          <div class="flex items-center gap-2">${searchBtn}${cityBtn}${langBtn}${bell}</div>
         </div></header>`;
     }
     const showBack = o.back && !(o.nav && TAB_IDS[o.nav]);
@@ -109,7 +111,8 @@
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           ${o.right || ""}
-          <span class="hidden lg:contents">${o.hideSearch ? "" : searchBtn}${cityBtn}${bell}</span>
+          <span class="hidden lg:contents">${o.hideSearch ? "" : searchBtn}${cityBtn}</span>
+          ${langBtn}${bell}
         </div>
       </div></header>`;
   }

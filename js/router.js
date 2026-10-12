@@ -33,9 +33,21 @@
     return { id: path, params };
   }
 
+  /* Même écran et mêmes paramètres : un clic sur la quantité ne doit pas remonter. */
+  function viewKey(id, params) {
+    const parts = [];
+    Object.keys(params || {}).sort().forEach((k) => {
+      const v = params[k];
+      if (v != null && v !== "") parts.push(k + "=" + v);
+    });
+    return (id || "") + "?" + parts.join("&");
+  }
   function show(id, params) {
     params = params || {};
+    const prevKey = current ? viewKey(current.id, current.params) : "";
     const prevId = current && current.id;
+    const scroller = document.getElementById("main");
+    const savedTop = scroller ? scroller.scrollTop : 0;
     const fn = window.Screens && window.Screens[id];
     if (!fn) {
       console.error("Unknown screen:", id);
@@ -56,13 +68,25 @@
       if (window.UI && UI.closeSheet) UI.closeSheet();
       if (window.YCScanner && YCScanner.stop && (prevId === "walletQrPay" || prevId === "culturalScanner")) YCScanner.stop();
     }
+    const sameView = prevKey === viewKey(id, params);
     current = { id, params: params || {} };
     document.dispatchEvent(new CustomEvent("yc:navigate", { detail: { id } }));
     fn(container, current.params);
     const main = document.getElementById("main");
-    if (main) main.scrollTop = 0;
-    window.scrollTo(0, 0);
+    if (sameView) {
+      const apply = () => { const el = document.getElementById("main"); if (el) el.scrollTop = savedTop; };
+      apply();
+      requestAnimationFrame(apply);
+    } else {
+      if (main) main.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }
     document.title = (id === "splash" ? "" : (titleFor(id) + " · ")) + "YOUSS CONNECT";
+    if (window.I18N && I18N.apply) {
+      I18N.apply(container);
+      document.title = I18N.applyText(document.title);
+      requestAnimationFrame(function () { if (I18N.lang === "en") I18N.apply(container); });
+    }
   }
   function titleFor(id) {
     const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", opsHome: "Console KYA", opsLogin: "Console KYA", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Invitation resto" };

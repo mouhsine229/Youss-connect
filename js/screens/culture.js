@@ -10,7 +10,8 @@
   Screens.culture = function (container, params) {
     if (params && params.city) f.city = params.city;
     if (params && params.type) f.type = params.type;
-    const sites = YCData.SITES.filter((s) => (f.type === "all" || s.type === f.type) && (f.city === "all" || s.city === f.city));
+    const pool = f.city === "all" ? YCData.SITES : YCData.sitesIn(f.city);
+    const sites = pool.filter((s) => f.type === "all" || s.type === f.type);
     const city = ACState.user.city;
     const near = YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES, 3);
     const body = `
@@ -48,17 +49,24 @@
       <div class="grid lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
         <div class="space-y-8 min-w-0">
           <p class="t-body lg:text-[16px] lg:leading-[26px] text-ink-2">${c.intro}</p>
-          <section>${UI.sectionTitle("Lieux à visiter", "Scanner un monument", "App.nav('culturalScanner')")}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${sites.slice(0, 6).map((s) => UI.siteCard(s)).join("")}</div></section>
+          <section>${UI.sectionTitle("Lieux à visiter", "Scanner un monument", "App.nav('culturalScanner')")}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div></section>
           ${rests.length ? `<section>${UI.sectionTitle("Restaurants", "Voir tout", `Screens._cityRestaurants('${c.name}')`)}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${rests.slice(0, 4).map((r) => UI.restaurantCard(r)).join("")}</div></section>` : ""}
           ${events.length ? `<section>${UI.sectionTitle("Événements", "Voir tout", `Screens._cityEvents('${c.name}')`)}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${events.slice(0, 4).map((e) => UI.eventCard(e)).join("")}</div></section>` : ""}
           ${activities.length ? `<section>${UI.sectionTitle("Activités et traditions")}<div class="hscroll lg:grid lg:grid-cols-3">${activities.slice(0, 6).map((s) => UI.siteCard(s, true)).join("")}</div></section>` : ""}
         </div>
         <aside class="space-y-4 lg:sticky lg:top-24">
           <div class="card p-5"><p class="t-h3 mb-3">Infos pratiques</p>${Object.keys(c.practical).map((k) => `<div class="py-2 border-b border-line last:border-0"><p class="t-caption text-ink-3">${k.charAt(0).toUpperCase() + k.slice(1)}</p><p class="t-small font-semibold mt-0.5">${c.practical[k]}</p></div>`).join("")}</div>
-          <div class="card overflow-hidden"><div id="dest-map" class="h-48 bg-surface-low"></div><div class="p-4 space-y-2">${UI.button("Se déplacer à " + c.name, `Shell.pickCity('${c.name}');App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Explorer autour", go("exploreAround", { city: c.name }), { variant: "outline", icon: "travel_explore" })}</div></div>
+          <div class="card overflow-hidden"><div id="dest-map" class="h-72 lg:h-80 bg-surface-low"></div><div class="p-4 space-y-2"><p class="t-small text-ink-2">${sites.length} lieu${sites.length > 1 ? "x" : ""} dans ${esc(c.name)}</p>${UI.button("Se déplacer à " + c.name, `Shell.pickCity('${c.name}');App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Explorer autour", go("exploreAround", { city: c.name }), { variant: "outline", icon: "travel_explore" })}</div></div>
         </aside>
       </div>`;
-    Shell.render(container, { title: c.name, subtitle: c.country + " · Destination", back: true, body, nav: false, showNav: true, onMount: () => { const m = YCMap.create("dest-map", { interactive: false, zoomControl: false, lat: c.lat, lng: c.lng, zoom: 11 }); if (m) sites.filter((s) => YCData.distanceKm(s.lat, s.lng, c.lat, c.lng) < 40).forEach((s) => m.addPoi([s.lat, s.lng], YCData.siteType(s.type).icon, "<b>" + esc(s.name) + "</b>", () => App.nav("cultureDetail", { id: s.id }))); } });
+    Shell.render(container, { title: c.name, subtitle: c.country + " · Destination", back: true, body, nav: false, showNav: true, onMount: () => {
+      const m = YCMap.create("dest-map", { interactive: true, lat: c.lat, lng: c.lng, zoom: 13, city: c.name });
+      if (!m) return;
+      const pts = [];
+      sites.forEach((s) => { pts.push([s.lat, s.lng]); m.addPoi([s.lat, s.lng], YCData.siteType(s.type).icon, "<b>" + esc(s.name) + "</b><br>" + esc(s.place), () => App.nav("cultureDetail", { id: s.id })); });
+      if (pts.length > 1) m.fit(pts, { paddingTopLeft: [28, 28], paddingBottomRight: [28, 28], maxZoom: 14 });
+      else if (pts.length === 1) m.setView(pts[0][0], pts[0][1], 15);
+    } });
   };
   Screens._cityRestaurants = (c) => { Shell.pickCity(c); App.nav("restaurants"); };
   Screens._cityEvents = (c) => { App.nav("events"); };
@@ -86,7 +94,7 @@
         </div>`,
       visit: `<div class="card divide-y divide-line">${[["schedule", "Horaires", s.visit.hours], ["payments", "Tarif", s.visit.price], ["timer", "Durée conseillée", s.visit.duration], ["tips_and_updates", "Conseil", s.visit.tips]].map((x) => `<div class="p-4 flex gap-3"><span class="menu-icon">${icon(x[0])}</span><div><p class="t-caption text-ink-3">${x[1]}</p><p class="t-body font-semibold">${x[2]}</p></div></div>`).join("")}</div>
         <div class="mt-4 grid sm:grid-cols-2 gap-3">${UI.button("Y aller en transport", `Screens._transportPreset({toLatLng:{name:${UI.js(s.name)},lat:${s.lat},lng:${s.lng}}});App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Réserver une visite guidée", `Screens._bookVisit('${s.id}')`, { variant: "primary", icon: "tour" })}</div>`,
-      info: `<div class="card overflow-hidden"><div id="site-map" class="h-56 bg-surface-low"></div><div class="p-4">${UI.row("Adresse", s.place)}${UI.row("Coordonnées", s.lat.toFixed(4) + ", " + s.lng.toFixed(4))}${UI.row("Type", type.label)}${s.unesco ? UI.row("Patrimoine", "UNESCO") : ""}${UI.row("Langues du guide", "Français, English, Fon, Wolof")}</div></div>
+      info: `<div class="card overflow-hidden"><div id="site-map" class="h-56 bg-surface-low"></div><div class="p-4">${UI.row("Adresse", s.place)}${UI.row("Coordonnées", s.lat.toFixed(4) + ", " + s.lng.toFixed(4))}${UI.row("Type", type.label)}${s.unesco ? UI.row("Patrimoine", "UNESCO") : ""}${UI.row("Langues du guide", "Français, English")}</div></div>
         <button type="button" onclick="Screens._showSiteQr('${s.id}')" class="mt-3 w-full card p-4 flex items-center gap-3 text-left"><span class="menu-icon">${icon("qr_code_2")}</span><span class="flex-1"><span class="block t-title">QR Code du site</span><span class="block t-small text-ink-2">À afficher sur place pour tester le scanner</span></span>${icon("chevron_right", "text-ink-3")}</button>`
     };
     const body = `
@@ -111,16 +119,21 @@
             { icon: "confirmation_number", label: "Événements à " + esc(s.city), sub: "Concerts, festivals, spectacles", onclick: "App.nav('events')" },
             { icon: "travel_explore", label: "Destination " + esc(s.city), sub: "Page complète de la ville", onclick: go("destination", { city: s.city }) }
           ], "Autour de ce lieu")}
-          <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Langue du contenu</p><div class="grid grid-cols-4 gap-2">${I18N.LANGS.map((l) => `<button type="button" onclick="UI.setLang('${l.id}')" class="chip justify-center ${I18N.lang === l.id ? "on" : ""}">${l.id.toUpperCase()}</button>`).join("")}</div><p class="t-small text-ink-3 mt-2">Fon et Wolof : traduction partielle de démonstration.</p></div>
+          <div class="card overflow-hidden"><div id="site-loc-map" class="h-56 bg-surface-low"></div><div class="p-4"><p class="t-title">${esc(s.name)}</p><p class="t-small text-ink-2 mt-0.5">${icon("location_on", "text-[15px]")}${esc(s.place)}</p></div></div>
+          <div class="card p-4"><p class="t-caption text-ink-3 mb-2">${I18N.t("lang_title")}</p><div class="grid grid-cols-2 gap-2">${I18N.LANGS.map((l) => `<button type="button" onclick="UI.setLang('${l.id}')" class="chip justify-center ${I18N.lang === l.id ? "on" : ""}">${l.label}</button>`).join("")}</div></div>
         </aside>
       </div>`;
-    Shell.render(container, { title: s.name, subtitle: type.label + " · " + s.city, back: true, body, nav: false, showNav: true, onMount: () => { if (st.tab === "info") { const m = YCMap.create("site-map", { interactive: false, zoomControl: false, lat: s.lat, lng: s.lng, zoom: 14 }); if (m) m.addPoi([s.lat, s.lng], type.icon, "<b>" + esc(s.name) + "</b>"); } } });
+    Shell.render(container, { title: s.name, subtitle: type.label + " · " + (s.near || s.city), back: true, body, nav: false, showNav: true, onMount: () => {
+      const pin = (id) => { const m = YCMap.create(id, { interactive: true, lat: s.lat, lng: s.lng, zoom: 15 }); if (m) m.addPoi([s.lat, s.lng], type.icon, "<b>" + esc(s.name) + "</b><br>" + esc(s.place)); };
+      pin("site-loc-map");
+      if (st.tab === "info") pin("site-map");
+    } });
   };
   Screens._cuTab = (tab, id, scanned) => { st.tab = tab; App.replace(App.current.id, Object.assign({}, App.current.params, { tab })); };
   Screens._toggleSaveSite = (id) => { const i = ACState.saved.indexOf(id); if (i >= 0) ACState.saved.splice(i, 1); else ACState.saved.push(id); UI.toast(i >= 0 ? "Retiré de vos lieux sauvegardés" : "Lieu sauvegardé", "success"); ACStore.emit(); };
   Screens._bookVisit = (id) => {
     const s = YCData.site(id);
-    UI.openSheet(`<h3 class="t-h3 mb-1">Visite guidée</h3><p class="t-small text-ink-2 mb-4">${esc(s.name)} · ${s.visit.duration}</p><div class="grid grid-cols-2 gap-3">${UI.select("vg-day", "Jour", ["Demain", "Samedi", "Dimanche"], "Samedi")}${UI.select("vg-time", "Heure", ["09:00", "10:30", "14:00", "16:00"], "10:30")}</div><div class="mt-3">${UI.select("vg-lang", "Langue du guide", ["Français", "English", "Fon", "Wolof"], "Français")}</div><div class="mt-5">${UI.primaryButton("Réserver (" + s.visit.price.split("(")[0].trim() + ")", `Screens._bookVisitConfirm('${id}')`, { icon: "tour" })}</div>`);
+    UI.openSheet(`<h3 class="t-h3 mb-1">Visite guidée</h3><p class="t-small text-ink-2 mb-4">${esc(s.name)} · ${s.visit.duration}</p><div class="grid grid-cols-2 gap-3">${UI.select("vg-day", "Jour", ["Demain", "Samedi", "Dimanche"], "Samedi")}${UI.select("vg-time", "Heure", ["09:00", "10:30", "14:00", "16:00"], "10:30")}</div><div class="mt-3">${UI.select("vg-lang", I18N.t("lang_title"), ["Français", "English"], I18N.lang === "en" ? "English" : "Français")}</div><div class="mt-5">${UI.primaryButton("Réserver (" + s.visit.price.split("(")[0].trim() + ")", `Screens._bookVisitConfirm('${id}')`, { icon: "tour" })}</div>`);
   };
   Screens._bookVisitConfirm = (id) => { const s = YCData.site(id); const when = document.getElementById("vg-day").value + " " + document.getElementById("vg-time").value; UI.closeSheet(); ACStore.addActivity({ service: "reservation", title: "Visite guidée · " + s.name, amount: null, status: "À venir", icon: "tour", detail: { when, place: s.place } }); ACStore.addNotification("Visite réservée", s.name + " · " + when + ". Votre guide vous attendra à l'entrée.", "culture", "activities"); ACStore.emit(); UI.toast("Visite réservée · " + when, "success"); };
 
@@ -267,13 +280,13 @@
     const origin = params.id ? YCData.site(params.id) : null;
     const c = YCData.cityOf(params.city || (origin ? origin.city : ACState.user.city));
     const center = origin ? { lat: origin.lat, lng: origin.lng, name: origin.name } : { lat: c.lat, lng: c.lng, name: c.name };
-    const sites = YCData.nearby(center.lat, center.lng, YCData.SITES, 8, origin ? origin.id : null).filter((s) => s.dist < 80);
-    const rests = YCData.nearby(center.lat, center.lng, YCData.RESTAURANTS, 4).filter((r) => r.dist < 80);
-    const events = YCData.nearby(center.lat, center.lng, YCData.EVENTS, 3).filter((e) => e.dist < 80);
+    const sites = (origin ? YCData.nearby(center.lat, center.lng, YCData.SITES, 8, origin.id) : YCData.sitesIn(c.name).map((s) => Object.assign({ dist: YCData.distanceKm(center.lat, center.lng, s.lat, s.lng) }, s))).filter((s) => s.dist <= 10);
+    const rests = YCData.nearby(center.lat, center.lng, YCData.RESTAURANTS, 4).filter((r) => r.dist <= 10);
+    const events = YCData.nearby(center.lat, center.lng, YCData.EVENTS, 3).filter((e) => e.dist <= 10);
     const rowItem = (x, kind) => `<button type="button" onclick="${kind === "site" ? go("cultureDetail", { id: x.id }) : kind === "rest" ? go("restaurantDetail", { id: x.id }) : go("eventDetail", { id: x.id })}" class="card card-press p-2.5 flex items-center gap-3 text-left w-full"><span class="w-14 h-14 rounded-xl overflow-hidden bg-card-high flex-shrink-0">${UI.img(x.img, x.name)}</span><span class="flex-1 min-w-0"><span class="block t-title truncate">${x.name}</span><span class="block t-small text-ink-2 truncate">${kind === "site" ? YCData.siteType(x.type).label : kind === "rest" ? x.cat + " · " + x.rating + " ★" : YCData.fmtDateShort(x.date) + " · " + x.cat}</span></span><span class="t-small font-bold whitespace-nowrap">${YCMap.fmtKm(x.dist)}</span></button>`;
     const body = `<div class="flex-1 min-h-0 lg:grid lg:grid-cols-[420px_1fr] flex flex-col">
       <aside class="order-2 lg:order-1 lg:h-full lg:overflow-y-auto border-t lg:border-t-0 lg:border-r border-line bg-surface p-4 lg:p-6 space-y-5 max-h-[55%] overflow-y-auto lg:max-h-none">
-        <div><p class="t-caption text-gold-deep dark:text-gold">Autour de</p><h2 class="t-h2">${esc(center.name)}</h2><p class="t-small text-ink-2">${sites.length + rests.length + events.length} lieux dans un rayon de 80 km</p></div>
+        <div><p class="t-caption text-gold-deep dark:text-gold">Autour de</p><h2 class="t-h2">${esc(center.name)}</h2><p class="t-small text-ink-2">${sites.length + rests.length + events.length} lieux dans ${esc(c.name)}</p></div>
         ${sites.length ? `<div><p class="t-caption text-ink-3 mb-2">Sites culturels</p><div class="space-y-2">${sites.map((s) => rowItem(s, "site")).join("")}</div></div>` : ""}
         ${rests.length ? `<div><p class="t-caption text-ink-3 mb-2">Restaurants</p><div class="space-y-2">${rests.map((r) => rowItem(r, "rest")).join("")}</div></div>` : ""}
         ${events.length ? `<div><p class="t-caption text-ink-3 mb-2">Événements</p><div class="space-y-2">${events.map((e) => rowItem(e, "event")).join("")}</div></div>` : ""}

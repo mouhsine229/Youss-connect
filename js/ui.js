@@ -245,6 +245,7 @@
     const tones = { success: "bg-inverse text-inverse-ink", error: "bg-danger text-white", info: "bg-inverse text-inverse-ink", warn: "bg-warn text-white" };
     el.className = "toast " + (tones[tone] || tones.info);
     el.innerHTML = `<span class="inline-flex items-center gap-2">${icon(tone === "error" ? "error" : tone === "success" ? "check_circle" : "info", "text-[18px] " + (tone === "success" ? "text-gold" : ""))}<span>${esc(message)}</span></span>`;
+    if (window.I18N && I18N.apply) I18N.apply(el);
     el.style.opacity = "1"; el.style.transform = "translate(-50%, 0)";
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translate(-50%, 8px)"; }, 2400);
@@ -264,6 +265,7 @@
       </div>`;
     document.body.appendChild(overlay);
     document.body.style.overflow = "hidden";
+    if (window.I18N && I18N.apply) I18N.apply(overlay);
   }
   function closeSheet() {
     const overlay = document.getElementById("ac-sheet-overlay");
@@ -319,10 +321,11 @@
   function timeAgo(at) {
     if (!at) return "";
     const diff = Math.max(0, Date.now() - at) / 1000;
-    if (diff < 60) return "À l'instant";
-    if (diff < 3600) return "Il y a " + Math.round(diff / 60) + " min";
-    if (diff < 86400) return "Il y a " + Math.round(diff / 3600) + " h";
-    return "Il y a " + Math.round(diff / 86400) + " j";
+    const en = window.I18N && I18N.lang === "en";
+    if (diff < 60) return en ? "Just now" : "À l'instant";
+    if (diff < 3600) return en ? Math.round(diff / 60) + " min ago" : "Il y a " + Math.round(diff / 60) + " min";
+    if (diff < 86400) return en ? Math.round(diff / 3600) + " h ago" : "Il y a " + Math.round(diff / 3600) + " h";
+    return en ? Math.round(diff / 86400) + " d ago" : "Il y a " + Math.round(diff / 86400) + " j";
   }
 
   window.UI = {

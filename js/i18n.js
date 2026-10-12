@@ -1,5 +1,4 @@
-// Traductions. Le français est la référence, l'anglais est complet.
-// Fon et wolof ne couvrent que la navigation et les actions courantes, à faire relire par des locuteurs.
+// Traductions. Le français est la référence, l'anglais couvre les mêmes clés.
 // Une clé absente retombe sur le français.
 (function () {
   "use strict";
@@ -19,7 +18,8 @@
     // Auth
     login: "Connexion", signup: "Créer un compte", phone: "Numéro de téléphone", password: "Mot de passe", forgot: "Mot de passe oublié", otp: "Vérification OTP",
     // Wallet
-    wallet: "Youss Wallet", balance: "Solde disponible", send: "Envoyer", receive: "Recevoir", topup: "Recharger", withdraw: "Retirer", qrpay: "QR Pay", recent: "Transactions récentes",
+    wallet: "Youss Wallet", balance: "Solde disponible", wallet_in: "Entrées", wallet_out: "Sorties", wallet_period: "30 derniers jours", wallet_demo: "Solde de démo",
+    send: "Envoyer", receive: "Recevoir", topup: "Recharger", withdraw: "Retirer", qrpay: "QR Pay", recent: "Transactions récentes",
     // Divers
     lang_title: "Langue", lang_done: "Langue : Français", settings: "Paramètres", notifications: "Notifications", security: "Sécurité", help: "Aide", logout: "Déconnexion",
     theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démo", next_steps: "Aussi près d'ici",
@@ -36,38 +36,27 @@
     back: "Back", next: "Next", skip: "Skip", start: "Get started", confirm: "Confirm", cancel: "Cancel", add: "Add", save: "Save", continue: "Continue",
     pay: "Pay", order: "Order", close: "Close", retry: "Retry", share: "Share", call: "Call", message: "Message", home_btn: "Back to home",
     login: "Log in", signup: "Create an account", phone: "Phone number", password: "Password", forgot: "Forgot password", otp: "OTP verification",
-    wallet: "Youss Wallet", balance: "Available balance", send: "Send", receive: "Receive", topup: "Top up", withdraw: "Withdraw", qrpay: "QR Pay", recent: "Recent transactions",
+    wallet: "Youss Wallet", balance: "Available balance", wallet_in: "Money in", wallet_out: "Money out", wallet_period: "Last 30 days", wallet_demo: "Demo balance",
+    send: "Send", receive: "Receive", topup: "Top up", withdraw: "Withdraw", qrpay: "QR Pay", recent: "Recent transactions",
     lang_title: "Language", lang_done: "Language: English", settings: "Settings", notifications: "Notifications", security: "Security", help: "Help", logout: "Log out",
     theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo walkthroughs", next_steps: "Nearby",
     empty_results: "No results", empty_results_body: "Try another keyword or category.",
     conceptual: "Demo feature. Going live depends on the licences granted in each country."
   };
 
-  // Fon, partiel
-  const FON = {
-    nav_home: "Aigba", nav_explorer: "Kpɔ́n", nav_activities: "Azɔ lɛɛ", nav_wallet: "Wallet", nav_profile: "Nyɛ",
-    hello: "Nú mi", search: "Étɛ wè nɔ ɖi ?", nearby: "Ɖo nɔwiwa", recos: "Nú ɖó wè", upcoming: "Hunxwé lɛɛ", discover: "Kpɔ́n Afrika",
-    lang_title: "Gbè", lang_done: "Gbè : Fon", back: "Lɛkɔ", next: "Bɔ dó", confirm: "Yí gbè", cancel: "Jó dó"
-  };
-
-  // Wolof, partiel
-  const WO = {
-    nav_home: "Kër", nav_explorer: "Seet", nav_activities: "Jëf", nav_wallet: "Wallet", nav_profile: "Profil",
-    hello: "Salaam", search: "Looy wut ?", nearby: "Ci wetu", recos: "Ngir yaw", upcoming: "Ay eveneman", discover: "Xam Afrik",
-    lang_title: "Làkk", lang_done: "Làkk : Wolof", back: "Dellu", next: "Topp", confirm: "Dëggal", cancel: "Bàyyi"
-  };
-
-  const PACKS = { fr: FR, en: EN, fon: FON, wo: WO };
+  const PACKS = { fr: FR, en: EN };
   const LANGS = [
-    { id: "fr", label: "Français", native: "Français", coverage: 100 },
-    { id: "en", label: "English", native: "English", coverage: 100 },
-    { id: "wo", label: "Wolof", native: "Wolof", coverage: 20, partial: true },
-    { id: "fon", label: "Fon", native: "Fɔngbè", coverage: 20, partial: true }
+    { id: "fr", label: "Français", native: "Français" },
+    { id: "en", label: "English", native: "English" }
   ];
 
   let current = "fr";
   try { current = localStorage.getItem("yc-lang") || "fr"; } catch (e) { /* navigation privée */ }
-  if (!PACKS[current]) current = "fr";
+  if (!PACKS[current]) {
+    current = "fr";
+    try { localStorage.setItem("yc-lang", "fr"); } catch (e) { /* no-op */ }
+  }
+  document.documentElement.lang = current === "en" ? "en" : "fr";
 
   function t(key) {
     const pack = PACKS[current] || FR;
