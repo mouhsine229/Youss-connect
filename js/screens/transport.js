@@ -367,12 +367,35 @@
       <p id="search-status" class="t-small text-ink-3 mt-6">Demande envoyée à ${operatorOf().label} · ${vehicleOf().label.toLowerCase()} à proximité…</p>
       <button type="button" onclick="Screens._cancelSearch()" class="btn btn-outline mt-10">Annuler la demande</button>
     </div>`;
+    const liveHold = window.YCBackend && YCBackend.isLive() && window.YCProviders && !YCProviders.ride.connected;
+    if (liveHold) {
+      const held = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto px-4">
+        <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center">${icon(vehicleOf().icon, "text-gold text-[52px]")}</div>
+        <h2 class="t-h1 mt-8">Demande enregistrée</h2>
+        <p class="t-body text-ink-2 mt-2 max-w-[360px]">De ${esc(trip.from.name)} vers ${esc(trip.to.name)}. Gozem, inDrive et WeDrive ne sont pas encore branchés. Aucun chauffeur n'est envoyé et aucun montant n'est débité.</p>
+        <button type="button" onclick="Screens._cancelSearch()" class="btn btn-outline mt-10">Annuler la demande</button>
+      </div>`;
+      Shell.render(container, { title: "Recherche", back: "App.nav('transportConfirm')", body: held, nav: false, hideSearch: true });
+      if (!trip.holdSaved) {
+        trip.holdSaved = true;
+        YCProviders.saveRequest("ride", { from: trip.from, to: trip.to, vehicle: trip.vehicle, price: trip.price, method: trip.method }).then(function (res) {
+          trip.holdId = res && res.id ? res.id : "";
+          if (!res || !res.ok) UI.toast((res && res.message) || "La demande n'a pas pu être enregistrée.", "error");
+        });
+      }
+      return;
+    }
     Shell.render(container, { title: "Recherche", back: "App.nav('transportConfirm')", body, nav: false, hideSearch: true });
     const msgs = ["3 chauffeurs contactés…", "Un chauffeur a accepté. Vérification…"];
     msgs.forEach((m, i) => setTimeout(() => { const el = document.getElementById("search-status"); if (el && App.current.id === "transportSearching") el.textContent = m; }, 900 * (i + 1)));
     setTimeout(() => { if (App.current && App.current.id === "transportSearching") { Screens._transportAssignDriver(); App.replace("transportDriverFound"); } }, 2600);
   };
-  Screens._cancelSearch = function () { trip.status = "idle"; syncTrip(); UI.toast("Demande annulée. Aucun montant débité.", "info"); App.resetTo("transport"); };
+  Screens._cancelSearch = function () {
+    if (trip.holdId && trip.holdId !== "pending" && window.YCProviders) YCProviders.cancel(trip.holdId);
+    trip.holdId = "";
+    trip.holdSaved = false;
+    trip.status = "idle"; syncTrip(); UI.toast("Demande annulée. Aucun montant débité.", "info"); App.resetTo("transport");
+  };
   Screens._transportAssignDriver = function () {
     const d = YCData.driverFor(ACState.user.city, trip.vehicle === "premium" ? "premium" : trip.vehicle);
     trip.driver = Object.assign({}, d, { car: trip.vehicle === "moto" && d.vehicle !== "moto" ? "Honda CG 125 · Noire" : d.car, etaMin: trip.vehicle === "moto" ? 2 : trip.vehicle === "premium" ? 6 : 4 });
@@ -397,7 +420,7 @@
           <div class="rounded-xl bg-gold-soft p-3"><p class="t-caption text-gold-deep">Arrivée</p><p class="t-small font-bold mt-0.5 text-gold-deep" id="df-eta">${d.etaMin} min</p></div>
         </div>
         <div class="flex gap-2 w-full mt-4">
-          <a href="tel:${esc(d.phone)}" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}${I18N.t("call")}</a>
+          <button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}${I18N.t("call")}</button>
           <button type="button" onclick="Screens._tripChat()" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}${I18N.t("message")}</button>
         </div>
       </div>
@@ -417,9 +440,9 @@
   Screens._tripChat = function () {
     const d = trip.driver || {};
     const canned = ["Je suis au point de départ", "J'arrive dans 2 minutes", "Pouvez-vous m'attendre ?", "Appelez-moi en arrivant"];
-    UI.openSheet(`<div class="flex items-center gap-3 mb-4">${UI.avatar(d, "w-11 h-11")}<div><p class="t-title">${esc(d.name || "Chauffeur")}</p><p class="t-small text-success font-semibold">En ligne</p></div></div>
+    UI.openSheet(`<div class="flex items-center gap-3 mb-4">${UI.avatar(d, "w-11 h-11")}<div><p class="t-title">${esc(d.name || "Chauffeur")}</p><p class="t-small text-ink-2">Sur cet appareil</p></div></div>
       <div id="chat-log" class="space-y-2 max-h-[260px] overflow-y-auto mb-3">
-        <div class="max-w-[80%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">Bonjour ${esc(ACState.user.name)}, je suis en route. ${esc((d.car || "").split("·")[0])}</div>
+        <div class="max-w-[90%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">Ce message reste sur cet appareil. Le chauffeur ne le reçoit pas.</div>
       </div>
       <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">${canned.map((c) => `<button type="button" onclick="Screens._chatSend(${UI.js(c)})" class="chip">${c}</button>`).join("")}</div>
       <form onsubmit="event.preventDefault();Screens._chatSend(document.getElementById('chat-input').value)" class="flex gap-2 mt-2"><input id="chat-input" class="input flex-1" placeholder="Votre message…"/><button type="submit" class="btn btn-primary !w-12 !px-0" aria-label="Envoyer">${icon("send")}</button></form>`);
@@ -430,7 +453,6 @@
     if (!log) return;
     log.insertAdjacentHTML("beforeend", `<div class="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-inverse text-inverse-ink p-3 t-small">${esc(text)}</div>`);
     log.scrollTop = log.scrollHeight;
-    setTimeout(() => { if (!document.getElementById("chat-log")) return; log.insertAdjacentHTML("beforeend", `<div class="max-w-[80%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">D'accord, à tout de suite 👍</div>`); log.scrollTop = log.scrollHeight; }, 900);
   };
 
   // Suivi en course
@@ -446,7 +468,7 @@
           <div class="h-1.5 rounded-full bg-card-high overflow-hidden mt-3"><div id="ride-progress" class="h-full rounded-full bg-gold transition-[width] duration-200" style="width:0%"></div></div>
         </div>
         <div class="flex items-center gap-3">${UI.avatar(d, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(d.name)} · ★ ${d.rating}</p><p class="t-small text-ink-2 truncate">${esc(d.car)} · ${esc(d.plate)}</p></div>
-          <a href="tel:${esc(d.phone)}" class="icon-btn" aria-label="Appeler">${icon("call")}</a><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
+          <button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
         <div class="flex items-center justify-between"><span class="t-body text-ink-2">Montant</span><span class="t-title font-extrabold">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
         <button type="button" id="finish-btn" onclick="Screens._transportFinish()" class="btn btn-lg btn-dark btn-block">Terminer la course</button>
       </div>`;
@@ -503,7 +525,9 @@
   }
   Screens._shareRide = function () {
     const text = "Je suis en course YOUSS CONNECT avec " + trip.driver.name + " (" + trip.driver.plate + ") vers " + trip.to.name + ".";
-    if (navigator.share) navigator.share({ title: "Ma course YOUSS CONNECT", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien de suivi copié.", "success")); else UI.toast("Lien de suivi partagé.", "success");
+    if (navigator.share) navigator.share({ title: "Ma course YOUSS CONNECT", text }).catch(function () {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { UI.toast("Texte de la course copié.", "success"); }).catch(function () { UI.toast("Le partage n'est pas disponible sur cet appareil.", "info"); });
+    else UI.toast("Le partage n'est pas disponible sur cet appareil.", "info");
   };
   Screens._transportMarkArrived = function () { trip.status = "arrived"; trip.fastDemo = true; syncTrip(); };
   Screens._transportFinish = function () { trip.status = "arrived"; syncTrip(); App.nav("transportEnd"); };

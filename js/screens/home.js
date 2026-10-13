@@ -27,10 +27,14 @@
     const d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
+  function cityPartners(city) {
+    if (!window.YCKitchen || !YCKitchen.cards) return [];
+    return YCKitchen.cards().filter(function (r) { return r.city === city && !r.paused; });
+  }
   function recommendations() {
     const city = ACState.user.city;
     const recos = [];
-    const rest = YCData.restaurantsIn(city)[0];
+    const rest = cityPartners(city)[0] || YCData.restaurantsIn(city)[0];
     if (rest) recos.push({ icon: "restaurant", img: rest.img, title: rest.name, sub: rest.cat + " · " + rest.time, onclick: go("restaurantDetail", { id: rest.id }) });
     const upcoming = ACState.tickets.filter((t) => t.date >= todayISO()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const ticket = upcoming.find((t) => t.city === city) || upcoming[0];
@@ -45,6 +49,7 @@
   Screens.home = function (container) {
     const city = ACState.user.city;
     const nearbyList = []
+      .concat(cityPartners(city).slice(0, 2).map((r) => ({ img: r.img, title: r.name, meta: "Compte restaurant · " + r.area, onclick: go("restaurantDetail", { id: r.id }) })))
       .concat(YCData.restaurantsIn(city).slice(0, 2).map((r) => ({ img: r.img, title: r.name, meta: "Restaurant · " + r.km + " km · " + r.rating + " ★", onclick: go("restaurantDetail", { id: r.id }) })))
       .concat(YCData.sitesIn(city).slice(0, 1).map((s) => ({ img: s.img, title: s.name, meta: YCData.siteType(s.type).label + " · " + s.place, onclick: go("cultureDetail", { id: s.id }) })))
       .concat(YCData.eventsIn(city).slice(0, 1).map((e) => ({ img: e.img, title: e.name, meta: "Événement · " + YCData.fmtDateShort(e.date), onclick: go("eventDetail", { id: e.id }) })));
@@ -73,14 +78,14 @@
           <div>${UI.sectionTitle(I18N.t("nearby"), I18N.t("see_all"), go("explorer", { near: 1 }))}
             <div class="grid sm:grid-cols-2 gap-3">${nearbyList.map((n) => `<button type="button" onclick="${n.onclick}" class="card card-press p-2.5 flex items-center gap-3 text-left min-w-0 overflow-hidden">
               <span class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-card-high">${UI.img(n.img, n.title)}</span>
-              <span class="min-w-0 flex-1"><span class="block t-title truncate">${n.title}</span><span class="block t-small text-ink-2 truncate">${n.meta}</span></span>${icon("chevron_right", "text-ink-3")}
+              <span class="min-w-0 flex-1"><span class="block t-title truncate">${esc(n.title)}</span><span class="block t-small text-ink-2 truncate">${esc(n.meta)}</span></span>${icon("chevron_right", "text-ink-3")}
             </button>`).join("")}</div>
           </div>
 
           <div>${UI.sectionTitle(I18N.t("recos"))}
             <div class="hscroll lg:grid lg:grid-cols-2 xl:grid-cols-4 gap-3">${recos.map((r) => `<button type="button" onclick="${r.onclick}" class="card card-press overflow-hidden text-left w-[230px] lg:w-auto">
               <span class="block h-24 lg:h-28 bg-card-high relative">${UI.img(r.img, "")}<span class="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/95 text-ink flex items-center justify-center">${icon(r.icon, "text-[18px]")}</span></span>
-              <span class="block p-3"><span class="block t-title truncate">${r.title}</span><span class="block t-small text-ink-2 truncate">${r.sub}</span></span>
+              <span class="block p-3"><span class="block t-title truncate">${esc(r.title)}</span><span class="block t-small text-ink-2 truncate">${esc(r.sub)}</span></span>
             </button>`).join("")}</div>
           </div>
 

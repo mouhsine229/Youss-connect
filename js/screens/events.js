@@ -35,15 +35,15 @@
     const items = list();
     const featured = items[0];
     const body = `
-      ${featured && f.cat === "Tous" && !f.q ? `<button type="button" onclick="${go("eventDetail", { id: featured.id })}" class="relative w-full rounded-3xl overflow-hidden h-60 lg:h-[380px] text-left card-press group">${UI.img(featured.img, featured.name, "img-cover transition-transform duration-700 group-hover:scale-105", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white max-w-[640px]"><span class="badge badge-gold mb-2">À la une · ${featured.cat}</span><h2 class="t-h1 lg:t-display">${featured.name}</h2><p class="t-body text-white/80 mt-1.5 flex flex-wrap gap-x-3">${icon("calendar_today", "text-[16px]")} ${YCData.fmtDate(featured.date)} · ${featured.time}<span>${icon("location_on", "text-[16px]")} ${featured.place}</span></p><p class="t-title mt-2">dès ${ACStore.fmtFCFA(YCData.minPrice(featured))}</p></div></button>` : ""}
+      ${featured && f.cat === "Tous" && !f.q ? `<button type="button" onclick="${go("eventDetail", { id: featured.id })}" class="relative w-full rounded-3xl overflow-hidden text-left card-press group bg-card-high">${UI.img(featured.img, featured.name, "absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105", { eager: true })}<span class="absolute inset-0 gradient-up"></span>
+        <span class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem] lg:px-8 lg:pb-8 max-w-[720px]"><span class="badge badge-gold mb-2 w-max">À la une · ${esc(featured.cat)}</span><span class="block t-h1 lg:t-display">${esc(featured.name)}</span><span class="block t-body text-white/80 mt-1.5">${icon("calendar_today", "text-[16px]")} ${YCData.fmtDate(featured.date)} · ${featured.time}<span class="inline-flex items-center">${icon("location_on", "text-[16px]")} ${esc(featured.place)}</span></span><span class="block t-title mt-2">dès ${ACStore.fmtFCFA(YCData.minPrice(featured))}</span></span></button>` : ""}
       <div class="flex flex-col lg:flex-row gap-3">
-        <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="ev-q" type="search" value="${esc(f.q)}" placeholder="Rechercher un événement, un lieu…" oninput="Screens._evType(this.value)" class="input input-lg pl-12"/></label>
+        <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="ev-q" type="search" value="${esc(f.q)}" placeholder="Événement ou lieu" oninput="Screens._evType(this.value)" class="input input-lg pl-12"/></label>
         <select class="select lg:w-56" onchange="Screens._evCity(this.value)" aria-label="Ville"><option value="" ${f.city ? "" : "selected"}>${esc(ACState.user.country)}</option>${eventCities().map((c) => `<option value="${esc(c)}" ${f.city === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
       </div>
       <div class="hscroll">${CATS.map((c) => UI.chip(c, `Screens._evCat('${c}')`, f.cat === c)).join("")}</div>
       <div id="ev-list"></div>`;
-    Shell.render(container, { title: "Événements", subtitle: "Concerts, festivals, conférences, spectacles, sport", back: "App.nav('home')", body, nav: false, showNav: true, right: `<button type="button" onclick="App.nav('myTickets')" class="btn btn-sm btn-outline">${icon("qr_code_2", "text-[18px]")}<span class="hidden sm:inline">Mes billets</span>${ACState.tickets.length ? `<span class="badge badge-gold">${ACState.tickets.length}</span>` : ""}</button>` });
+    Shell.render(container, { title: "Événements", subtitle: "Concerts et festivals", back: "App.nav('home')", body, nav: false, showNav: true, right: `<button type="button" onclick="App.nav('myTickets')" class="btn btn-sm btn-outline">${icon("qr_code_2", "text-[18px]")}<span class="hidden sm:inline">Mes billets</span>${ACState.tickets.length ? `<span class="badge badge-gold">${ACState.tickets.length}</span>` : ""}</button>` });
     renderList();
   };
   function renderList() {
@@ -75,9 +75,14 @@
         <p class="t-small text-ink-3 text-center">Billet nominatif avec QR Code · remboursable jusqu'à 48 h avant.</p>
       </div>`;
     const body = `
-      <section class="relative rounded-3xl overflow-hidden h-64 lg:h-[420px] bg-card-high">${UI.img(e.img, e.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white"><span class="badge bg-white/95 text-ink mb-2">${e.cat}</span><h2 class="t-h1 lg:t-display max-w-[760px]">${e.name}</h2></div>
-        <button type="button" onclick="Screens._shareEvent('${e.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Partager">${icon("share")}</button>
+      <section class="relative rounded-3xl overflow-hidden bg-card-high">
+        ${UI.img(e.img, e.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
+        <div class="absolute inset-0 gradient-up"></div>
+        <div class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem] lg:px-8 lg:pb-8">
+          <span class="badge bg-white/95 text-ink mb-2 w-max">${esc(e.cat)}</span>
+          <h2 class="t-h1 lg:t-display max-w-[760px]">${esc(e.name)}</h2>
+        </div>
+        <button type="button" onclick="Screens._shareEvent('${e.id}')" class="absolute top-4 right-4 z-10 icon-btn" aria-label="Partager">${icon("share")}</button>
       </section>
       <div class="grid lg:grid-cols-[1fr_400px] gap-6 items-start">
         <div class="space-y-5 min-w-0">
@@ -88,7 +93,7 @@
           </div>
           <div><h3 class="t-h3 mb-2">À propos</h3><p class="t-body text-ink-2 leading-relaxed">${e.body}</p></div>
           <div><h3 class="t-h3 mb-2">Programme</h3><div class="card divide-y divide-line">${e.program.map((p) => `<div class="p-3.5 flex gap-3 t-body"><span class="font-bold text-gold-deep dark:text-gold w-14 flex-shrink-0">${p.split(" ")[0]}</span><span>${p.split(" ").slice(1).join(" ")}</span></div>`).join("")}</div></div>
-          <div class="card p-4 flex items-center gap-3">${UI.avatar({ name: e.organizer }, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Organisateur</p><p class="t-title truncate">${e.organizer}</p></div><button type="button" onclick="UI.toast('Message envoyé à l\\'organisateur.','success')" class="btn btn-sm btn-outline">Contacter</button></div>
+          <div class="card p-4 flex items-center gap-3">${UI.avatar({ name: e.organizer }, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Organisateur</p><p class="t-title truncate">${esc(e.organizer)}</p></div><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="btn btn-sm btn-outline shrink-0">Contacter</button></div>
           <div class="card overflow-hidden"><div id="ev-map" class="h-48 lg:h-56 bg-surface-low"></div><div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="flex-1"><p class="t-title">${e.place}</p><p class="t-small text-ink-2">Transport, restaurants et hébergements à proximité.</p></div>${UI.button("Y aller en transport", `Screens._goRide(${UI.js(e.place)},${e.lat},${e.lng})`, { variant: "dark", block: false, icon: "directions_car" })}</div></div>
           ${nearbyRest.length ? `<div>${UI.sectionTitle("Dîner avant ou après", "Voir tout", "App.nav('restaurants')")}<div class="grid sm:grid-cols-2 gap-3">${nearbyRest.map((r) => UI.restaurantCard(r)).join("")}</div></div>` : ""}
           <div class="lg:hidden">${ticketPanel}</div>

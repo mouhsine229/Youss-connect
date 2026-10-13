@@ -55,7 +55,7 @@
       <section id="cu-catalog">${UI.sectionTitle(catalogTitle, "", "", catalogSub)}${typeMeta && TYPE_INTRO[typeMeta.id] ? `<p class="t-body text-ink-2 mb-4">${TYPE_INTRO[typeMeta.id]}</p>` : ""}
         ${chips}
       </section>`;
-    Shell.render(container, { title: "Culture & tourisme", subtitle: filtered ? typeMeta.label : esc(city), back: filtered ? "Screens._cuType('all')" : "App.nav('home')", body, nav: false, showNav: true });
+    Shell.render(container, { title: "Culture & tourisme", subtitle: filtered ? typeMeta.label : city, back: filtered ? "Screens._cuType('all')" : "App.nav('home')", body, nav: false, showNav: true });
   };
   Screens._cuType = (t) => { f.type = t; App.replace("culture", cultureQuery()); };
   Screens._cuCity = (c) => { f.city = c; App.replace("culture", cultureQuery()); };
@@ -66,9 +66,13 @@
     const sites = YCData.sitesIn(c.name), rests = YCData.restaurantsIn(c.name), events = YCData.eventsIn(c.name), activities = sites.filter((s) => s.type === "nature" || s.type === "tradition" || s.type === "activite");
     const isHome = ACState.user.city === c.name;
     const body = `
-      <section class="relative rounded-3xl overflow-hidden h-64 lg:h-[400px] bg-card-high">${UI.img(c.hero, c.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white"><p class="t-caption text-gold">${c.country} · Destination</p><h2 class="t-display">${c.name}</h2><p class="t-body text-white/85 mt-1 max-w-[600px]">${c.tagline}</p></div>
-        ${!isHome ? `<button type="button" onclick="Shell.pickCity('${c.name}')" class="absolute top-4 right-4 btn btn-sm bg-white/95 text-ink">${icon("swap_horiz", "text-[18px]")}Utiliser ${c.name} comme ville</button>` : `<span class="absolute top-4 right-4 badge badge-gold">Votre ville</span>`}
+      <section class="relative rounded-3xl overflow-hidden bg-card-high">
+        ${UI.img(c.hero, c.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
+        <div class="absolute inset-0 gradient-up"></div>
+        <div class="relative z-10 flex flex-col min-h-[18rem] p-5 text-white lg:min-h-[22rem] lg:p-8">
+          <div class="flex justify-end">${!isHome ? `<button type="button" onclick="Shell.pickCity('${esc(c.name)}')" class="btn btn-sm bg-white/95 text-ink max-w-full h-auto min-h-9 whitespace-normal text-left py-2">${icon("swap_horiz", "text-[18px]")}Utiliser ${esc(c.name)} comme ville</button>` : `<span class="badge badge-gold">Votre ville</span>`}</div>
+          <div class="mt-auto max-w-[640px]"><p class="t-caption text-gold">${esc(c.country)} · Destination</p><h2 class="t-display">${esc(c.name)}</h2><p class="t-body text-white/85 mt-1">${esc(c.tagline)}</p></div>
+        </div>
       </section>
       <div class="grid lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
         <div class="space-y-8 min-w-0">
@@ -103,7 +107,7 @@
     const gallery = [s.img].concat(near.slice(0, 2).map((n) => n.img));
     const tabContent = {
       overview: `<p class="t-body lg:text-[16px] lg:leading-[26px] text-ink-2">${s.body}</p>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">${[["history_edu", "Époque", s.epoch], ["location_on", "Lieu", s.place.split("·")[0]], ["schedule", "Horaires", s.visit.hours.split("(")[0]], ["payments", "Tarif", s.visit.price.split("(")[0]]].map((x) => `<div class="card p-3"><span class="text-gold">${icon(x[0], "text-[20px]")}</span><p class="t-caption text-ink-3 mt-1">${x[1]}</p><p class="t-small font-semibold">${x[2]}</p></div>`).join("")}</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">${[["history_edu", "Époque", s.epoch], ["location_on", "Lieu", s.place.split("·")[0]], ["schedule", "Horaires", s.visit.hours.split("(")[0]], ["payments", "Tarif", s.visit.price.split("(")[0]]].map((x) => `<div class="card p-3 min-w-0"><span class="text-gold">${icon(x[0], "text-[20px]")}</span><p class="t-caption text-ink-3 mt-1">${x[1]}</p><p class="t-small font-semibold break-words">${esc(x[2])}</p></div>`).join("")}</div>
         <div class="mt-5"><h3 class="t-h3 mb-2">Pourquoi c'est là</h3><p class="t-body text-ink-2">${s.importance}</p></div>`,
       history: `<div class="card-dark p-5"><p class="t-caption text-gold">${s.epoch}</p><p class="t-body lg:text-[16px] lg:leading-[27px] text-white/90 mt-2">${s.history}</p></div>
         <div class="mt-4 grid sm:grid-cols-2 gap-3">
@@ -118,9 +122,15 @@
     const body = `
       ${scanned ? `<div class="card-dark p-4 flex items-center gap-3 animate-screen-in"><span class="w-11 h-11 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pop">${icon("center_focus_strong", "text-[24px]")}</span><div class="flex-1"><p class="t-caption text-gold">Résultat du scan</p><p class="t-title">Monument reconnu · correspondance ${params.score || 97} %</p></div><button type="button" onclick="App.nav('culturalScanner')" class="btn btn-sm bg-white/10 text-white">Rescanner</button></div>` : ""}
       <section class="grid lg:grid-cols-[1.4fr_1fr] gap-3">
-        <div class="relative rounded-3xl overflow-hidden h-64 lg:h-[420px] bg-card-high">${UI.img(gallery[0], s.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-          <div class="absolute bottom-5 left-5 right-5 text-white"><div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${type.label}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div><h2 class="t-h1 lg:t-display">${s.name}</h2><p class="t-body text-white/85 mt-1">${icon("location_on", "text-[16px]")} ${s.place}</p></div>
-          <button type="button" onclick="Screens._toggleSaveSite('${s.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Sauvegarder">${icon("bookmark", saved ? "text-gold" : "", saved)}</button>
+        <div class="relative rounded-3xl overflow-hidden bg-card-high">
+          ${UI.img(gallery[0], s.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
+          <div class="absolute inset-0 gradient-up"></div>
+          <div class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem]">
+            <div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${esc(type.label)}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div>
+            <h2 class="t-h1 lg:t-display">${esc(s.name)}</h2>
+            <p class="t-body text-white/85 mt-1">${icon("location_on", "text-[16px]")} ${esc(s.place)}</p>
+          </div>
+          <button type="button" onclick="Screens._toggleSaveSite('${s.id}')" class="absolute top-4 right-4 z-10 icon-btn" aria-label="Sauvegarder">${icon("bookmark", saved ? "text-gold" : "", saved)}</button>
         </div>
         <div class="hidden lg:grid grid-rows-2 gap-3 h-[420px]">${gallery.slice(1, 3).map((g, i) => `<div class="relative rounded-3xl overflow-hidden bg-card-high min-h-0"><img src="${g}" alt="" class="absolute inset-0 w-full h-full object-cover img-fade" loading="lazy"/>${i === 1 ? `<button type="button" onclick="Screens._videoPreview('${s.id}')" class="absolute inset-0 flex items-center justify-center bg-black/30 text-white"><span class="w-14 h-14 rounded-full bg-white/90 text-ink flex items-center justify-center">${icon("play_arrow", "text-[32px]", true)}</span></button>` : ""}</div>`).join("")}</div>
       </section>
@@ -329,7 +339,7 @@
         ${events.length ? `<div><p class="t-caption text-ink-3 mb-2">Événements</p><div class="space-y-2">${events.map((e) => rowItem(e, "event")).join("")}</div></div>` : ""}
       </aside>
       <div class="order-1 lg:order-2 relative flex-1 min-h-[45%] lg:min-h-0 lg:h-full"><div id="around-map" class="absolute inset-0"></div></div></div>`;
-    Shell.render(container, { title: "Explorer autour de moi", subtitle: esc(center.name), back: true, body, nav: false, fill: true, onMount: () => {
+    Shell.render(container, { title: "Explorer autour de moi", subtitle: center.name, back: true, body, nav: false, fill: true, onMount: () => {
       const m = YCMap.create("around-map", { interactive: true, lat: center.lat, lng: center.lng, zoom: 12 });
       if (!m) return;
       m.setUser([center.lat, center.lng]);

@@ -122,6 +122,13 @@
           out.wallet = Object.assign({}, base.wallet, out.wallet && typeof out.wallet === "object" ? out.wallet : {});
           const bal = Number(out.wallet.balance);
           out.wallet.balance = isFinite(bal) ? Math.max(0, Math.min(bal, 10000000)) : base.wallet.balance;
+          if (out.user && typeof out.user === "object" && window.YCData) {
+            const official = (YCData.COUNTRIES || []).find((c) => c.code === out.user.countryCode);
+            if (official) {
+              if (out.user.country !== official.name) out.user.country = official.name;
+              if (official.cities.indexOf(out.user.city) < 0) out.user.city = official.cities[0];
+            }
+          }
           if (!Array.isArray(out.wallet.cards)) out.wallet.cards = [];
           out.wallet.cards = out.wallet.cards.filter(function (c) { return c && c.last4 && !c.pan && !c.cvv; }).map(function (c) {
             return { id: String(c.id || ""), brand: String(c.brand || "Carte"), last4: String(c.last4).replace(/\D/g, "").slice(-4), exp: String(c.exp || ""), holder: String(c.holder || "") };
@@ -298,13 +305,7 @@
   };
   function createOrder(o) {
     const order = Object.assign({ id: uid("ord"), number: "YC-" + (o.type === "market" ? "MK" : "RS") + "-" + Math.floor(100000 + Math.random() * 899999), createdAt: Date.now(), durationSec: o.type === "market" ? 150 : 110, rated: null }, o);
-    if (o.type === "restaurant" && o.restaurantId === "rest1") {
-      order.kitchenStatus = "Nouvelle";
-      State.kitchen = State.kitchen || { restId: "rest1", dishes: [], paused: false, ticket: [] };
-      const items = (o.items || []).map((i) => i.name + (i.qty > 1 ? " × " + i.qty : "")).join(", ");
-      State.kitchen.ticket = (State.kitchen.ticket || []).filter((t) => t.orderId !== order.id);
-      State.kitchen.ticket.unshift({ id: order.id, orderId: order.id, number: order.number, client: State.user.name || "Client", items: items || order.title, total: order.total || 0, status: "Nouvelle", at: "À l'instant" });
-    }
+    if (o.partnerOrderId) order.kitchenStatus = o.kitchenStatus || "Nouvelle";
     State.orders.unshift(order);
     emit();
     return order;
@@ -316,6 +317,9 @@
   }
   function orderStep(order) {
     const steps = ORDER_STEPS[order.type] || ORDER_STEPS.restaurant;
+    if (order.kitchenStatus === "Annulée") {
+      return { idx: 0, steps: steps, progress: 0, current: { id: "cancelled", label: "Annulée", icon: "cancel", after: 0 }, done: false };
+    }
     if (order.kitchenStatus) {
       const map = { "Nouvelle": 0, "En préparation": 1, "Prête": 2, "Livrée": steps.length - 1 };
       let idx = map[order.kitchenStatus];

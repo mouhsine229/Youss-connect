@@ -47,7 +47,7 @@
     if (!o) { App.resetTo("activities"); return; }
     clearInterval(timer);
     const st = ACStore.orderStep(o);
-    const courier = o.courier || YCData.courierFor(ACState.user.city);
+    const courier = o.partnerOrderId ? null : (o.courier || YCData.courierFor(ACState.user.city));
     const body = `<div class="grid lg:grid-cols-[1fr_400px] gap-6">
       <div class="space-y-4">
         <div class="card overflow-hidden"><div id="ot-map" class="h-56 lg:h-80 bg-surface-low relative"><div id="ot-map-cover" class="absolute inset-0 flex flex-col items-center justify-center text-center bg-surface-low"><span class="w-14 h-14 rounded-full bg-card flex items-center justify-center text-gold mb-2">${icon(st.current.icon, "text-[28px]")}</span><p class="t-title" id="ot-cover-title">${st.current.label}</p><p class="t-small text-ink-2">La carte s'affiche dès le départ du livreur.</p></div></div>
@@ -56,7 +56,7 @@
             <div class="h-1.5 rounded-full bg-card-high overflow-hidden mt-3"><div id="ot-bar" class="h-full bg-gold transition-[width] duration-500" style="width:${st.progress}%"></div></div>
           </div></div>
         <div class="card p-4" id="ot-timeline">${timelineHtml(o)}</div>
-        <div id="ot-courier" class="card p-4 ${st.idx >= 2 ? "" : "hidden"}"><div class="flex items-center gap-3">${UI.avatar(courier, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(courier.name)} · ★ ${courier.rating}</p><p class="t-small text-ink-2">${courier.vehicle} · votre livreur</p></div><a href="tel:${esc(courier.phone)}" class="icon-btn" aria-label="Appeler">${icon("call")}</a><button type="button" onclick="UI.toast('Message envoyé au livreur.','success')" class="icon-btn" aria-label="Message">${icon("chat")}</button></div></div>
+        ${o.partnerOrderId ? `<div class="card p-4"><p class="t-title">Cuisine du restaurant</p><p class="t-small text-ink-2 mt-1">Le statut vient de la cuisine. Le coursier n'est pas encore branché.</p></div>` : `<div id="ot-courier" class="card p-4 ${st.idx >= 2 ? "" : "hidden"}"><div class="flex items-center gap-3">${UI.avatar(courier, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(courier.name)} · ★ ${courier.rating}</p><p class="t-small text-ink-2">${esc(courier.vehicle)} · votre livreur</p></div><button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Message">${icon("chat")}</button></div></div>`}
         <div id="ot-done" class="${st.done ? "" : "hidden"}">${doneHtml(o)}</div>
       </div>
       <aside class="space-y-4 lg:sticky lg:top-24 self-start">
@@ -65,7 +65,7 @@
         ${UI.secondaryButton("Besoin d'aide ?", "App.nav('help')", { icon: "support_agent" })}
         ${UI.secondaryButton(o.type === "market" ? "Continuer mes achats" : "Recommander", o.type === "market" ? "App.nav('market')" : go("restaurantDetail", { id: o.restaurantId || "rest1" }), { icon: "replay" })}
       </aside></div>`;
-    Shell.render(container, { title: "Suivi de commande", subtitle: esc(o.title), back: "App.nav('activities')", body, nav: false, showNav: true, onMount: () => startWatch(o) });
+    Shell.render(container, { title: "Suivi de commande", subtitle: o.title, back: "App.nav('activities')", body, nav: false, showNav: true, onMount: () => startWatch(o) });
   };
   function timelineHtml(o) {
     const st = ACStore.orderStep(o);
@@ -82,6 +82,20 @@
   Screens._rateOrder = (id, v) => { const o = findOrder(id); if (!o) return; o.rated = v; ACStore.emit(); UI.toast("Merci pour votre note !", "success"); App.replace("orderTracking", { id }); };
 
   function startWatch(o) {
+    if (o.partnerOrderId && window.YCBackend && YCBackend.api && YCBackend.api()) {
+      const tickPartner = function () {
+        if (!App.current || App.current.id !== "orderTracking") { clearInterval(timer); return; }
+        const api = YCBackend.api();
+        if (!api) return;
+        api.from("partner_orders").select("status").eq("id", o.partnerOrderId).maybeSingle().then(function (res) {
+          if (!res.data || res.data.status === o.kitchenStatus) return;
+          o.kitchenStatus = res.data.status;
+          ACStore.emit();
+        });
+      };
+      timer = setInterval(tickPartner, 4000);
+      return;
+    }
     let shownMap = false, lastIdx = -1;
     const tick = () => {
       if (!App.current || App.current.id !== "orderTracking") { clearInterval(timer); return; }

@@ -81,12 +81,12 @@
   function restaurantCard(r, compact) {
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[240px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(r.img, r.name)}
-        <span class="absolute top-2.5 left-2.5 badge badge-dark">${r.time}</span>
-        <span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${r.rating}</span>
+        <span class="absolute top-2.5 left-2.5 badge badge-dark">${esc(r.time)}</span>
+        ${r.partnerId ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${esc(String(r.rating))}</span>`}
       </div>
       <div class="p-3.5">
-        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${r.name}</h3><span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span></div>
-        <p class="t-small text-ink-2 truncate mt-0.5">${r.cat} · ${r.area}, ${r.city} · ~${ACStore.fmtFCFA(r.avg)}</p>
+        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${esc(r.name)}</h3>${r.partnerId ? "" : `<span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span>`}</div>
+        <p class="t-small text-ink-2 truncate mt-0.5">${esc(r.cat)} · ${esc(r.area)}, ${esc(r.city)} · ~${ACStore.fmtFCFA(r.avg)}</p>
       </div>
     </button>`;
   }

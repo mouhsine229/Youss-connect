@@ -526,7 +526,8 @@
     if (!_index) _index = searchIndex();
     const words = norm(q).trim().split(/\s+/).filter(Boolean);
     const f = filters || {};
-    return _index.filter((item) => {
+    const extra = (window.YCKitchen && YCKitchen.cards) ? YCKitchen.cards().map((r) => ({ kind: "restaurant", title: r.name, sub: r.cat + " · " + r.area + ", " + r.city, icon: "restaurant", img: r.img, route: "restaurantDetail", params: { id: r.id }, keys: [r.name, r.area, r.city, (r.tags || []).join(" "), (r.menu || []).map((m) => m.name).join(" ")].join(" "), rating: 0, price: r.avg, city: r.city, lat: r.lat, lng: r.lng, open: r.open })) : [];
+    return _index.concat(extra).filter((item) => {
       if (words.length) {
         const hay = norm(item.title + " " + item.sub + " " + (item.keys || ""));
         if (!words.every((w) => hay.includes(w))) return false;
@@ -551,7 +552,10 @@
     IMG, COUNTRIES, CITIES, DESTINATIONS, RESTAURANTS, RESTAURANT_CATS, SELLERS, PRODUCTS, PRODUCT_CATS,
     EVENTS, EVENT_CATS, SITE_TYPES, SITES, DRIVERS, COURIERS, REWARDS, TIERS,
     distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, countryCodeOfCity, countryCodeAt, inCountry, siteType, search,
-    restaurant: (id) => { const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r; }, product: (id) => byId(PRODUCTS, id), event: (id) => byId(allEvents(), id), site: (id) => byId(SITES, id), allEvents, extraDishes,
+    restaurant: (id) => {
+      if (window.YCKitchen && YCKitchen.card) { const live = YCKitchen.card(id); if (live) return live; }
+      const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r;
+    }, product: (id) => byId(PRODUCTS, id), event: (id) => byId(allEvents(), id), site: (id) => byId(SITES, id), allEvents, extraDishes,
     seller: (id) => SELLERS[id], driverFor: (city, vehicle) => DRIVERS.find((d) => d.city === city && d.vehicle === vehicle) || DRIVERS.find((d) => d.city === city) || DRIVERS[0],
     courierFor: (city) => COURIERS.find((c) => c.city === city) || COURIERS[0],
     restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => { const code = countryCodeOfCity(city); const country = code ? countryOf(code).name : ""; return allEvents().filter((e) => e.city === city || (country && e.country === country)); },

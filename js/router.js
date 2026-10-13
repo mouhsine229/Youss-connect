@@ -79,7 +79,7 @@
     if (window.I18N && I18N.applyTitle) I18N.applyTitle();
   }
   function titleFor(id) {
-    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", walletHistory: "Historique des transactions", addCard: "Carte bancaire", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", terms: "Conditions d'utilisation", privacy: "Politique de confidentialité", biometricSetup: "Biométrie", helpChat: "Assistance", verifyAccount: "Vérification du compte", opsHome: "Console KYA", opsLogin: "Console KYA", opsIdentity: "Pièces d'identité", opsSupport: "Assistance", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Invitation resto" };
+    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", walletHistory: "Historique des transactions", addCard: "Carte bancaire", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", terms: "Conditions d'utilisation", privacy: "Politique de confidentialité", biometricSetup: "Biométrie", helpChat: "Assistance", verifyAccount: "Vérification du compte", opsHome: "Console KYA", opsLogin: "Console KYA", opsIdentity: "Pièces d'identité", opsSupport: "Assistance", opsRestaurants: "Restaurants", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Compte restaurant" };
     return map[id] || id.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
   }
 
@@ -160,7 +160,14 @@
   document.addEventListener("DOMContentLoaded", function () {
     UI.applyTheme(ACState.prefs.theme);
     UI.initOfflineBanner();
-    const boot = (window.YCBackend && YCBackend.init) ? YCBackend.init() : Promise.resolve();
+    const boot = (window.YCBackend && YCBackend.init) ? YCBackend.init().then(function () {
+      const jobs = [];
+      if (window.YCKitchen) {
+        jobs.push(YCKitchen.restore());
+        jobs.push(YCKitchen.loadCatalog());
+      }
+      return Promise.all(jobs);
+    }) : Promise.resolve();
     const timeout = new Promise((resolve) => setTimeout(resolve, 2500));
     Promise.race([boot, timeout]).then(function () {
       const d = decode(location.hash);

@@ -7,12 +7,14 @@
     { id: "opsHome", label: "Vue d'ensemble", icon: "space_dashboard" },
     { id: "opsUsers", label: "Utilisateurs", icon: "group" },
     { id: "opsIdentity", label: "Pièces d'identité", icon: "badge" },
-    { id: "opsSupport", label: "Assistance", icon: "support_agent" }
+    { id: "opsSupport", label: "Assistance", icon: "support_agent" },
+    { id: "opsRestaurants", label: "Restaurants", icon: "restaurant" }
   ];
   const DOC = { cni: "Carte d'identité", passeport: "Passeport", permis: "Permis de conduire" };
   const ST = { pending: "En revue", approved: "Acceptée", rejected: "Refusée" };
   let openThread = "";
   let opsPoll = null;
+  let issued = null;
 
   function gateOn() { const v = sessionStorage.getItem("yc-ops") || ""; return v.indexOf("ok:") === 0; }
   function gateSet(v) { if (v) sessionStorage.setItem("yc-ops", "ok:" + Date.now()); else sessionStorage.removeItem("yc-ops"); }
@@ -38,10 +40,10 @@
         <div class="flex-1 min-w-0 min-h-dvh flex flex-col bg-surface text-ink">
           <header class="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-line">
             <div class="px-4 lg:px-8 h-14 flex items-center justify-between gap-3">
-              <div class="min-w-0"><h1 class="t-h3 truncate">${title}</h1><p class="t-caption">Comptes, pièces d'identité et assistance</p></div>
+              <div class="min-w-0"><h1 class="t-h3 truncate">${esc(title)}</h1><p class="t-caption truncate">Comptes et restaurants</p></div>
               <button type="button" onclick="Screens._opsOut()" class="lg:hidden t-small font-semibold">Quitter</button>
             </div>
-            <nav class="lg:hidden flex gap-1 overflow-x-auto no-scrollbar px-3 pb-2">${NAV.map((n) => `<button type="button" onclick="App.nav('${n.id}')" class="chip ${active === n.id ? "on" : ""} whitespace-nowrap">${n.label}</button>`).join("")}</nav>
+            <nav class="lg:hidden flex flex-wrap gap-1 px-3 pb-2">${NAV.map((n) => `<button type="button" onclick="App.nav('${n.id}')" class="chip ${active === n.id ? "on" : ""}">${n.label}</button>`).join("")}</nav>
           </header>
           <main class="flex-1 px-4 lg:px-8 py-5 lg:py-8 space-y-5 max-w-[1100px] w-full">${body}</main>
         </div>
@@ -102,6 +104,7 @@
   };
   Screens._opsOut = function () {
     if (opsPoll) { clearInterval(opsPoll); opsPoll = null; }
+    issued = null;
     gateSet(false);
     App.resetTo("opsLogin");
   };
@@ -115,11 +118,12 @@
       ]).then(function (rows) {
         if (!still("opsHome")) return;
         const n = rows.map(function (r) { return r && typeof r.count === "number" ? r.count : 0; });
-        layout("opsHome", "Vue d'ensemble", `<div class="grid sm:grid-cols-3 gap-3">
+        layout("opsHome", "Vue d'ensemble", `<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <button type="button" onclick="App.nav('opsUsers')" class="card p-5 text-left"><p class="t-caption text-ink-3">Comptes</p><p class="t-h2 mt-1">${n[0]}</p></button>
           <button type="button" onclick="App.nav('opsIdentity')" class="card p-5 text-left"><p class="t-caption text-ink-3">Pièces en revue</p><p class="t-h2 mt-1">${n[1]}</p></button>
           <button type="button" onclick="App.nav('opsSupport')" class="card p-5 text-left"><p class="t-caption text-ink-3">Assistances ouvertes</p><p class="t-h2 mt-1">${n[2]}</p></button>
-        </div><div class="card p-5"><p class="t-body text-ink-2">Les restaurants, événements, chauffeurs et prix de l'application restent des exemples. Cette console traite les comptes, les pièces d'identité et les messages.</p></div>`);
+          <button type="button" onclick="App.nav('opsRestaurants')" class="card p-5 text-left"><p class="t-caption text-ink-3">Restaurants</p><p class="t-title mt-2">Créer un compte cuisine</p></button>
+        </div><div class="card p-5"><p class="t-body text-ink-2">Les restaurants se créent ici. Chaque compte reçoit un identifiant et un mot de passe, à remettre en PDF. Les événements, chauffeurs et prix restent des exemples.</p></div>`);
       });
     });
   };
@@ -230,9 +234,110 @@
     });
   };
 
+  function suggestLogin(name, city) {
+    let raw = (String(name || "") + "-" + String(city || "")).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (raw.length < 4) raw = (raw + "REST").replace(/^-+|-+$/g, "");
+    return raw.slice(0, 24).replace(/-+$/g, "");
+  }
+  function cityOptions(code) {
+    const country = YCData.countryOf(code || "BJ");
+    return country.cities.map(function (name) { return `<option value="${esc(name)}">${esc(name)}</option>`; }).join("");
+  }
+  function sheetCard() {
+    if (!issued) return "";
+    return `<div class="card p-5 space-y-3 border-gold">
+      <p class="t-title">Fiche à remettre</p>
+      <p class="t-small text-ink-2">Le mot de passe s'affiche une seule fois. Téléchargez le PDF, puis quittez cet écran.</p>
+      <p class="t-body"><span class="t-caption">Restaurant</span><br>${esc(issued.name)} · ${esc(issued.city || "")}</p>
+      <p class="t-body"><span class="t-caption">Identifiant</span><br><span class="font-extrabold">${esc(issued.loginId)}</span></p>
+      <p class="t-body"><span class="t-caption">Mot de passe</span><br><span class="font-extrabold break-all">${esc(issued.password)}</span></p>
+      <button type="button" onclick="Screens._opsPdf()" class="btn btn-primary btn-block">Télécharger la fiche PDF</button>
+    </div>`;
+  }
+  Screens.opsRestaurants = function () {
+    enter("opsRestaurants", "Restaurants", function (api) {
+      api.from("partner_places").select("id,name,city,area,paused,partner_access(login_id)").order("created_at", { ascending: false }).limit(80).then(function (res) {
+        if (!still("opsRestaurants")) return;
+        const rows = (res.data || []).map(function (p) {
+          const access = Array.isArray(p.partner_access) ? p.partner_access[0] : p.partner_access;
+          const login = access && access.login_id ? access.login_id : "";
+          return `<div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="min-w-0 flex-1"><p class="t-title truncate">${esc(p.name)}</p><p class="t-small text-ink-2">${esc(p.area || "")}${p.area ? ", " : ""}${esc(p.city)} · ${esc(login || "sans identifiant")}${p.paused ? " · en pause" : ""}</p></div><button type="button" class="btn btn-sm btn-secondary" onclick='Screens._opsReset(${JSON.stringify(p.id)})'>Nouveau mot de passe</button></div>`;
+        }).join("");
+        const country = ACState.user.countryCode || "BJ";
+        layout("opsRestaurants", "Restaurants", `
+          ${sheetCard()}
+          <form class="card p-5 space-y-3" onsubmit="event.preventDefault();Screens._opsCreateRestaurant()">
+            <p class="t-title">Nouveau restaurant</p>
+            ${UI.field("opr-name", "Nom", { maxlength: "80", placeholder: "Chez Maman", attrs: "oninput=\"Screens._opsRestSuggest()\"" })}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="block"><span class="label">Pays</span><select id="opr-country" class="select" onchange="Screens._opsRestCountry(this.value)">${YCData.COUNTRIES.map(function (c) { return `<option value="${c.code}" ${c.code === country ? "selected" : ""}>${esc(c.name)}</option>`; }).join("")}</select></label>
+              <label class="block"><span class="label">Ville</span><select id="opr-city" class="select" onchange="Screens._opsRestSuggest()">${cityOptions(country)}</select></label>
+            </div>
+            ${UI.field("opr-area", "Quartier", { maxlength: "80" })}
+            ${UI.field("opr-address", "Adresse", { maxlength: "160" })}
+            ${UI.field("opr-phone", "Téléphone", { maxlength: "24" })}
+            ${UI.field("opr-hours", "Horaires", { maxlength: "80", value: "11:00 – 22:00" })}
+            ${UI.field("opr-login", "Identifiant de connexion", { maxlength: "24", placeholder: "MAMAN-COTONOU", autocomplete: "off", attrs: "oninput=\"this.dataset.touched='1'\"" })}
+            <p class="t-small text-ink-3">4 à 24 caractères : lettres, chiffres et tirets. Le mot de passe est créé ici et n'est pas conservé.</p>
+            ${UI.error("opr-err")}
+            <button type="submit" class="btn btn-primary btn-block">Créer le compte et la fiche</button>
+          </form>
+          ${rows ? `<div class="card divide-y divide-line">${rows}</div>` : `<div class="card p-5"><p class="t-body text-ink-2">Aucun restaurant créé pour le moment.</p></div>`}`);
+      });
+    });
+  };
+  Screens._opsRestCountry = function (code) {
+    const sel = document.getElementById("opr-city");
+    if (!sel) return;
+    sel.innerHTML = cityOptions(code);
+    Screens._opsRestSuggest();
+  };
+  Screens._opsRestSuggest = function () {
+    const id = document.getElementById("opr-login");
+    if (!id || id.dataset.touched === "1") return;
+    const name = (document.getElementById("opr-name") || {}).value || "";
+    const city = (document.getElementById("opr-city") || {}).value || "";
+    if (name.trim().length < 2) return;
+    id.value = suggestLogin(name, city);
+  };
+  Screens._opsCreateRestaurant = function () {
+    if (!window.YCBackend || !YCBackend.callFunction) return;
+    const body = {
+      action: "create",
+      name: ((document.getElementById("opr-name") || {}).value || "").trim(),
+      countryCode: (document.getElementById("opr-country") || {}).value || "",
+      city: (document.getElementById("opr-city") || {}).value || "",
+      area: ((document.getElementById("opr-area") || {}).value || "").trim(),
+      address: ((document.getElementById("opr-address") || {}).value || "").trim(),
+      phone: ((document.getElementById("opr-phone") || {}).value || "").trim(),
+      hours: ((document.getElementById("opr-hours") || {}).value || "").trim(),
+      loginId: ((document.getElementById("opr-login") || {}).value || "").trim()
+    };
+    if (body.name.length < 2) { UI.showError("opr-err", "Indiquez le nom du restaurant."); return; }
+    YCBackend.callFunction("partner-account", body).then(function (res) {
+      if (!res || !res.ok) { UI.showError("opr-err", (res && res.message) || "Création impossible."); return; }
+      issued = { placeId: res.placeId, loginId: res.loginId, password: res.password, name: res.name, city: res.city, area: res.area || "" };
+      if (window.YCKitchen) YCKitchen.loadCatalog();
+      UI.toast("Compte créé. Téléchargez la fiche avant de quitter.", "success");
+      App.replace("opsRestaurants");
+    });
+  };
+  Screens._opsReset = function (placeId) {
+    if (!window.YCBackend || !/^[0-9a-f-]{36}$/i.test(String(placeId || ""))) return;
+    YCBackend.callFunction("partner-account", { action: "reset", placeId: placeId }).then(function (res) {
+      if (!res || !res.ok) { UI.toast((res && res.message) || "Nouveau mot de passe impossible.", "error"); return; }
+      issued = { placeId: res.placeId, loginId: res.loginId, password: res.password, name: res.name, city: res.city, area: res.area || "" };
+      UI.toast("Nouveau mot de passe créé. Téléchargez la fiche.", "success");
+      App.replace("opsRestaurants");
+    });
+  };
+  Screens._opsPdf = function () {
+    if (!issued || !window.YCSheet) return;
+    YCSheet.restaurant(issued);
+  };
   function later(container, id, title) {
     if (!gateOn()) { App.replace("opsLogin"); return; }
-    layout(id, title, `<div class="card p-5"><p class="t-body text-ink-2">Les restaurants, événements, tarifs et retraits affichés dans l'application restent des exemples. Ils ne se pilotent pas ici.</p></div>`);
+    layout(id, title, `<div class="card p-5"><p class="t-body text-ink-2">Les événements, tarifs et retraits affichés dans l'application restent des exemples. Les restaurants se créent dans l'onglet Restaurants.</p></div>`);
   }
   Screens.opsMerchants = function (c) { later(c, "opsMerchants", "Prestataires"); };
   Screens.opsEvents = function (c) { later(c, "opsEvents", "Événements"); };

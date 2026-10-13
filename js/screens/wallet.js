@@ -60,7 +60,7 @@
           </div>
         </section>
       </div>`;
-    Shell.render(container, { title: I18N.t("wallet"), subtitle: "Solde de démo", body, nav: "wallet" });
+    Shell.render(container, { title: I18N.t("wallet"), subtitle: "Solde du compte", body, nav: "wallet" });
   };
   Screens._wMask = () => { wf.masked = !wf.masked; App.replace("wallet", {}, { keepScroll: true }); };
   Screens._wFilter = (f) => { wf.filter = f; App.replace("walletHistory", {}, { keepScroll: true }); };
@@ -70,7 +70,7 @@
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">${[["all", "Tout"], ["in", "Entrées"], ["out", "Sorties"], ["pending", "En attente"]].map((x) => UI.chip(x[1], `Screens._wFilter('${x[0]}')`, wf.filter === x[0])).join("")}</div>
       ${tx.length ? `<div class="card divide-y divide-line">${tx.map(txRow).join("")}</div>` : UI.emptyState({ icon: "receipt_long", title: "Aucune transaction", body: "Vos opérations apparaîtront ici." })}
-      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le relevé", "Screens._downloadStatement()", { icon: "download" })}${UI.secondaryButton("Partager", "Screens._shareStatement()", { icon: "share" })}</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le relevé", "Screens._downloadStatement()", { icon: "download" })}${UI.secondaryButton("Partager", "Screens._shareStatement()", { icon: "share" })}</div>
     </div>`;
     Shell.render(container, { title: "Historique des transactions", subtitle: tx.length + " opération" + (tx.length > 1 ? "s" : ""), back: true, body, nav: false, showNav: true });
   };
@@ -176,7 +176,7 @@
     const contacts = [{ name: "Fatou Diallo", phone: "+229 96 12 34 56", youss: true }, { name: "Kossi Agbeko", phone: "+228 90 11 22 33", youss: true }, { name: "Marc Adjovi", phone: "+229 97 88 77 66", youss: false }, { name: "Aminata Ndiaye", phone: "+221 77 123 45 67", youss: true }];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="card p-4 space-y-3"><p class="t-caption text-ink-3">Destinataire</p>${UI.field("send-name", "", { value: params.to || "", placeholder: "Nom ou numéro de téléphone", icon: "person_search" })}
-        <div class="hscroll">${contacts.map((c) => `<button type="button" onclick="document.getElementById('send-name').value=${UI.js(c.name + " · " + c.phone)}" class="flex flex-col items-center gap-1.5 w-20 flex-shrink-0 text-center">${UI.avatar({ name: c.name }, "w-12 h-12")}<span class="t-caption normal-case tracking-normal truncate w-full">${c.name.split(" ")[0]}</span>${c.youss ? `<span class="t-caption text-gold-deep dark:text-gold">Youss</span>` : `<span class="t-caption text-ink-3">Externe</span>`}</button>`).join("")}</div></div>
+        <div class="hscroll">${contacts.map((c) => `<button type="button" onclick="document.getElementById('send-name').value=${UI.js(c.name + " · " + c.phone)}" class="flex flex-col items-center gap-1.5 w-20 flex-shrink-0 text-center">${UI.avatar({ name: c.name }, "w-12 h-12")}<span class="t-caption normal-case tracking-normal truncate w-full">${esc(c.name.split(" ")[0])}</span>${c.youss ? `<span class="t-caption text-gold-deep dark:text-gold">Youss</span>` : `<span class="t-caption text-ink-3">Externe</span>`}</button>`).join("")}</div></div>
       <div class="card p-4 space-y-3"><label class="block"><span class="label">Montant (FCFA)</span><input id="send-amount" type="number" inputmode="numeric" min="100" step="100" placeholder="0" class="input input-lg text-2xl font-extrabold"/></label>
         <div class="flex gap-2">${[1000, 5000, 10000, 25000].map((a) => `<button type="button" onclick="document.getElementById('send-amount').value=${a}" class="chip">${a.toLocaleString("fr-FR")}</button>`).join("")}</div>
         ${UI.field("send-note", "Note (optionnel)", { placeholder: "Ex. Remboursement déjeuner", icon: "sticky_note_2" })}
@@ -421,10 +421,10 @@
     if (!Screens._wdMethod) Screens._wdMethod = "mobile";
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="card p-5"><label class="block"><span class="label">Montant (FCFA)</span><input id="wd-amount" type="number" inputmode="numeric" min="500" step="500" placeholder="Ex. 20 000" value="${esc(Screens._wdAmount || "")}" class="input input-lg text-2xl font-extrabold" oninput="Screens._wdAmount=this.value"/></label><p class="t-small text-ink-2 mt-2">Disponible : <b>${ACStore.fmtFCFA(ACState.wallet.balance)}</b> · minimum 500 FCFA</p></div>
-      <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Vers</p>${[["smartphone", "Paiement mobile", "Opérateur à définir · conceptuel", "mobile"], ["store", "Agent YOUSS CONNECT", "Retrait en espèces avec code", "agent"]].map((m) => `<button type="button" onclick="Screens._wdPick('${m[3]}')" data-wd class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${Screens._wdMethod === m[3] ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[0])}</span><span class="flex-1"><span class="block t-title">${m[1]}</span><span class="block t-small text-ink-2">${m[2]}</span></span></button>`).join("")}</div>
+      <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Vers</p>${[["smartphone", "Paiement mobile", "Pas encore ouvert", "mobile"], ["store", "Agent YOUSS CONNECT", "Pas encore ouvert", "agent"]].map((m) => `<button type="button" onclick="Screens._wdPick('${m[3]}')" data-wd class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${Screens._wdMethod === m[3] ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[0])}</span><span class="flex-1"><span class="block t-title">${m[1]}</span><span class="block t-small text-ink-2">${m[2]}</span></span></button>`).join("")}</div>
       ${UI.primaryButton("Retirer", "Screens._doWithdraw()", { size: "lg", icon: "account_balance" })}
       <p class="t-small text-ink-3 text-center">${I18N.t("conceptual")}</p></div>`;
-    Shell.render(container, { title: "Retirer", subtitle: "Youss Wallet · conceptuel", back: true, body, nav: false, showNav: true });
+    Shell.render(container, { title: "Retirer", subtitle: "Pas encore ouvert", back: true, body, nav: false, showNav: true });
   };
   Screens._wdPick = (method) => {
     Screens._wdMethod = method;
@@ -478,7 +478,7 @@
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       ${UI.successHero({ icon: "hourglass_top", tone: "warn", title: params.title || "Paiement en attente", body: params.body || "La confirmation arrivera dès que le réseau sera disponible." })}
       <div class="card p-5 text-center">${amount ? `<p class="t-display">${ACStore.fmtFCFA(amount)}</p>` : ""}${params.code ? `<p class="t-caption text-ink-3 mt-3">Code de retrait / dépôt</p><p class="t-h1 tracking-[0.3em]">${esc(params.code)}</p><p class="t-small text-ink-2">Valable 24 h · ne le partagez qu'avec l'agent</p>` : `<div class="flex items-center justify-center gap-2 mt-2">${UI.spinner("!w-5 !h-5 !border-2")}<span class="t-small text-ink-2">Traitement en cours…</span></div>`}</div>
-      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Historique des transactions", "App.nav('walletHistory')", { icon: "receipt_long" })}${accountLive() ? "" : UI.primaryButton("Simuler la confirmation", `Screens._confirmPending('${esc(params.txid || "")}')`, { icon: "check" })}</div></div>`;
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.secondaryButton("Historique des transactions", "App.nav('walletHistory')", { icon: "receipt_long" })}${accountLive() ? "" : UI.primaryButton("Simuler la confirmation", "Screens._confirmPending(" + JSON.stringify(params.txid || "") + ")", { icon: "check" })}</div></div>`;
     Shell.render(container, { title: "En attente", back: "App.resetTo('wallet')", body, nav: false, hideSearch: true });
   };
   Screens._confirmPending = (txid) => {

@@ -16,6 +16,7 @@
   }
   function isReady() { return ready && !!client; }
   function isLive() { return !!(ready && client && window.ACState && ACState.session && ACState.session.remote); }
+  function reader() { return ready && client ? client : null; }
 
   /* E.164 selon l'indicatif choisi par l'utilisateur (+229, +221, +228, +233) */
   function toE164(phone) {
@@ -255,6 +256,21 @@
     });
   }
 
+  function callFunction(name, body) {
+    if (!client || !/^[a-z0-9-]{3,40}$/.test(String(name || ""))) return Promise.resolve({ ok: false, message: "Action indisponible." });
+    return client.auth.getSession().then(function (res) {
+      var token = res.data.session && res.data.session.access_token;
+      if (!token) return { ok: false, message: "Connectez-vous à la console." };
+      var root = (cfg.supabaseUrl || "").replace(/\/$/, "");
+      return fetch(root + "/functions/v1/" + name, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: cfg.supabaseAnonKey, Authorization: "Bearer " + token },
+        body: JSON.stringify(body || {})
+      }).then(function (r) {
+        return r.json().catch(function () { return { ok: false, message: "Réponse invalide." }; });
+      }).catch(function () { return { ok: false, message: "Connexion impossible." }; });
+    });
+  }
   function deviceAuth(body) {
     if (!client) return Promise.resolve({ ok: false, message: "Compte indisponible." });
     return client.auth.getSession().then(function (res) {
@@ -354,5 +370,5 @@
     });
   }
 
-  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, explain: explain, api: function () { return isLive() ? client : null; }, deviceAuth: deviceAuth, claimConsole: claimConsole, uploadIdentity: uploadIdentity, removeBiometric: removeBiometric, openSupport: openSupport, loadMessages: loadMessages, sendSupport: sendSupport };
+  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, explain: explain, api: function () { return isLive() ? client : null; }, reader: reader, callFunction: callFunction, deviceAuth: deviceAuth, claimConsole: claimConsole, uploadIdentity: uploadIdentity, removeBiometric: removeBiometric, openSupport: openSupport, loadMessages: loadMessages, sendSupport: sendSupport };
 })();

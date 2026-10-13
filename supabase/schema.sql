@@ -372,6 +372,9 @@ begin
   if auth.uid() is null then
     return 'denied';
   end if;
+  if exists (select 1 from public.partner_access where auth_user_id = auth.uid()) then
+    return 'denied';
+  end if;
   if exists (select 1 from public.staff where user_id = auth.uid()) then
     return 'member';
   end if;

@@ -103,8 +103,8 @@
         <div class="flex items-center gap-2.5 min-w-0">
           ${showBack ? `<button type="button" onclick="${o.back === true ? "App.back()" : o.back}" class="icon-btn flex-shrink-0" aria-label="${t("back")}">${icon("arrow_back")}</button>` : ""}
           <div class="min-w-0">
-            <h1 class="t-h3 lg:t-h2 truncate">${o.title || ""}</h1>
-            ${o.subtitle ? `<p class="t-small text-ink-2 truncate">${o.subtitle}</p>` : ""}
+            <h1 class="t-h3 lg:t-h2 truncate">${UI.esc(o.title || "")}</h1>
+            ${o.subtitle ? `<p class="t-small text-ink-2 truncate">${UI.esc(o.subtitle)}</p>` : ""}
           </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
