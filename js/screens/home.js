@@ -105,10 +105,10 @@
             <span class="w-11 h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("workspace_premium", "text-[24px]", true)}</span>
             <span class="min-w-0 flex-1"><span class="block t-title">${ACState.rewards.points.toLocaleString("fr-FR")} points Youss Bonus</span><span class="block t-small text-ink-2">Niveau ${YCData.tierFor(ACState.rewards.points).id}${YCData.nextTier(ACState.rewards.points) ? " · " + (YCData.nextTier(ACState.rewards.points).min - ACState.rewards.points).toLocaleString("fr-FR") + " pts avant " + YCData.nextTier(ACState.rewards.points).id : ""}</span></span>${icon("chevron_right", "text-ink-3")}
           </button>
-          <button type="button" onclick="Demo.openMenu()" class="flex w-full card p-4 text-left items-center gap-3 border-dashed">
+          ${ACState.session.remote ? "" : `<button type="button" onclick="Demo.openMenu()" class="flex w-full card p-4 text-left items-center gap-3 border-dashed">
             <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("play_circle", "text-[24px]")}</span>
             <span class="min-w-0 flex-1"><span class="block t-title">${I18N.t("demo_tour")}</span><span class="block t-small text-ink-2">Transport, restaurant, événement, commerce, culture</span></span>
-          </button>
+          </button>`}
         </aside>
       </section>`;
     Shell.render(container, { homeHeader: true, body, nav: "home" });

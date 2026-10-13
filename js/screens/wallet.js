@@ -7,7 +7,12 @@
   const EXTERNAL_FEE = 250;
   const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
-  const STATUS = { success: ["Réussi", "success"], pending: ["En attente", "warn"], failed: ["Échoué", "danger"] };
+  function accountLive() { return !!(window.YCBackend && YCBackend.isLive()); }
+  function hashPin(pin) {
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode("youss-pin-v1:" + pin)).then(function (buf) {
+      return Array.from(new Uint8Array(buf)).map(function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+    });
+  }
   function txRow(t) {
     const st = STATUS[t.status || "success"];
     return `<button type="button" onclick="${go("walletTxnDetail", { id: t.id })}" class="w-full max-w-full min-w-0 flex items-center justify-between gap-2 sm:gap-3 p-3.5 text-left hover:bg-surface-low transition-colors overflow-hidden">
@@ -143,6 +148,7 @@
   };
   Screens._topupMethod = (m) => { tp.method = m; App.replace("walletTopup"); };
   Screens._doTopup = function () {
+    if (accountLive()) { UI.toast("La recharge ouvre avec un prestataire de paiement. Le solde ne change pas avant.", "info"); return; }
     const amount = tp.amount || parseInt((document.getElementById("topup-amount") || {}).value, 10);
     if (!amount || amount < 500) { UI.toast("Montant minimum : 500 FCFA.", "error"); return; }
     if (tp.method === "card" && Screens.needCard("card")) return;
@@ -209,7 +215,7 @@
     return true;
   };
   Screens.cardAddButton = function () {
-    return `<button type="button" onclick="Screens._openAddCard()" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left"><span class="menu-icon">${icon("add_card")}</span><span class="flex-1"><span class="block t-title">Ajouter une carte bancaire</span><span class="block t-small text-ink-2">Démo · le numéro complet n'est pas enregistré</span></span></button>`;
+    return `<button type="button" onclick="Screens._openAddCard()" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left"><span class="menu-icon">${icon("add_card")}</span><span class="flex-1"><span class="block t-title">Ajouter une carte bancaire</span><span class="block t-small text-ink-2">Seuls les 4 derniers chiffres sont gardés. L'encaissement n'est pas encore ouvert.</span></span></button>`;
   };
   Screens._openAddCard = function () {
     if (App.current) sessionStorage.setItem("yc-after-card", JSON.stringify({ id: App.current.id, params: App.current.params || {} }));
@@ -228,13 +234,13 @@
   Screens.securityPin = function (container, params) {
     params = params || {}; const action = params.action || "confirm";
     const titles = { walletSendConfirm: "Confirmer l'envoi", changePin: "Nouveau code PIN", walletQrPayConfirm: "Confirmer le paiement", withdraw: "Confirmer le retrait", purchase: "Confirmer le paiement", confirm: "Confirmation sécurisée" };
-    const bio = Screens.bioReady();
+    const known = !!(ACState.prefs && ACState.prefs.pinHash);
+    const hint = action === "changePin" || !known ? "Choisissez un code PIN à 4 chiffres. Il confirmera vos paiements." : "Saisissez votre code PIN.";
     const body = `<div class="max-w-narrow mx-auto w-full flex-1 flex flex-col items-center text-center py-6 space-y-5">
-      <div class="w-16 h-16 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon(bio ? "fingerprint" : "lock", "text-[30px]")}</div>
-      <div><h2 class="t-h2">${titles[action] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">${params.label ? esc(params.label) + "<br>" : ""}Code PIN à 4 chiffres ou empreinte. Démo : <b>0000</b></p></div>
+      <div class="w-16 h-16 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("lock", "text-[30px]")}</div>
+      <div><h2 class="t-h2">${titles[action] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">${params.label ? esc(params.label) + "<br>" : ""}${hint}</p></div>
       <div class="flex gap-2 sm:gap-3 max-w-full justify-center px-2" onpaste="Screens._pinPaste(event)">${[0, 1, 2, 3].map((i) => `<input id="pin-${i}" type="password" inputmode="numeric" maxlength="1" autocomplete="off" class="input input-lg w-12 sm:w-14 flex-1 max-w-[3.5rem] text-center text-xl sm:text-2xl font-extrabold px-0" oninput="Screens._pinInput(${i},this)" onkeydown="if(event.key==='Backspace'&&!this.value&&${i}>0)document.getElementById('pin-${i - 1}').focus()" aria-label="Chiffre ${i + 1}"/>`).join("")}</div>
       ${UI.error("pin-error")}
-      <button type="button" onclick="Screens._biometric('${action}')" class="btn btn-outline">${icon("fingerprint", "text-[22px]")}${bio ? "Utiliser l'empreinte" : "Enregistrer mon empreinte"}</button>
       <div class="w-full">${UI.primaryButton("Confirmer", `Screens._pinConfirm('${action}')`, { size: "lg", icon: "lock" })}</div></div>`;
     Shell.render(container, { title: "Confirmer", back: true, body, nav: false, hideSearch: true });
     setTimeout(() => { const f = document.getElementById("pin-0"); if (f) f.focus(); }, 50);
@@ -254,17 +260,32 @@
     const wait = window.YCGuard && YCGuard.blocked("pin");
     if (wait) return UI.showError("pin-error", YCGuard.waitMsg(wait));
     const pin = [0, 1, 2, 3].map((i) => (document.getElementById("pin-" + i) || {}).value || "").join("");
-    if (pin !== "0000") {
-      const left = window.YCGuard ? YCGuard.fail("pin") : 0;
-      return UI.showError("pin-error", left ? YCGuard.waitMsg(left) : "Code PIN incorrect (démo : 0000).");
-    }
-    if (window.YCGuard) YCGuard.ok("pin");
-    Screens._pinDone(action);
+    if (pin.length < 4) return UI.showError("pin-error", "Saisissez les 4 chiffres du code.");
+    hashPin(pin).then(function (hash) {
+      const known = (ACState.prefs && ACState.prefs.pinHash) || "";
+      if (action === "changePin" || !known) {
+        ACState.prefs.pinHash = hash;
+        ACStore.emit();
+        if (accountLive() && window.YCBackend) YCBackend.saveProfile({ fullName: ACState.user.fullName, email: ACState.user.email, city: ACState.user.city, country: ACState.user.country, phone: ACState.user.phone, pinHash: hash });
+        if (window.YCGuard) YCGuard.ok("pin");
+        if (action === "changePin") { UI.toast("Code PIN enregistré.", "success"); App.resetTo("security"); return; }
+        Screens._pinDone(action);
+        return;
+      }
+      if (hash !== known) {
+        const left = window.YCGuard ? YCGuard.fail("pin") : 0;
+        UI.showError("pin-error", left ? YCGuard.waitMsg(left) : "Code PIN incorrect.");
+        return;
+      }
+      if (window.YCGuard) YCGuard.ok("pin");
+      Screens._pinDone(action);
+    });
   };
   Screens._pinDone = function (action) {
     if (action === "walletSendConfirm" && pendingSend) {
       const s = pendingSend;
       if (s.external) {
+        if (accountLive()) { pendingSend = null; UI.toast("L'envoi vers un numéro hors YOUSS CONNECT n'est pas encore ouvert.", "info"); App.resetTo("wallet"); return; }
         const total = s.amount + (s.fee || EXTERNAL_FEE);
         if (total > ACState.wallet.balance) { pendingSend = null; App.nav("paymentFailed", { retry: "walletSend", amount: total, reason: "insufficient_balance" }); return; }
         const label = "Envoi à " + s.name.split("·")[0].trim();
@@ -366,7 +387,10 @@
     const label = "Paiement QR · " + (p.name || p.to || "Marchand YOUSS CONNECT");
     ACStore.whenPaid(ACStore.payFromWallet({ amount, label, service: "wallet", pointsEarned: Math.round(amount / 500) }), (res) => { pendingQrPay = null; if (window.YCReceipt && res && res.tx) YCReceipt.deliver(res.tx, { title: "Reçu QR Pay" }); App.resetTo("paymentSuccess", { amount, title: "Paiement effectué", body: label, next: "wallet" }); }, (res) => App.nav("paymentFailed", { retry: "walletQrPay", amount, reason: res.reason }));
   };
-  Screens._simulateQrScan = function () { YCScanner.stop(); const city = YCData.cityOf(ACState.user.city); const market = city.poi.find((p) => p.kind === "marche") || city.poi[0]; const amount = 1500 + Math.round(Math.random() * 30) * 100; Screens._qrPayFromScan({ type: "pay", to: "+" + ACState.user.dial.replace("+", "") + " 00 00 00 00", name: market.name + " · Stand 42", amount }); };
+  Screens._simulateQrScan = function () {
+    if (accountLive()) { UI.toast("Le scan de démonstration n'est plus utilisé. Cadrez un QR YOUSS CONNECT.", "info"); return; }
+    YCScanner.stop(); const city = YCData.cityOf(ACState.user.city); const market = city.poi.find((p) => p.kind === "marche") || city.poi[0]; const amount = 1500 + Math.round(Math.random() * 30) * 100; Screens._qrPayFromScan({ type: "pay", to: "+" + ACState.user.dial.replace("+", "") + " 00 00 00 00", name: market.name + " · Stand 42", amount });
+  };
 
   // Retirer
   let pendingWithdraw = null;
@@ -386,6 +410,7 @@
     App.replace("walletWithdraw");
   };
   Screens._doWithdraw = function () {
+    if (accountLive()) { UI.toast("Le retrait ouvre avec un prestataire de paiement. Le solde ne change pas avant.", "info"); return; }
     const amount = parseInt(document.getElementById("wd-amount").value, 10);
     if (!amount || amount < 500) { UI.toast("Montant minimum 500 FCFA.", "error"); return; }
     if (amount > ACState.wallet.balance) { App.nav("paymentFailed", { retry: "walletWithdraw", amount, reason: "insufficient_balance" }); return; }
@@ -430,10 +455,11 @@
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       ${UI.successHero({ icon: "hourglass_top", tone: "warn", title: params.title || "Paiement en attente", body: params.body || "La confirmation arrivera dès que le réseau sera disponible." })}
       <div class="card p-5 text-center">${amount ? `<p class="t-display">${ACStore.fmtFCFA(amount)}</p>` : ""}${params.code ? `<p class="t-caption text-ink-3 mt-3">Code de retrait / dépôt</p><p class="t-h1 tracking-[0.3em]">${esc(params.code)}</p><p class="t-small text-ink-2">Valable 24 h · ne le partagez qu'avec l'agent</p>` : `<div class="flex items-center justify-center gap-2 mt-2">${UI.spinner("!w-5 !h-5 !border-2")}<span class="t-small text-ink-2">Traitement en cours…</span></div>`}</div>
-      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Historique des transactions", "App.nav('walletHistory')", { icon: "receipt_long" })}${UI.primaryButton("Simuler la confirmation", `Screens._confirmPending('${esc(params.txid || "")}')`, { icon: "check" })}</div></div>`;
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Historique des transactions", "App.nav('walletHistory')", { icon: "receipt_long" })}${accountLive() ? "" : UI.primaryButton("Simuler la confirmation", `Screens._confirmPending('${esc(params.txid || "")}')`, { icon: "check" })}</div></div>`;
     Shell.render(container, { title: "En attente", back: "App.resetTo('wallet')", body, nav: false, hideSearch: true });
   };
   Screens._confirmPending = (txid) => {
+    if (accountLive()) { UI.toast("Cette confirmation n'est pas encore ouverte.", "info"); return; }
     const t = txid ? ACState.wallet.transactions.find((x) => x.id === txid) : ACState.wallet.transactions.find((x) => x.status === "pending");
     if (!t || t.status !== "pending") { App.resetTo("wallet"); return; }
     if (!t.balanceApplied) {
@@ -459,7 +485,7 @@
     App.resetTo("paymentSuccess", { amount: Math.abs(t.amount), title: "Opération confirmée", body: t.type === "credit" ? "Votre solde a été crédité." : "L'opération est confirmée.", next: "wallet" });
   };
   Screens.paymentFailed = function (container, params) {
-    const reasons = { insufficient_balance: ["Solde insuffisant", "Votre solde Youss Wallet ne couvre pas ce montant. Rechargez ou choisissez un autre moyen de paiement."], offline: ["Vous êtes hors ligne", "Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible."], error: ["Paiement impossible", "Une erreur est survenue. Aucun montant n'a été débité."] };
+    const reasons = { insufficient_balance: ["Solde insuffisant", "Votre solde Youss Wallet ne couvre pas ce montant. Rechargez ou choisissez les espèces."], offline: ["Vous êtes hors ligne", "Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible."], unavailable: ["Moyen de paiement fermé", "La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces."], error: ["Paiement impossible", "Une erreur est survenue. Aucun montant n'a été débité."] };
     const r = reasons[params.reason] || reasons.error;
     const amount = parseInt(params.amount, 10) || 0;
     const retry = params.retry ? `App.resetTo('${esc(params.retry)}'${params.retryParams ? ",{id:'" + esc(params.retryParams) + "'}" : ""})` : "App.back()";

@@ -50,8 +50,8 @@
         { id: "addr_work", label: "Travail", detail: "Ganhi, avenue Clozel, Cotonou", icon: "work", lat: 6.3600, lng: 2.4290 }
       ],
       paymentMethods: [
-        { id: "pm_wallet", type: "wallet", label: "Youss Wallet", sub: "Solde de démo", icon: "account_balance_wallet", isDefault: true },
-        { id: "pm_mobile", type: "mobile", label: "Paiement mobile", sub: "Conceptuel · opérateur à définir", icon: "smartphone" },
+        { id: "pm_wallet", type: "wallet", label: "Youss Wallet", sub: "Solde du compte", icon: "account_balance_wallet", isDefault: true },
+        { id: "pm_mobile", type: "mobile", label: "Paiement mobile", sub: "Pas encore ouvert", icon: "smartphone" },
         { id: "pm_cash", type: "cash", label: "Espèces", sub: "À la livraison ou au chauffeur", icon: "payments" }
       ],
       activities: [
@@ -135,10 +135,11 @@
   State = load();
 
   let saveTimer = null;
-  function persist() {
+    function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(State)); } catch (e) { /* quota / privé */ }
+      if (window.YCBackend && YCBackend.isLive() && YCBackend.saveLists) YCBackend.saveLists();
     }, 120);
   }
   function reset() {
@@ -234,6 +235,9 @@
     const method = opts.method || State.prefs.paymentMethod || "wallet";
     const pointsEarned = opts.pointsEarned || 0;
     if (method === "wallet" && window.YCBackend && YCBackend.isLive()) return YCBackend.pay(opts);
+    if ((method === "card" || method === "mobile") && window.YCBackend && YCBackend.isLive()) {
+      return { ok: false, reason: "unavailable", message: "La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces." };
+    }
     if (typeof navigator !== "undefined" && navigator.onLine === false && method !== "cash") {
       return { ok: false, reason: "offline" };
     }

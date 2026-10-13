@@ -1,8 +1,8 @@
 # YOUSS CONNECT
 
-Maquette interactive de KYA CORPORATION : transport, livraison, restos, sorties, achats, culture et paiement, à Cotonou, Dakar, Lomé et Accra.
+Application de KYA CORPORATION : transport, livraison, restos, sorties, achats, culture et portefeuille, à Cotonou, Dakar, Lomé et Accra.
 
-Tout tourne dans le navigateur, sans backend : les données sont fictives, l'état est gardé en localStorage, et les services se parlent entre eux. Payer une course débite le wallet, crédite des points, crée une activité et une notification.
+Le compte (e-mail, mot de passe, profil, solde) est enregistré sur Supabase. Les restaurants, produits, événements et prix affichés restent des exemples. La recharge, la carte et le paiement mobile ne sont pas encaissés tant qu'un prestataire n'est pas branché. Les espèces se règlent à la livraison ou au chauffeur.
 
 Aucune banque, aucun opérateur ni aucune entreprise n'est présenté comme partenaire officiel.
 
@@ -17,7 +17,7 @@ npm run dev
 
 Si vous touchez à `src/styles.css`, `tailwind.config.js` ou aux classes utilisées dans `js/**`, relancez `npm run build:css` (ou laissez `npm run watch:css` tourner).
 
-Pour entrer : n'importe quel numéro de téléphone, code OTP `1234`, code PIN `0000`. Il y a aussi un bouton "Explorer la démo sans compte" sur l'écran de connexion.
+Pour entrer : créez un compte avec un e-mail et un mot de passe d'au moins 8 caractères, ou connectez-vous avec un compte déjà créé. Le code PIN se choisit au premier paiement.
 
 ## Déploiement
 
@@ -48,7 +48,7 @@ Pas de bundler, pas de framework. Chaque fichier expose un objet global et `inde
 - `js/demo.js` : les parcours guidés.
 - `js/screens/*.js` : un fichier par domaine (`auth`, `home`, `explorer`, `transport`, `delivery`, `restaurants`, `orders`, `events`, `market`, `culture`, `wallet`, `rewards`, `business`, `activities`, `notifications`, `profile`, `ops`, `pro`).
 - `sw.js` : service worker. Shell précaché, images en cache, polices et tuiles en stale-while-revalidate.
-- `supabase/schema.sql`, `js/backend.js`, `js/config.js` : backend Supabase optionnel (OTP par SMS, wallet côté serveur). Tant que `js/config.js` est vide, tout reste local.
+- `supabase/schema.sql`, `js/backend.js`, `js/config.js` : compte Supabase (e-mail et mot de passe, profil, solde). La recharge en ligne attend un prestataire.
 
 ## Ce qu'on peut montrer
 

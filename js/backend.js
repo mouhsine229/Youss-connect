@@ -29,7 +29,8 @@
 
   function explain(error) {
     var msg = (error && (error.message || error.error_description)) || "Erreur inconnue";
-    if (/phone provider|unsupported phone|sms/i.test(msg)) return "Activez le fournisseur Phone (Twilio) dans Supabase, menu Authentication puis Providers.";
+    if (/invalid login/i.test(msg)) return "E-mail ou mot de passe incorrect.";
+    if (/phone provider|unsupported phone|sms/i.test(msg)) return "Le code SMS n'est pas encore ouvert. Connectez-vous avec votre e-mail.";
     if (/expired|invalid.*(otp|token)/i.test(msg)) return "Code incorrect ou expiré. Demandez-en un nouveau.";
     if (/rate limit/i.test(msg)) return "Trop de tentatives. Réessayez dans quelques minutes.";
     if (/schema|relation|PGRST|could not find/i.test(msg)) return "Exécutez supabase/schema.sql dans le SQL Editor Supabase.";
@@ -41,7 +42,10 @@
     return d.toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
   }
 
-  function applyAccount(profile, wallet, txRows) {
+  function dropSeed(list, prefix) {
+    return (list || []).filter(function (row) { return !row || String(row.id || "").indexOf(prefix) !== 0; });
+  }
+  function applyAccount(profile, wallet, txRows, records) {
     var user = ACState.user;
     if (profile) {
       if (profile.full_name) { user.fullName = profile.full_name; user.name = profile.full_name.split(" ")[0] || user.name; }
@@ -49,14 +53,33 @@
       if (profile.email) user.email = profile.email;
       if (profile.city) user.city = profile.city;
       if (profile.country) user.country = profile.country;
+      if (profile.pin_hash) ACState.prefs.pinHash = profile.pin_hash;
     }
+    user.verified = true;
+    user.biometricEnrolled = false;
+    ACState.prefs.biometric = false;
     if (wallet) {
       ACState.wallet.balance = wallet.balance;
       ACState.wallet.currency = wallet.currency || "FCFA";
       ACState.rewards.points = wallet.points || 0;
     }
     ACState.wallet.transactions = (txRows || []).map(function (t) {
-      return { id: t.id, label: t.label, amount: t.amount, type: t.kind, status: "success", service: t.service, date: relDate(t.created_at), ref: "SB-" + String(t.id).slice(0, 8).toUpperCase() };
+      return { id: t.id, label: t.label, amount: t.amount, type: t.kind, status: "success", service: t.service, date: relDate(t.created_at), ref: "SB-" + String(t.id).slice(0, 8).toUpperCase(), at: new Date(t.created_at).getTime() };
+    });
+    var grouped = { activity: [], ticket: [], order: [], notification: [], address: [] };
+    (records || []).forEach(function (row) {
+      if (row && grouped[row.kind] && row.payload) grouped[row.kind].push(row.payload);
+    });
+    ACState.activities = grouped.activity;
+    ACState.tickets = grouped.ticket;
+    ACState.orders = grouped.order;
+    ACState.notifications = grouped.notification;
+    if (grouped.address.length) ACState.addresses = grouped.address;
+    else ACState.addresses = (ACState.addresses || []).filter(function (a) { return a && a.id !== "addr_home" && a.id !== "addr_work"; });
+    ACState.rewards.history = dropSeed(ACState.rewards.history, "rwd_seed");
+    (ACState.paymentMethods || []).forEach(function (m) {
+      if (m.type === "wallet") m.sub = "Solde du compte";
+      if (m.type === "mobile") m.sub = "Pas encore ouvert";
     });
     ACState.session.authenticated = true;
     ACState.session.remote = true;
@@ -69,16 +92,18 @@
     return Promise.all([
       client.from("profiles").select("*").eq("id", uid).maybeSingle(),
       client.from("wallets").select("*").eq("user_id", uid).maybeSingle(),
-      client.from("wallet_transactions").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(40)
+      client.from("wallet_transactions").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(40),
+      client.from("user_records").select("kind,payload").order("created_at", { ascending: false }).limit(200)
     ]).then(function (rows) {
-      var failed = rows.filter(function (r) { return r.error; })[0];
+      var failed = rows.slice(0, 3).filter(function (r) { return r.error; })[0];
       if (failed) throw failed.error;
       var profile = rows[0].data, wallet = rows[1].data;
+      var records = rows[3] && !rows[3].error ? rows[3].data : [];
       if (!profile) {
         return client.from("profiles").insert({ id: uid, phone: session.user.phone || "", full_name: (session.user.user_metadata && session.user.user_metadata.full_name) || "" }).select("*").single()
-          .then(function (ins) { applyAccount(ins.data, wallet, rows[2].data); });
+          .then(function (ins) { applyAccount(ins.data, wallet, rows[2].data, records); });
       }
-      applyAccount(profile, wallet, rows[2].data);
+      applyAccount(profile, wallet, rows[2].data, records);
     });
   }
 
@@ -94,6 +119,7 @@
 
   function init() {
     if (!configured()) return Promise.resolve(false);
+    if (window.ACState && ACState.session) ACState.session.authenticated = false;
     return loadSdk().then(function () {
       client = window.supabase.createClient(cfg.supabaseUrl.trim(), cfg.supabaseAnonKey.trim(), { auth: { persistSession: true, storageKey: "youss-auth", detectSessionInUrl: false } });
       ready = true;
@@ -109,6 +135,39 @@
     });
   }
 
+  function signIn(email, password) {
+    if (!client) return Promise.resolve({ error: { message: "Compte indisponible." } });
+    return client.auth.signInWithPassword({ email: String(email || "").trim().toLowerCase(), password: password }).then(function (res) {
+      if (res.error) return res;
+      return hydrate(res.data.session).then(function () { return res; });
+    });
+  }
+  function signUp(fields) {
+    fields = fields || {};
+    var root = (cfg.supabaseUrl || "").replace(/\/$/, "");
+    return fetch(root + "/functions/v1/create-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: cfg.supabaseAnonKey, Authorization: "Bearer " + cfg.supabaseAnonKey },
+      body: JSON.stringify({ email: fields.email, password: fields.password, fullName: fields.fullName, phone: fields.phone, city: fields.city, country: fields.country })
+    }).then(function (r) {
+      return r.json().then(function (body) { return { ok: r.ok && body && body.ok === true, message: body && body.message }; }, function () { return { ok: false, message: "Création du compte impossible." }; });
+    }).then(function (res) {
+      if (!res.ok) return { error: { message: res.message || "Création du compte impossible." } };
+      return signIn(fields.email, fields.password);
+    }).catch(function () { return { error: { message: "Création du compte impossible. Vérifiez la connexion." } }; });
+  }
+  function updatePassword(next) {
+    if (!client) return Promise.resolve({ ok: false, message: "Compte indisponible." });
+    return client.auth.updateUser({ password: next }).then(function (res) {
+      return res.error ? { ok: false, message: explain(res.error) } : { ok: true };
+    });
+  }
+  function signOutOthers() {
+    if (!client) return Promise.resolve({ ok: false });
+    return client.auth.signOut({ scope: "others" }).then(function (res) {
+      return { ok: !res.error, message: res.error ? explain(res.error) : "" };
+    });
+  }
   function sendOtp(phone, fullName) {
     if (!client) return Promise.resolve({ error: { message: "Supabase non configuré" } });
     return client.auth.signInWithOtp({ phone: toE164(phone), options: { channel: "sms", data: { full_name: fullName || "" } } });
@@ -155,6 +214,19 @@
       return { ok: true, balance: body.balance };
     });
   }
+  function saveLists() {
+    if (!isLive() || !client || !window.ACState) return;
+    var map = { activity: ACState.activities, ticket: ACState.tickets, order: ACState.orders, notification: ACState.notifications, address: ACState.addresses };
+    var rows = [];
+    Object.keys(map).forEach(function (kind) {
+      (map[kind] || []).slice(0, 30).forEach(function (item) {
+        if (!item || !item.id) return;
+        rows.push({ kind: kind, local_id: String(item.id).slice(0, 80), payload: item });
+      });
+    });
+    if (!rows.length) return;
+    client.rpc("save_records", { p_rows: rows.slice(0, 80) });
+  }
   function topup() {
     return Promise.resolve({ ok: false, reason: "error", message: "La recharge en ligne attend le prestataire de paiement." });
   }
@@ -163,10 +235,13 @@
     return client.auth.getSession().then(function (res) {
       var uid = res.data.session && res.data.session.user.id;
       if (!uid) return { ok: false };
-      return client.from("profiles").update({ full_name: fields.fullName, email: fields.email || "", city: fields.city || "", country: fields.country || "" }).eq("id", uid)
+      var patch = { full_name: fields.fullName, email: fields.email || "", city: fields.city || "", country: fields.country || "" };
+      if (fields.phone) patch.phone = fields.phone;
+      if (fields.pinHash) patch.pin_hash = fields.pinHash;
+      return client.from("profiles").update(patch).eq("id", uid)
         .then(function (upd) { return { ok: !upd.error, message: upd.error ? explain(upd.error) : "" }; });
     });
   }
 
-  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, explain: explain };
+  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, explain: explain };
 })();

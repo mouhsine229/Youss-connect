@@ -351,7 +351,24 @@
     "Achats, courses, Youss Market": "Shopping, errands, Youss Market",
     "Histoire, audio-guide, alentours": "History, audio guide, nearby",
     "Aucun lieu de ce type dans cette ville.": "No place of this type in this city.",
-    "Fragile / manipuler avec soin": "Fragile / handle with care"
+    "Fragile / manipuler avec soin": "Fragile / handle with care",
+    "Entrez l'e-mail et le mot de passe de votre compte YOUSS CONNECT.": "Enter the email and password of your YOUSS CONNECT account.",
+    "Créer mon compte": "Create my account",
+    "Le code par SMS n'est pas encore ouvert. Le compte s'ouvre avec l'e-mail et le mot de passe.": "SMS codes are not open yet. The account opens with email and password.",
+    "Aller à la connexion": "Go to log in",
+    "E-mail ou mot de passe incorrect.": "Incorrect email or password.",
+    "Un compte existe déjà avec cet e-mail.": "An account already exists with this email.",
+    "Solde du compte": "Account balance",
+    "Pas encore ouvert": "Not open yet",
+    "Choisissez un code PIN à 4 chiffres. Il confirmera vos paiements.": "Choose a 4-digit PIN. It will confirm your payments.",
+    "Saisissez votre code PIN.": "Enter your PIN.",
+    "Code PIN incorrect.": "Incorrect PIN.",
+    "Code PIN enregistré.": "PIN saved.",
+    "La recharge ouvre avec un prestataire de paiement. Le solde ne change pas avant.": "Top-up opens with a payment provider. The balance does not change before that.",
+    "Le retrait ouvre avec un prestataire de paiement. Le solde ne change pas avant.": "Withdrawal opens with a payment provider. The balance does not change before that.",
+    "La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces.": "Card and mobile payment are not collected yet. Choose Youss Wallet or cash.",
+    "Mot de passe mis à jour.": "Password updated.",
+    "Quatre villes": "Four cities"
   };
   const EXACT = { "Cuisine": "Kitchen" };
   function lockCore() { addPhrases(CORE); addPhrases(EXTRA); }

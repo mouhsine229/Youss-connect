@@ -7,6 +7,7 @@ create table if not exists public.profiles (
   phone text,
   full_name text default '',
   email text default '',
+  pin_hash text,
   city text default 'Cotonou',
   country text default 'Bénin',
   created_at timestamptz default now()
@@ -66,13 +67,20 @@ drop policy if exists "own tx read" on public.wallet_transactions;
 drop policy if exists "own bookings read" on public.bookings;
 drop policy if exists "own rides read" on public.rides;
 
-create policy "own profile read" on public.profiles for select using (auth.uid() = id);
-create policy "own profile update" on public.profiles for update using (auth.uid() = id);
-create policy "own profile insert" on public.profiles for insert with check (auth.uid() = id);
-create policy "own wallet read" on public.wallets for select using (auth.uid() = user_id);
-create policy "own tx read" on public.wallet_transactions for select using (auth.uid() = user_id);
-create policy "own bookings read" on public.bookings for select using (auth.uid() = user_id);
-create policy "own rides read" on public.rides for select using (auth.uid() = user_id);
+create index if not exists wallet_transactions_user_created_idx
+  on public.wallet_transactions (user_id, created_at desc);
+create index if not exists bookings_user_created_idx
+  on public.bookings (user_id, created_at desc);
+create index if not exists rides_user_created_idx
+  on public.rides (user_id, created_at desc);
+
+create policy "own profile read" on public.profiles for select using ((select auth.uid()) = id);
+create policy "own profile update" on public.profiles for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
+create policy "own profile insert" on public.profiles for insert with check ((select auth.uid()) = id);
+create policy "own wallet read" on public.wallets for select using ((select auth.uid()) = user_id);
+create policy "own tx read" on public.wallet_transactions for select using ((select auth.uid()) = user_id);
+create policy "own bookings read" on public.bookings for select using ((select auth.uid()) = user_id);
+create policy "own rides read" on public.rides for select using ((select auth.uid()) = user_id);
 
 -- Compte créé à la première vérification OTP : profil + wallet vides.
 create or replace function public.handle_new_user()
@@ -189,6 +197,73 @@ begin
 end;
 $$;
 
+revoke all on function public.handle_new_user() from public, anon, authenticated;
 revoke all on function public.wallet_pay(integer, text, text, integer, jsonb) from public, anon, authenticated;
 revoke all on function public.wallet_topup(integer, text) from public, anon, authenticated;
 grant execute on function public.wallet_pay(integer, text, text, integer, jsonb) to authenticated;
+
+create table if not exists public.user_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  kind text not null check (kind in ('activity', 'ticket', 'order', 'notification', 'address')),
+  local_id text not null check (char_length(local_id) between 1 and 80),
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (user_id, kind, local_id)
+);
+
+create index if not exists user_records_user_created_idx
+  on public.user_records (user_id, created_at desc);
+
+alter table public.user_records enable row level security;
+
+drop policy if exists "own records read" on public.user_records;
+drop policy if exists "own records insert" on public.user_records;
+drop policy if exists "own records update" on public.user_records;
+drop policy if exists "own records delete" on public.user_records;
+
+create policy "own records read" on public.user_records for select using ((select auth.uid()) = user_id);
+create policy "own records insert" on public.user_records for insert with check ((select auth.uid()) = user_id);
+create policy "own records update" on public.user_records for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "own records delete" on public.user_records for delete using ((select auth.uid()) = user_id);
+
+create or replace function public.save_records(p_rows jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  row jsonb;
+  k text;
+  lid text;
+  body jsonb;
+begin
+  if uid is null or jsonb_typeof(p_rows) is distinct from 'array' then
+    return;
+  end if;
+  if jsonb_array_length(p_rows) > 80 then
+    return;
+  end if;
+  for row in select value from jsonb_array_elements(p_rows)
+  loop
+    k := row->>'kind';
+    lid := left(coalesce(row->>'local_id', ''), 80);
+    body := coalesce(row->'payload', '{}'::jsonb);
+    if k not in ('activity', 'ticket', 'order', 'notification', 'address') then
+      continue;
+    end if;
+    if char_length(lid) < 1 or octet_length(body::text) > 12000 then
+      continue;
+    end if;
+    insert into public.user_records (user_id, kind, local_id, payload)
+    values (uid, k, lid, body)
+    on conflict (user_id, kind, local_id) do update set payload = excluded.payload;
+  end loop;
+end;
+$$;
+
+revoke all on function public.save_records(jsonb) from public, anon, authenticated;
+grant execute on function public.save_records(jsonb) to authenticated;
+

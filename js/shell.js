@@ -64,10 +64,10 @@
       <p class="t-caption text-ink-3 px-3 mt-6 mb-2">${t("nav_more")}</p>
       <nav class="space-y-1">${MORE.map((s) => item(s)).join("")}</nav>
       <div class="mt-auto pt-6 space-y-3">
-        <button type="button" onclick="Shell.openDemoMenu()" class="w-full card-dark p-3.5 text-left flex items-center gap-3 hover:opacity-95">
+        ${window.ACState && ACState.session && ACState.session.remote ? "" : `<button type="button" onclick="Shell.openDemoMenu()" class="w-full card-dark p-3.5 text-left flex items-center gap-3 hover:opacity-95">
           <span class="w-9 h-9 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("play_arrow", "text-[22px]", true)}</span>
           <span class="min-w-0"><span class="block t-title">${t("demo_tour")}</span><span class="block t-small text-white/70 truncate">5 parcours</span></span>
-        </button>
+        </button>`}
         <button type="button" onclick="App.nav('profile')" class="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-surface-low text-left">
           ${UI.avatar(user, "w-10 h-10")}
           <span class="min-w-0"><span class="block t-title truncate">${UI.esc(user.fullName)}</span><span class="block t-small text-ink-2 truncate">${UI.esc(user.city)}, ${UI.esc(user.country)}</span></span>
@@ -170,6 +170,7 @@
   }
 
   function demoBar() {
+    if (window.ACState && ACState.session && ACState.session.remote) return "";
     return `<div class="bg-gold text-[#0A0A0A] px-3 py-1.5 text-center text-[12.5px] leading-[18px] font-semibold">Démo locale · aucun paiement réel · données gardées sur cet appareil</div>`;
   }
 

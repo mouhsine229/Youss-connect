@@ -144,13 +144,14 @@
   // Sécurité
   Screens.security = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">Élevé</p><p class="t-small opacity-80">Compte vérifié, PIN actif, biométrie ${ACState.prefs.biometric === false || ACState.user.biometricEnrolled === false ? "désactivée" : "activée"}</p></div></div>
+      <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">${ACState.session.remote ? "Compte ouvert" : "Élevé"}</p><p class="t-small opacity-80">${ACState.session.remote ? "E-mail, mot de passe et code PIN." : "Compte vérifié, PIN actif, biométrie " + (ACState.prefs.biometric === false || ACState.user.biometricEnrolled === false ? "désactivée" : "activée")}</p></div></div>
       <div class="space-y-2.5">
-        ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: ACState.user.verified ? "Identité vérifiée" : "Vérification requise", right: UI.badge(ACState.user.verified ? "Vérifié" : "À faire", ACState.user.verified ? "success" : "warn") })}
-        ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: "Modifier le code à 4 chiffres" })}
-        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: ACState.user.biometricEnrolled === false ? "Non enregistrée" : "Empreinte pour confirmer les paiements", right: UI.toggle(ACState.prefs.biometric !== false && ACState.user.biometricEnrolled !== false, "Screens._toggleBio()", "Biométrie") })}
-        ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "3 appareils" })}
-        ${menuRow("history", "Historique des connexions", "App.nav('loginHistory')", { sub: "Dernière : aujourd'hui, " + esc(ACState.user.city) })}
+        ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: "E-mail du compte. Pièce d'identité pas encore ouverte.", right: UI.badge(ACState.session.remote ? "E-mail" : "À faire", ACState.session.remote ? "success" : "warn") })}
+        ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: ACState.prefs.pinHash ? "Modifier le code à 4 chiffres" : "Choisir le code à 4 chiffres" })}
+        ${menuRow("key", "Mot de passe", "App.nav('accountPassword')", { sub: "Changer le mot de passe du compte" })}
+        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: ACState.session.remote ? "Pas encore reliée. Les paiements utilisent le code PIN." : (ACState.user.biometricEnrolled === false ? "Non enregistrée" : "Empreinte pour confirmer les paiements"), right: UI.toggle(!ACState.session.remote && ACState.prefs.biometric !== false && ACState.user.biometricEnrolled !== false, "Screens._toggleBio()", "Biométrie") })}
+        ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "Cet appareil" })}
+        ${menuRow("history", "Historique des connexions", "App.nav('loginHistory')", { sub: "Session en cours" })}
         ${menuRow("report", "Signalement", "App.nav('report')", { sub: "Signaler un chauffeur, un vendeur, un incident" })}
         ${menuRow("support_agent", "Assistance", "App.nav('help')", { sub: "Centre d'aide 24h/24" })}
         ${menuRow("sos", "SOS", "App.nav('sos')", { sub: "Alerte immédiate avec partage de position", danger: true })}
@@ -158,6 +159,7 @@
     Shell.render(container, { title: I18N.t("security"), subtitle: "PIN, biométrie, appareils", back: true, body, nav: false, showNav: true });
   };
   Screens._toggleBio = function () {
+    if (ACState.session.remote) { UI.toast("L'empreinte de l'appareil n'est pas encore reliée. Les paiements utilisent le code PIN.", "info"); return; }
     if (ACState.user.biometricEnrolled === false || ACState.prefs.biometric === false) {
       App.nav("biometricSetup", { next: "security" });
       return;
@@ -167,29 +169,59 @@
     UI.toast("Biométrie désactivée. Les paiements demanderont le code PIN.", "info");
   };
   Screens.verifyAccount = function (container) {
-    const steps = [{ label: "Numéro de téléphone vérifié", icon: "call" }, { label: "E-mail confirmé", icon: "mail" }, { label: "Pièce d'identité", icon: "badge" }, { label: "Selfie de vérification", icon: "face" }];
-    const done = ACState.user.verified ? 4 : 2;
+    const steps = [{ label: "E-mail du compte", icon: "mail" }, { label: "Numéro de téléphone", icon: "call" }, { label: "Pièce d'identité", icon: "badge" }];
+    const done = ACState.session.remote ? 1 : 0;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5">${UI.timeline(steps, done)}</div>
-      ${!ACState.user.verified ? `<div class="card p-5 text-center"><span class="w-16 h-16 rounded-2xl bg-surface-low flex items-center justify-center mx-auto text-gold">${icon("badge", "text-[32px]")}</span><p class="t-title mt-3">Pièce d'identité</p><p class="t-small text-ink-2 mt-1">CNI, passeport ou permis. Les documents sont chiffrés et traités selon la réglementation de chaque pays.</p>${UI.primaryButton("Prendre une photo du document", "Screens._verifyDone()", { icon: "photo_camera", cls: "mt-4" })}</div>` : `<div class="card p-5 text-center">${icon("verified", "text-gold text-[40px]", true)}<p class="t-title mt-2">Votre compte est vérifié</p><p class="t-small text-ink-2">Les plafonds du portefeuille de démonstration sont étendus.</p></div>`}</div>`;
+      <div class="card p-5 text-center"><span class="w-16 h-16 rounded-2xl bg-surface-low flex items-center justify-center mx-auto text-gold">${icon("badge", "text-[32px]")}</span><p class="t-title mt-3">Pièce d'identité</p><p class="t-small text-ink-2 mt-1">La vérification d'identité n'est pas encore ouverte. Aucun document n'est demandé ni enregistré.</p></div></div>`;
     Shell.render(container, { title: "Vérification du compte", back: true, body, nav: false, showNav: true });
   };
-  Screens._verifyDone = () => { ACState.user.verified = true; ACStore.addNotification("Compte vérifié", "Votre identité a été validée. Plafonds Wallet étendus.", "wallet", "security"); ACStore.emit(); UI.toast("Documents reçus · compte vérifié (démo).", "success"); };
+  Screens.accountPassword = function (container) {
+    const body = `<form class="max-w-narrow mx-auto w-full space-y-4" onsubmit="event.preventDefault();Screens._savePassword()">
+      ${UI.field("pw-1", "Nouveau mot de passe", { type: "password", placeholder: "8 caractères min.", autocomplete: "new-password" })}
+      ${UI.field("pw-2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}
+      ${UI.error("pw-error")}
+      ${UI.primaryButton("Enregistrer", "Screens._savePassword()", { size: "lg", icon: "lock" })}
+    </form>`;
+    Shell.render(container, { title: "Mot de passe", back: true, body, nav: false, showNav: true });
+  };
+  Screens._savePassword = function () {
+    const a = document.getElementById("pw-1").value, b = document.getElementById("pw-2").value;
+    if (a.length < 8) return UI.showError("pw-error", "Le mot de passe doit contenir au moins 8 caractères.");
+    if (a !== b) return UI.showError("pw-error", "Les mots de passe ne correspondent pas.");
+    if (!window.YCBackend || !YCBackend.isLive()) return UI.showError("pw-error", "Connectez-vous pour changer le mot de passe.");
+    YCBackend.updatePassword(a).then(function (res) {
+      if (!res || res.ok === false) return UI.showError("pw-error", (res && res.message) || "Changement impossible.");
+      UI.toast("Mot de passe mis à jour.", "success");
+      App.resetTo("security");
+    });
+  };
   Screens.devices = function (container) {
-    const list = [{ name: "Ce téléphone", sub: navigator.platform || "Mobile", icon: "smartphone", current: true, when: "Actif maintenant" }, { name: "Ordinateur portable", sub: "Chrome · " + ACState.user.city, icon: "laptop", when: "Hier, 21:14" }, { name: "Tablette", sub: "Safari · " + ACState.user.city, icon: "tablet", when: "Il y a 6 jours" }];
-    const body = `<div class="max-w-narrow mx-auto w-full space-y-3">${list.map((d, i) => `<div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon(d.icon)}</span><div class="flex-1 min-w-0"><p class="t-title flex items-center gap-2">${d.name}${d.current ? UI.badge("Cet appareil", "gold") : ""}</p><p class="t-small text-ink-2">${d.sub} · ${d.when}</p></div>${!d.current ? `<button type="button" onclick="this.closest('.card').remove();UI.toast('Appareil déconnecté.','success')" class="btn btn-sm btn-outline">Déconnecter</button>` : ""}</div>`).join("")}${UI.secondaryButton("Déconnecter tous les autres appareils", "UI.toast('Tous les autres appareils ont été déconnectés.','success')", { icon: "logout" })}</div>`;
+    const remote = ACState.session.remote;
+    const list = remote
+      ? [{ name: "Cet appareil", sub: navigator.platform || "Navigateur", icon: "smartphone", current: true, when: "Actif maintenant" }]
+      : [{ name: "Ce téléphone", sub: navigator.platform || "Mobile", icon: "smartphone", current: true, when: "Actif maintenant" }];
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-3">${list.map((d) => `<div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon(d.icon)}</span><div class="flex-1 min-w-0"><p class="t-title flex items-center gap-2">${d.name}${d.current ? UI.badge("Cet appareil", "gold") : ""}</p><p class="t-small text-ink-2">${d.sub} · ${d.when}</p></div></div>`).join("")}${remote ? UI.secondaryButton("Fermer les autres sessions", "Screens._signOutOthers()", { icon: "logout" }) : ""}</div>`;
     Shell.render(container, { title: "Appareils connectés", back: true, body, nav: false, showNav: true });
   };
+  Screens._signOutOthers = function () {
+    if (!window.YCBackend || !YCBackend.signOutOthers) return;
+    YCBackend.signOutOthers().then(function (res) {
+      UI.toast(res && res.ok ? "Les autres sessions sont fermées." : ((res && res.message) || "Fermeture impossible."), res && res.ok ? "success" : "error");
+    });
+  };
   Screens.loginHistory = function (container) {
-    const rows = [["Aujourd'hui 09:12", ACState.user.city, "Ce téléphone", true], ["Hier 21:14", ACState.user.city, "Chrome · ordinateur", true], ["Lundi 08:40", ACState.user.city, "Ce téléphone", true], ["Samedi 19:02", "Lagos, Nigeria", "Appareil inconnu", false]];
-    const body = `<div class="max-w-narrow mx-auto w-full space-y-3"><div class="card divide-y divide-line">${rows.map((r) => `<div class="p-4 flex items-center gap-3"><span class="menu-icon ${r[3] ? "" : "!bg-danger-soft !text-danger"}">${icon(r[3] ? "check" : "warning")}</span><div class="flex-1 min-w-0"><p class="t-title">${r[0]}</p><p class="t-small text-ink-2">${r[1]} · ${r[2]}</p></div>${r[3] ? "" : `<button type="button" onclick="App.nav('report')" class="btn btn-sm btn-outline">Ce n'est pas moi</button>`}</div>`).join("")}</div><p class="t-small text-ink-3">Une connexion inhabituelle déclenche une vérification par code OTP.</p></div>`;
+    const rows = ACState.session.remote
+      ? [["Maintenant", ACState.user.city, "Cet appareil", true]]
+      : [["Aujourd'hui 09:12", ACState.user.city, "Ce téléphone", true]];
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-3"><div class="card divide-y divide-line">${rows.map((r) => `<div class="p-4 flex items-center gap-3"><span class="menu-icon">${icon("check")}</span><div class="flex-1 min-w-0"><p class="t-title">${r[0]}</p><p class="t-small text-ink-2">${r[1]} · ${r[2]}</p></div></div>`).join("")}</div><p class="t-small text-ink-3">${ACState.session.remote ? "Seule la session ouverte sur cet appareil est affichée." : "Historique local."}</p></div>`;
     Shell.render(container, { title: "Historique des connexions", back: true, body, nav: false, showNav: true });
   };
   Screens.report = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5 space-y-3">${UI.select("rp-type", "Objet du signalement", ["Comportement d'un chauffeur", "Problème de livraison", "Vendeur ou produit", "Transaction suspecte", "Connexion inhabituelle", "Autre"], "Problème de livraison")}${UI.select("rp-ref", "Activité concernée", ["Aucune"].concat(ACState.activities.slice(0, 6).map((a) => a.title)), "Aucune")}<label class="block"><span class="label">Description</span><textarea id="rp-desc" class="textarea" placeholder="Décrivez ce qui s'est passé…"></textarea></label><div class="rounded-xl border border-dashed border-line p-4 text-center t-small text-ink-2">${icon("attach_file", "text-[22px] text-ink-3")}<p>Joindre une capture ou une photo</p></div></div>
-      ${UI.primaryButton("Envoyer le signalement", "Screens._sendReport()", { size: "lg", icon: "send" })}<p class="t-small text-ink-3 text-center">Réponse sous 24 h. En cas d'urgence, utilisez le bouton SOS.</p></div>`;
+      ${UI.primaryButton("Envoyer le signalement", "Screens._sendReport()", { size: "lg", icon: "send" })}<p class="t-small text-ink-3 text-center">Le signalement reste sur cet appareil. L'envoi à l'équipe n'est pas encore ouvert. En cas d'urgence, utilisez le bouton SOS.</p></div>`;
     Shell.render(container, { title: "Signalement", back: true, body, nav: false, showNav: true });
   };
-  Screens._sendReport = () => { const d = document.getElementById("rp-desc").value.trim(); if (d.length < 10) { UI.toast("Décrivez le problème en quelques mots.", "error"); return; } ACStore.addNotification("Signalement reçu", "Référence YC-SR-" + Math.floor(1000 + Math.random() * 8999) + ". Notre équipe vous répond sous 24 h.", "wallet", "help"); ACStore.emit(); UI.toast("Signalement transmis. Merci.", "success"); App.back(); };
+  Screens._sendReport = () => { const d = document.getElementById("rp-desc").value.trim(); if (d.length < 10) { UI.toast("Décrivez le problème en quelques mots.", "error"); return; } UI.toast("Signalement noté sur cet appareil. L'envoi à l'équipe n'est pas encore ouvert.", "info"); App.back(); };
 
   // Langues
   Screens.languages = function (container) {
@@ -201,11 +233,12 @@
 
   // Aide
   Screens.help = function (container) {
-    const faq = [["Comment payer une course ?", "Wallet, espèces ou paiement mobile, au moment de confirmer. Le prix vient de l'itinéraire."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Course, commande, achat ou billet : vous gagnez des points. Vous les échangez ensuite."], ["Le wallet est-il réel ?", "Non, c'est de la démo. Un vrai lancement dépendrait des licences du pays."], ["Vendre sur l'app ?", "La vente n'est pas proposée dans le compte personnel. Cette version montre l'achat, le transport et le portefeuille."]];
+    const faq = [["Comment payer une course ?", "Youss Wallet ou espèces, au moment de confirmer. Le prix vient de l'itinéraire. La carte et le paiement mobile ne sont pas encore encaissés."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Un paiement par Youss Wallet ajoute des points, dans la limite du montant."], ["Le wallet est-il réel ?", "Le solde est celui du compte. La recharge n'est pas encore ouverte : elle attend un prestataire de paiement."], ["Vendre sur l'app ?", "La vente n'est pas proposée dans le compte personnel. Cette version montre l'achat, le transport et le portefeuille."]];
+    const actions = [["chat", "Chat avec l'assistance", "Pas encore ouvert", "UI.toast('Le chat d\\'assistance n\\'est pas encore ouvert.','info')"], ["call", "Appeler", "Pas encore ouvert", "UI.toast('L\\'appel d\\'assistance n\\'est pas encore ouvert.','info')"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="grid grid-cols-2 gap-3">${[["chat", "Chat avec l'assistance", "Réponse en quelques minutes", "UI.toast('Un conseiller vous répond dans quelques instants (démo).','success')"], ["call", "Appeler", "Du lundi au samedi, 8h - 20h", "UI.toast('Appel du support (démo).','info')"], ["play_circle", I18N.t("demo_tour"), "5 parcours guidés", "Demo.openMenu()"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]].map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
+      <div class="grid grid-cols-2 gap-3">${actions.map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
       <section><p class="t-caption text-ink-3 mb-2">Questions fréquentes</p><div class="card divide-y divide-line">${faq.map((q, i) => `<details class="group"><summary class="flex items-center justify-between gap-3 p-4 cursor-pointer list-none t-title">${q[0]}${icon("expand_more", "text-ink-3 transition-transform group-open:rotate-180")}</summary><p class="px-4 pb-4 t-body text-ink-2">${q[1]}</p></details>`).join("")}</div></section>
-      <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT v2.0</p><p class="t-small text-ink-2 mt-1">Maquette KYA CORPORATION. Données fictives, aucun partenaire officiel.</p><div class="flex flex-wrap gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "App.nav('terms')", { variant: "outline", block: false, size: "sm" })}${UI.button("Confidentialité", "App.nav('privacy')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
+      <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT</p><p class="t-small text-ink-2 mt-1">KYA CORPORATION. Les prix, chauffeurs et événements affichés sont des exemples. Aucun partenaire officiel.</p><div class="flex flex-wrap gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "App.nav('terms')", { variant: "outline", block: false, size: "sm" })}${UI.button("Confidentialité", "App.nav('privacy')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
     Shell.render(container, { title: I18N.t("help"), subtitle: "FAQ et contact", back: true, body, nav: false, showNav: true });
   };
 
@@ -220,9 +253,9 @@
         <button type="button" onclick="App.nav('notificationPrefs')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("notifications")}</span><div class="flex-1"><p class="t-title">Préférences de notifications</p></div>${icon("chevron_right", "text-ink-3")}</button>
         <div class="flex items-center gap-3 p-4"><span class="menu-icon">${icon("my_location")}</span><div class="flex-1"><p class="t-title">Localisation</p><p class="t-small text-ink-2">Pendant l'utilisation de l'application</p></div>${UI.toggle(ACState.prefs.location !== false, "Screens._togglePrefFlag('location')", "Localisation")}</div>
         <div class="flex items-center gap-3 p-4"><span class="menu-icon">${icon("analytics")}</span><div class="flex-1"><p class="t-title">Recommandations personnalisées</p><p class="t-small text-ink-2">Basées sur vos habitudes</p></div>${UI.toggle(ACState.prefs.recs !== false, "Screens._togglePrefFlag('recs')", "Recommandations")}</div></div></section>
-      <section><p class="t-caption text-ink-3 mb-2">Démonstration</p><div class="card divide-y divide-line">
-        <button type="button" onclick="Demo.openMenu()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("play_circle")}</span><div class="flex-1"><p class="t-title">${I18N.t("demo_tour")}</p><p class="t-small text-ink-2">Transport, restaurant, événement, commerce, culture</p></div>${icon("chevron_right", "text-ink-3")}</button>
-        <button type="button" onclick="Screens._resetDemo()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon !bg-danger-soft !text-danger">${icon("restart_alt")}</span><div class="flex-1"><p class="t-title text-danger">Réinitialiser la démo</p><p class="t-small text-ink-2">Solde, panier, billets, activités et notifications d'origine</p></div></button></div></section>
+      <section><p class="t-caption text-ink-3 mb-2">${ACState.session.remote ? "Cet appareil" : "Démonstration"}</p><div class="card divide-y divide-line">
+        ${ACState.session.remote ? "" : `<button type="button" onclick="Demo.openMenu()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("play_circle")}</span><div class="flex-1"><p class="t-title">${I18N.t("demo_tour")}</p><p class="t-small text-ink-2">Transport, restaurant, événement, commerce, culture</p></div>${icon("chevron_right", "text-ink-3")}</button>`}
+        <button type="button" onclick="Screens._resetDemo()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon !bg-danger-soft !text-danger">${icon("restart_alt")}</span><div class="flex-1"><p class="t-title text-danger">${ACState.session.remote ? "Effacer les données de cet appareil" : "Réinitialiser la démo"}</p><p class="t-small text-ink-2">${ACState.session.remote ? "Le compte YOUSS CONNECT reste ouvert. Seul cet appareil est vidé." : "Solde, panier, billets, activités et notifications d'origine"}</p></div></button></div></section>
       <section><p class="t-caption text-ink-3 mb-2">Informations légales</p><div class="card divide-y divide-line">
         <button type="button" onclick="App.nav('terms')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("gavel")}</span><div class="flex-1"><p class="t-title">Conditions d'utilisation</p></div>${icon("chevron_right", "text-ink-3")}</button>
         <button type="button" onclick="App.nav('privacy')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("privacy_tip")}</span><div class="flex-1"><p class="t-title">Politique de confidentialité</p></div>${icon("chevron_right", "text-ink-3")}</button>
@@ -231,5 +264,5 @@
     Shell.render(container, { title: I18N.t("settings"), back: true, body, nav: false, showNav: true });
   };
   Screens._togglePrefFlag = (k) => { ACState.prefs[k] = ACState.prefs[k] === false; ACStore.emit(); };
-  Screens._resetDemo = () => UI.confirm({ title: "Réinitialiser la démo ?", body: "Toutes les données de démonstration reviendront à leur état d'origine.", okLabel: "Réinitialiser", danger: true, icon: "restart_alt", onOk: "ACStore.reset();ACState.session.authenticated=true;ACState.session.onboardingSeen=true;ACStore.emit();UI.toast('Démo réinitialisée.','success');App.resetTo('home')" });
+  Screens._resetDemo = () => UI.confirm({ title: ACState.session.remote ? "Effacer cet appareil ?" : "Réinitialiser la démo ?", body: ACState.session.remote ? "Les données affichées sur cet appareil seront effacées. Le compte et le solde restent sur YOUSS CONNECT." : "Toutes les données de démonstration reviendront à leur état d'origine.", okLabel: "Effacer", danger: true, icon: "restart_alt", onOk: ACState.session.remote ? "ACStore.reset();if(window.YCBackend)YCBackend.signOut();App.resetTo('login')" : "ACStore.reset();ACState.session.authenticated=true;ACState.session.onboardingSeen=true;ACStore.emit();UI.toast('Démo réinitialisée.','success');App.resetTo('home')" });
 })();
