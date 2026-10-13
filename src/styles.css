@@ -141,7 +141,7 @@
 
   /* Youss Wallet : grilles d'actions, KPI solde, montants de recharge */
   .wallet-kpi-grid { @apply grid grid-cols-2 gap-2 sm:gap-3 min-w-0; }
-  .wallet-kpi-cell { @apply rounded-xl bg-white/10 p-2.5 sm:p-3 min-w-0 overflow-hidden; }
+  .wallet-kpi-cell { @apply rounded-xl bg-inverse-ink/10 p-2.5 sm:p-3 min-w-0 overflow-hidden; }
   .wallet-action-grid { @apply grid grid-cols-3 gap-1.5 sm:gap-3 min-w-0 max-w-full; grid-auto-rows: 1fr; }
   .wallet-action-btn { @apply card card-press flex flex-col items-center justify-center gap-1 p-1.5 sm:p-3 min-h-[72px] sm:min-h-[92px] min-w-0 h-full text-center overflow-hidden; }
   .wallet-action-btn__icon { @apply w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center flex-shrink-0; }
@@ -185,7 +185,7 @@
   /* Feuille basse / modale */
   .sheet-overlay { @apply fixed inset-0 z-[900] flex items-end lg:items-center justify-center p-0 lg:p-6; }
   .sheet { @apply relative w-full lg:max-w-[520px] bg-card border border-line rounded-t-3xl lg:rounded-3xl p-5 pb-8 lg:pb-6 max-h-[88vh] overflow-y-auto; }
-  .toast { @apply fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-[999] px-4 py-3 rounded-2xl t-small font-semibold text-center max-w-[360px] transition-all duration-200; }
+  .toast { @apply pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-[999] px-4 py-3 rounded-2xl t-small font-semibold text-center max-w-[360px] transition-all duration-200; }
 
   /* Entrée d'écran */
   .screen-enter { animation: screen-in .22s ease-out both; }

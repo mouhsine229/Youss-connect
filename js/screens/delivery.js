@@ -186,18 +186,35 @@
           <div class="flex gap-3"><span class="w-2.5 h-2.5 rounded-sm bg-ink mt-1.5 flex-shrink-0"></span><div><p class="t-caption text-ink-3">Livraison</p><p class="t-title">${esc(parcel.to.name)}</p><p class="t-small text-ink-2">${esc(parcel.recipient)} · ${esc(parcel.recipientPhone)}</p></div></div>
           ${parcel.note ? `<p class="t-small text-ink-2 bg-surface-low rounded-xl p-3">${icon("sticky_note_2", "text-[15px]")} ${esc(parcel.note)}</p>` : ""}
         </div>
-        <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Moyen de paiement</p><div class="space-y-2">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._dlMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${parcel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${parcel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div></div>
+        <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Moyen de paiement</p><div class="space-y-2">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._dlMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${parcel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${parcel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}${Screens.cardAddButton()}</div></div>
       </div>
       <aside class="space-y-4 lg:sticky lg:top-24 self-start">
         <div class="card-dark p-5"><p class="t-caption text-gold">Total</p>${UI.row("Livraison " + v.label, ACStore.fmtFCFA(parcel.price))}${UI.row("Assurance", "Incluse")}<div class="divider border-white/15 my-2"></div><div class="flex items-center justify-between"><span class="t-title">À payer</span><span class="t-h2">${ACStore.fmtFCFA(parcel.price)}</span></div></div>
-        ${UI.primaryButton("Payer et trouver un livreur", "Screens._payDelivery()", { size: "lg", icon: "account_balance_wallet" })}
+        ${UI.primaryButton("Payer et trouver un livreur", "Screens._payDelivery()", { size: "lg", icon: "lock", id: "yc-pay-delivery" })}
       </aside></div>`;
     Shell.render(container, { title: "Récapitulatif", subtitle: "Livraison", back: true, body, nav: false });
   };
-  Screens._dlMethod = (t) => { parcel.method = t; App.replace("deliveryConfirm"); };
+  Screens._dlMethod = (t) => { parcel.method = t; App.replace("deliveryConfirm", {}, { keepScroll: true }); };
   Screens._payDelivery = function () {
-    ACStore.whenPaid(ACStore.pay({ amount: parcel.price, label: "Livraison " + CATS.find((c) => c.id === parcel.cat).label.toLowerCase() + " vers " + parcel.to.name.split("·")[0].trim(), service: "livraison", pointsEarned: 15, method: parcel.method, activity: { status: "En cours", detail: { from: parcel.from.name, to: parcel.to.name, recipient: parcel.recipient, km: parcel.km } } }),
-      function () { parcel.status = "searching"; parcel.code = String(Math.floor(1000 + Math.random() * 8999)); App.resetTo("deliverySearching"); },
+    if (!parcel.from || !parcel.to || !parcel.price) { UI.toast("Complétez la livraison avant de payer.", "error"); return; }
+    if (Screens._preferCard) { parcel.method = "card"; Screens._preferCard = false; }
+    if (Screens.needCard(parcel.method)) return;
+    Screens.requirePay("Livraison · " + ACStore.fmtFCFA(parcel.price), function () { Screens._payDeliveryNow(); });
+  };
+  Screens._deliveryReceipt = function () {
+    const r = window.YCReceipt && YCReceipt.current();
+    if (!r) { UI.toast("Aucun reçu disponible.", "info"); return; }
+    YCReceipt.download(r);
+    UI.toast("Reçu téléchargé.", "success");
+  };
+  Screens._payDeliveryNow = function () {
+    const cat = CATS.find((c) => c.id === parcel.cat);
+    ACStore.whenPaid(ACStore.pay({ amount: parcel.price, label: "Livraison " + (cat ? cat.label.toLowerCase() : "colis") + " vers " + parcel.to.name.split("·")[0].trim(), service: "livraison", pointsEarned: 15, method: parcel.method, activity: { status: "En cours", detail: { from: parcel.from.name, to: parcel.to.name, recipient: parcel.recipient, km: parcel.km } } }),
+      function (res) {
+        parcel.status = "searching"; parcel.code = String(Math.floor(1000 + Math.random() * 8999));
+        if (window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu livraison" });
+        App.resetTo("deliverySearching");
+      },
       function (res) { App.nav("paymentFailed", { retry: "deliveryConfirm", amount: parcel.price, reason: res.reason }); });
   };
 
@@ -298,7 +315,7 @@
       </div>
       ${UI.nextSteps([
         { icon: "workspace_premium", label: "+15 points Youss Bonus", sub: "Voir mes récompenses", onclick: "App.nav('rewards')" },
-        { icon: "receipt_long", label: "Voir le reçu", sub: "Dans mes activités", onclick: "App.nav('activities',{f:'livraison'})" },
+        { icon: "receipt_long", label: "Télécharger le reçu", sub: "Fichier sur cet appareil", onclick: "Screens._deliveryReceipt()" },
         { icon: "storefront", label: "Commander sur Youss Market", sub: "Livraison incluse", onclick: "App.nav('market')" }
       ])}
       ${UI.secondaryButton(I18N.t("home_btn"), "App.resetTo('home')")}

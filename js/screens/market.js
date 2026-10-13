@@ -4,7 +4,8 @@
   window.Screens = window.Screens || {};
   const { icon, esc, go } = UI;
 
-  const f = { q: "", cat: "Tout", sort: "pertinence" };
+  const f = { q: "", cat: "Tout", sort: "pertinence", scope: "pays" };
+  let seenCountry = "";
   const CATS = ["Tout"].concat(YCData.PRODUCT_CATS);
   const SHIPPING = [
     { id: "standard", label: "Standard", sub: "48 h · livreur Youss", price: 1000, eta: "48 h", icon: "local_shipping" },
@@ -15,6 +16,10 @@
   function list() {
     const q = YCData.norm(f.q).trim(), words = q ? q.split(/\s+/) : [];
     let out = YCData.PRODUCTS.filter((p) => {
+      if (f.scope !== "all") {
+        const seller = YCData.seller(p.seller);
+        if (!seller || YCData.countryCodeOfCity(seller.city) !== ACState.user.countryCode) return false;
+      }
       if (f.cat !== "Tout" && p.cat !== f.cat && !(f.cat === "Artisanat" && ["Maison", "Produits locaux", "Accessoires"].indexOf(p.cat) >= 0)) return false;
       if (!words.length) return true;
       const hay = YCData.norm([p.name, p.cat, YCData.seller(p.seller).name, YCData.seller(p.seller).city, p.desc].join(" "));
@@ -28,6 +33,7 @@
   const total = () => ACState.cart.market.reduce((s, i) => s + i.price * i.qty, 0);
 
   Screens.market = function (container, params) {
+    if (seenCountry !== ACState.user.countryCode) { seenCountry = ACState.user.countryCode; f.scope = "pays"; }
     if (params && params.cat) f.cat = params.cat;
     if (params && params.q != null) f.q = params.q;
     const body = `
@@ -35,7 +41,7 @@
         <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="mk-q" type="search" value="${esc(f.q)}" placeholder="Rechercher un produit, un vendeur…" oninput="Screens._mkType(this.value)" class="input input-lg pl-12"/></label>
         <select class="select sm:w-56" onchange="Screens._mkSort(this.value)" aria-label="Trier">${[["pertinence", "Pertinence"], ["note", "Meilleures notes"], ["prix-asc", "Prix croissant"], ["prix-desc", "Prix décroissant"]].map((o) => `<option value="${o[0]}" ${f.sort === o[0] ? "selected" : ""}>${o[1]}</option>`).join("")}</select>
       </div>
-      <div class="hscroll">${CATS.map((c) => UI.chip(c, `Screens._mkCat('${c}')`, f.cat === c)).join("")}</div>
+      <div class="hscroll">${UI.chip(ACState.user.country, "Screens._mkScope('pays')", f.scope === "pays")}${UI.chip("Tout le réseau", "Screens._mkScope('all')", f.scope === "all")}${CATS.map((c) => UI.chip(c, `Screens._mkCat('${c}')`, f.cat === c)).join("")}</div>
       ${f.cat === "Tout" && !f.q ? `<section class="relative rounded-3xl overflow-hidden h-40 lg:h-56 bg-[#0A0A0A] text-white">${UI.img(YCData.IMG + "services/svc-market.jpg", "", "img-cover opacity-60")}<div class="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/60 to-transparent"></div><div class="absolute inset-0 p-5 lg:p-8 flex flex-col justify-center max-w-[520px]"><span class="badge badge-gold w-max mb-2">Sélection de la semaine</span><h2 class="t-h2 lg:t-h1">Artisanat et produits locaux de 4 pays</h2><p class="t-small text-white/75 mt-1 hidden sm:block">Vendeurs vérifiés, livraison par les livreurs YOUSS CONNECT, paiement Youss Wallet.</p></div></section>` : ""}
       <div id="mk-list"></div>
       ${marketCartBar()}`;
@@ -51,7 +57,8 @@
   Screens._mkType = (v) => { f.q = v; renderList(); };
   Screens._mkSort = (v) => { f.sort = v; renderList(); };
   Screens._mkCat = (c) => { f.cat = c; App.replace("market"); };
-  Screens._mkReset = () => { f.q = ""; f.cat = "Tout"; App.replace("market"); };
+  Screens._mkScope = (s) => { f.scope = s; App.replace("market"); };
+  Screens._mkReset = () => { f.q = ""; f.cat = "Tout"; f.scope = "pays"; App.replace("market"); };
   function cartBtn() { const n = ACStore.marketCount(); return `<button type="button" onclick="App.nav('cartMarket')" class="icon-btn relative" aria-label="Panier Market">${icon("shopping_cart")}${n ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-[#0A0A0A] text-[10px] font-extrabold flex items-center justify-center">${n}</span>` : ""}</button>`; }
   function marketCartBar() {
     const n = ACStore.marketCount(); if (!n) return "";
@@ -102,14 +109,14 @@
     const p = YCData.product(id); if (!p || p.stock === 0) return;
     const ex = ACState.cart.market.find((i) => i.id === id);
     if (ex) ex.qty++; else ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller });
-    ACStore.emit(); UI.toast(p.name + " ajouté au panier Market.", "success");
-    App.replace(App.current.id, App.current.params);
+    ACStore.quietly(function () { ACStore.emit(); }); UI.toast(p.name + " ajouté au panier Market.", "success");
+    App.replace(App.current.id, App.current.params, { keepScroll: true });
   };
   Screens._marketSeed = (ids) => { ACState.cart.market = ids.map((id) => { const p = YCData.product(id); return { id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller }; }); ACStore.emit(); };
   Screens._marketQty = function (id, d) {
     const it = ACState.cart.market.find((i) => i.id === id); if (!it) return;
     it.qty += d; if (it.qty <= 0) ACState.cart.market = ACState.cart.market.filter((i) => i.id !== id);
-    ACStore.emit(); App.replace(App.current.id, App.current.params);
+    ACStore.quietly(function () { ACStore.emit(); }); App.replace(App.current.id, App.current.params, { keepScroll: true });
   };
   Screens._buyNow = (id) => { if (!ACState.cart.market.find((i) => i.id === id)) { const p = YCData.product(id); ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller }); ACStore.emit(); } App.nav("checkoutMarket", { step: 0 }); };
 
@@ -142,15 +149,16 @@
     if (!items.length) { App.resetTo("cartMarket"); return; }
     if (params.step != null) co.step = parseInt(params.step, 10) || 0;
     if (!co.address) co.address = (ACState.addresses.find((a) => a.isDefault) || ACState.addresses[0] || {}).id;
+    if (Screens._preferCard) { co.method = "card"; Screens._preferCard = false; }
     if (!co.method) co.method = ACState.prefs.paymentMethod || "wallet";
-    const ship = SHIPPING.find((s) => s.id === co.shipping), addr = ACState.addresses.find((a) => a.id === co.address), method = ACState.paymentMethods.find((m) => m.type === co.method);
+    const ship = SHIPPING.find((s) => s.id === co.shipping), addr = ACState.addresses.find((a) => a.id === co.address), method = ACState.paymentMethods.find((m) => m.type === co.method) || ACState.paymentMethods[0] || { icon: "payments", label: "Paiement", type: "wallet" };
     const sub = total(), tot = sub + ship.price;
     const steps = ["Adresse", "Livraison", "Paiement", "Confirmation"];
     const nav = (prev, next, label) => `<div class="flex gap-3">${prev != null ? UI.secondaryButton(I18N.t("back"), `Screens._mcStep(${prev})`) : ""}${UI.primaryButton(label || I18N.t("continue"), next === "pay" ? `Screens._payMarket(${tot})` : `Screens._mcStep(${next})`, { size: "lg", iconRight: next === "pay" ? "lock" : "arrow_forward" })}</div>`;
     let html = "";
     if (co.step === 0) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Adresse de livraison</p>${ACState.addresses.map((a) => `<button type="button" onclick="Screens._mcAddress('${a.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.address === a.id ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(a.icon || "place")}</span><span class="flex-1 min-w-0"><span class="block t-title">${esc(a.label)}</span><span class="block t-small text-ink-2 truncate">${esc(a.detail)}</span></span>${co.address === a.id ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}<button type="button" onclick="App.nav('addAddress',{back:'checkoutMarket'})" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left text-ink-2"><span class="menu-icon">${icon("add")}</span><span class="t-title">Nouvelle adresse</span></button></div>${nav(null, 1)}`;
     else if (co.step === 1) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Mode de livraison</p>${SHIPPING.map((s) => `<button type="button" onclick="Screens._mcShip('${s.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.shipping === s.id ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(s.icon)}</span><span class="flex-1"><span class="block t-title">${s.label}</span><span class="block t-small text-ink-2">${s.sub}</span></span><span class="t-title font-bold">${s.price ? ACStore.fmtFCFA(s.price) : "Gratuit"}</span></button>`).join("")}</div>${nav(0, 2)}`;
-    else if (co.step === 2) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._mcMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${co.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>${nav(1, 3)}`;
+    else if (co.step === 2) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._mcMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${co.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}${Screens.cardAddButton()}</div>${nav(1, 3)}`;
     else html = `<div class="card p-4 space-y-3">
         <div class="flex items-center gap-3"><span class="menu-icon">${icon("location_on")}</span><div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Livraison</p><p class="t-title truncate">${esc(addr ? addr.label + " · " + addr.detail : "")}</p></div><button type="button" onclick="Screens._mcStep(0)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
         <div class="flex items-center gap-3"><span class="menu-icon">${icon(ship.icon)}</span><div class="flex-1"><p class="t-caption text-ink-3">Mode</p><p class="t-title">${ship.label} · ${ship.eta}</p></div><button type="button" onclick="Screens._mcStep(1)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
@@ -164,16 +172,23 @@
   Screens._mcShip = (id) => { co.shipping = id; App.replace("checkoutMarket", { step: 1 }); };
   Screens._mcMethod = (t) => { co.method = t; App.replace("checkoutMarket", { step: 2 }); };
   Screens._payMarket = function (tot) {
+    if (!ACState.cart.market.length) { UI.toast("Le panier est vide.", "error"); return; }
+    if (Screens.needCard(co.method)) return;
+    Screens.requirePay("Achat Youss Market", function () { Screens._payMarketNow(tot); });
+  };
+  Screens._payMarketNow = function (tot) {
     const items = ACState.cart.market.slice(), ship = SHIPPING.find((s) => s.id === co.shipping), addr = ACState.addresses.find((a) => a.id === co.address);
+    if (!items.length || !ship) { UI.toast("Commande incomplète.", "error"); return; }
     const sellerNames = Array.from(new Set(items.map((i) => YCData.seller(i.seller).name))).join(", ");
-    ACStore.whenPaid(ACStore.pay({ amount: tot, label: "Achat Youss Market · " + sellerNames, service: "market", pointsEarned: Math.round(tot / 100), method: co.method, activity: false }), function () {
+    ACStore.whenPaid(ACStore.pay({ amount: tot, label: "Achat Youss Market · " + sellerNames, service: "market", pointsEarned: Math.round(tot / 100), method: co.method, activity: false }), function (res) {
       const first = YCData.seller(items[0].seller);
       const from = YCData.restaurantsIn(ACState.user.city)[0] || YCData.cityOf(ACState.user.city);
       const order = ACStore.createOrder({ type: "market", title: "Youss Market · " + sellerNames, img: items[0].img, items, total: tot, address: co.shipping === "pickup" ? "Retrait chez " + first.name + " · " + first.city : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: ship.eta, shipping: ship.label, from: { lat: from.lat, lng: from.lng }, to: addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null, courier: YCData.courierFor(ACState.user.city) });
       ACStore.addActivity({ service: "market", title: "Achat Youss Market · " + items.map((i) => i.name).join(", "), amount: tot, status: "En cours", icon: "storefront", orderId: order.id, detail: { items: items.map((i) => i.name + " × " + i.qty), seller: sellerNames, shipping: ship.label } });
       items.forEach((i) => { const p = YCData.product(i.id); if (p) p.stock = Math.max(0, p.stock - i.qty); });
       ACStore.addNotification("Commande confirmée", "Youss Market · " + order.number + " · livraison " + ship.label.toLowerCase() + " (" + ship.eta + ").", "market", "orderTracking?id=" + order.id);
-      ACState.cart.market = []; co.step = 0; ACStore.emit();
+      ACState.cart.market = []; co.step = 0;
+      if (window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu Youss Market", label: sellerNames, lines: [["Commande", order.number]] });
       App.resetTo("orderConfirmed", { id: order.id });
     }, function (res) { App.nav("paymentFailed", { retry: "checkoutMarket", amount: tot, reason: res.reason }); });
   };

@@ -486,7 +486,7 @@
         <textarea id="ride-comment" class="textarea mt-3" placeholder="Un commentaire (optionnel)">${esc(trip.comment || "")}</textarea>
         <div class="flex items-center justify-center gap-2 mt-3"><span class="t-small text-ink-2">Pourboire :</span>${[0, 200, 500, 1000].map((v) => `<button type="button" onclick="Screens._setTip(${v})" class="chip ${(trip.tip || 0) === v ? "on" : ""}">${v ? ACStore.fmtFCFA(v) : "Aucun"}</button>`).join("")}</div>
       </div>
-      ${UI.primaryButton((trip.method === "cash" ? "Terminer · payé en espèces " : "Payer ") + ACStore.fmtFCFA(total + (trip.tip || 0)), "Screens._transportPay()", { size: "lg", icon: trip.method === "cash" ? "check" : "account_balance_wallet" })}
+      ${UI.primaryButton((trip.method === "cash" ? "Terminer · payé en espèces " : "Payer ") + ACStore.fmtFCFA(total + (trip.tip || 0)), "Screens._transportPay()", { size: "lg", icon: "lock", id: "yc-pay-ride" })}
     </div>`;
     Shell.render(container, { title: "Fin de course", back: "App.nav('home')", body, nav: false, hideSearch: true });
   };
@@ -494,6 +494,13 @@
   Screens._setTip = function (v) { trip.tip = v; trip.comment = (document.getElementById("ride-comment") || {}).value || ""; App.replace("transportEnd"); };
   Screens._ratingTag = function (btn) { btn.classList.toggle("on"); };
   Screens._transportPay = function () {
+    if (!trip.to) { UI.toast("La course est incomplète.", "error"); return; }
+    if (Screens._preferCard) { trip.method = "card"; Screens._preferCard = false; }
+    if (Screens.needCard(trip.method)) return;
+    const total = Math.max(FARE.min, trip.price - (trip.promo || 0)) + (trip.tip || 0);
+    Screens.requirePay("Course · " + ACStore.fmtFCFA(total), function () { Screens._transportPayNow(); });
+  };
+  Screens._transportPayNow = function () {
     const total = Math.max(FARE.min, trip.price - (trip.promo || 0)) + (trip.tip || 0);
     trip.comment = (document.getElementById("ride-comment") || {}).value || "";
     const dest = trip.to.name.split("(")[0].trim();
@@ -501,8 +508,9 @@
       amount: total, label: "Course · " + dest, service: "transport", pointsEarned: 25, method: trip.method,
       meta: { from: trip.from.name, to: trip.to.name, km: String(trip.km || "") },
       activity: { detail: { from: trip.from.name, to: trip.to.name, km: trip.km, driver: trip.driver.name, rating: trip.rating, vehicle: vehicleOf().label, duration: Math.round(etaSec(trip.km) / 60) } }
-    }), function () {
+    }), function (res) {
       const city = ACState.user.city;
+      if (window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu de course", label: "Course · " + dest });
       trip.status = "done"; trip.driver = null; trip.promo = 0; trip.tip = 0; trip.fastDemo = false; syncTrip();
       const rest = YCData.nearby(trip.to.lat, trip.to.lng, YCData.restaurantsIn(city), 1)[0];
       App.resetTo("paymentSuccess", { amount: total, title: "Course payée", body: "+25 points Youss Bonus ajoutés. Merci " + ACState.user.name + " !", next: "transport", rest: rest ? rest.id : "" });

@@ -6,7 +6,7 @@
   const IMG = "./assets/img/";
 
   const COUNTRIES = [
-    { code: "BJ", name: "Bénin", dial: "+229", flag: "🇧🇯", currency: "FCFA", cities: ["Cotonou", "Porto-Novo", "Ouidah", "Abomey", "Parakou"] },
+    { code: "BJ", name: "Bénin", dial: "+229", flag: "🇧🇯", currency: "FCFA", cities: ["Cotonou", "Porto-Novo", "Ouidah", "Abomey", "Parakou", "Bohicon"] },
     { code: "SN", name: "Sénégal", dial: "+221", flag: "🇸🇳", currency: "FCFA", cities: ["Dakar", "Saint-Louis", "Thiès", "Mbour"] },
     { code: "TG", name: "Togo", dial: "+228", flag: "🇹🇬", currency: "FCFA", cities: ["Lomé", "Kara", "Sokodé", "Kpalimé"] },
     { code: "GH", name: "Ghana", dial: "+233", flag: "🇬🇭", currency: "GHS", cities: ["Accra", "Kumasi", "Takoradi", "Cape Coast"] }
@@ -464,12 +464,23 @@
   const byId = (list, id) => list.find((x) => x.id === id);
   const fmtDate = (iso, opts) => {
     const d = new Date(iso + "T12:00:00");
-    return d.toLocaleDateString("fr-FR", opts || { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    const loc = (window.I18N && I18N.lang === "en") ? "en-GB" : "fr-FR";
+    return d.toLocaleDateString(loc, opts || { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   };
   const fmtDateShort = (iso) => fmtDate(iso, { day: "numeric", month: "short" });
   const minPrice = (ev) => Math.min.apply(null, ev.tickets.map((t) => t.price));
-  const cityOf = (name) => CITIES[name] || CITIES["Cotonou"];
   const countryOf = (code) => COUNTRIES.find((c) => c.code === code) || COUNTRIES[0];
+  const countryCodeOfCity = (name) => {
+    if (CITIES[name]) return CITIES[name].code;
+    const found = COUNTRIES.find((c) => c.cities.indexOf(name) >= 0);
+    return found ? found.code : "";
+  };
+  const cityOf = (name) => {
+    if (CITIES[name]) return CITIES[name];
+    const code = countryCodeOfCity(name);
+    const hub = code && countryOf(code).cities.find((n) => CITIES[n]);
+    return (hub && CITIES[hub]) || CITIES.Cotonou;
+  };
   const siteType = (id) => SITE_TYPES.find((t) => t.id === id) || SITE_TYPES[0];
 
   /* Index de recherche global : construit depuis les données réelles */
@@ -505,6 +516,10 @@
       }
       if (f.kind && f.kind !== "all" && item.kind !== f.kind) return false;
       if (f.city && item.city && item.city !== f.city) return false;
+      if (!f.city && f.countryCode && item.kind !== "service" && item.kind !== "destination") {
+        const code = item.city ? countryCodeOfCity(item.city) : "";
+        if (code && code !== f.countryCode) return false;
+      }
       if (f.rating && (item.rating || 0) < f.rating) return false;
       if (f.maxPrice && item.price && item.price > f.maxPrice) return false;
       if (f.available && item.available === false) return false;
@@ -518,11 +533,11 @@
   window.YCData = {
     IMG, COUNTRIES, CITIES, DESTINATIONS, RESTAURANTS, RESTAURANT_CATS, SELLERS, PRODUCTS, PRODUCT_CATS,
     EVENTS, EVENT_CATS, SITE_TYPES, SITES, DRIVERS, COURIERS, REWARDS, TIERS,
-    distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, siteType, search,
+    distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, countryCodeOfCity, siteType, search,
     restaurant: (id) => { const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r; }, product: (id) => byId(PRODUCTS, id), event: (id) => byId(allEvents(), id), site: (id) => byId(SITES, id), allEvents, extraDishes,
     seller: (id) => SELLERS[id], driverFor: (city, vehicle) => DRIVERS.find((d) => d.city === city && d.vehicle === vehicle) || DRIVERS.find((d) => d.city === city) || DRIVERS[0],
     courierFor: (city) => COURIERS.find((c) => c.city === city) || COURIERS[0],
-    restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => allEvents().filter((e) => e.city === city || (CITIES[city] && e.country === CITIES[city].country)),
+    restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => { const code = countryCodeOfCity(city); const country = code ? countryOf(code).name : ""; return allEvents().filter((e) => e.city === city || (country && e.country === country)); },
     sitesIn: (city) => SITES.filter((s) => s.city === city), productsBy: (sellerId) => PRODUCTS.filter((p) => p.seller === sellerId),
     tierFor: (points) => { let t = TIERS[0]; TIERS.forEach((x) => { if (points >= x.min) t = x; }); return t; },
     nextTier: (points) => TIERS.find((x) => x.min > points) || null

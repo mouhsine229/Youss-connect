@@ -7,7 +7,7 @@
   let current = null;      // { id, params }
   let ignoreNextHash = false;
 
-  const AUTH_FREE = { splash: 1, onboarding: 1, login: 1, signup: 1, otp: 1, forgotPassword: 1, about: 1, opsLogin: 1, opsOtp: 1, proJoin: 1, proLogin: 1 };
+  const AUTH_FREE = { splash: 1, onboarding: 1, login: 1, signup: 1, otp: 1, forgotPassword: 1, about: 1, terms: 1, privacy: 1, opsLogin: 1, opsOtp: 1, proJoin: 1, proLogin: 1 };
   /* « profile » et « productDetail » commencent aussi par « pro » : seule la cuisine (pro + majuscule) est un écran partenaire. */
   function isOpsScreen(id) { return /^ops[A-Z]/.test(id || ""); }
   function isKitchenScreen(id) { return /^pro[A-Z]/.test(id || ""); }
@@ -33,13 +33,17 @@
     return { id: path, params };
   }
 
-  function show(id, params) {
+  function show(id, params, opts) {
     params = params || {};
+    opts = opts || {};
+    const prevMain = document.getElementById("main");
+    const kept = opts.keepScroll && prevMain ? prevMain.scrollTop : 0;
     const prevId = current && current.id;
-    const fn = window.Screens && window.Screens[id];
+    let fn = window.Screens && window.Screens[id];
     if (!fn) {
       console.error("Unknown screen:", id);
       container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(id)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
+      if (window.I18N && I18N.apply) I18N.apply(document.body);
       return;
     }
     const opsScreen = isOpsScreen(id);
@@ -52,20 +56,30 @@
       sessionStorage.setItem("yc-after-login", encode(id, params));
       id = ACState.session.onboardingSeen ? "login" : "onboarding"; params = {};
     }
+    if (window.Screens && window.Screens[id]) fn = window.Screens[id];
     if (prevId && prevId !== id) {
       if (window.UI && UI.closeSheet) UI.closeSheet();
       if (window.YCScanner && YCScanner.stop && (prevId === "walletQrPay" || prevId === "culturalScanner")) YCScanner.stop();
+      if (prevId === "securityPin" && id !== "biometricSetup" && window.Screens && Screens._abandonPay) Screens._abandonPay();
     }
     current = { id, params: params || {} };
     document.dispatchEvent(new CustomEvent("yc:navigate", { detail: { id } }));
-    fn(container, current.params);
+    try { fn(container, current.params); }
+    catch (err) {
+      console.error(err);
+      container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Cet écran n'a pas pu s'afficher</p><p class="t-body text-ink-2 mb-4">Revenez en arrière et réessayez.</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
+    }
+    if (opts.keepScroll) container.querySelectorAll(".screen-enter").forEach((el) => { el.style.animation = "none"; });
     const main = document.getElementById("main");
-    if (main) main.scrollTop = 0;
-    window.scrollTo(0, 0);
+    if (main) main.scrollTop = kept;
+    if (!opts.keepScroll) window.scrollTo(0, 0);
     document.title = (id === "splash" ? "" : (titleFor(id) + " · ")) + "YOUSS CONNECT";
+    if (window.I18N && I18N.rememberTitle) I18N.rememberTitle(document.title);
+    if (window.I18N && I18N.apply) I18N.apply(document.body);
+    if (window.I18N && I18N.applyTitle) I18N.applyTitle();
   }
   function titleFor(id) {
-    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", opsHome: "Console KYA", opsLogin: "Console KYA", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Invitation resto" };
+    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", walletHistory: "Historique des transactions", addCard: "Carte bancaire", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", terms: "Conditions d'utilisation", privacy: "Politique de confidentialité", biometricSetup: "Biométrie", opsHome: "Console KYA", opsLogin: "Console KYA", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Invitation resto" };
     return map[id] || id.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
   }
 
@@ -85,9 +99,9 @@
     location.hash = hash;
     show(id, params);
   }
-  function replace(id, params) {
+  function replace(id, params, opts) {
     setHash(encode(id, params), true);
-    show(id, params);
+    show(id, params, opts);
   }
   function back() {
     const prev = stack.pop();

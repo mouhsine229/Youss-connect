@@ -4,7 +4,8 @@
   window.Screens = window.Screens || {};
   const { icon, esc, go } = UI;
 
-  const f = { type: "all", city: "all" };
+  const f = { type: "all", city: "pays" };
+  let seenCountry = "";
   const TYPE_INTRO = {
     monument: "Statues, places et édifices publics.",
     palais: "Anciennes cours royales et palais.",
@@ -20,25 +21,27 @@
 
   // Hub
   Screens.culture = function (container, params) {
+    if (seenCountry !== ACState.user.country) { seenCountry = ACState.user.country; if (!(params && params.city)) f.city = "pays"; }
     if (params && params.city) f.city = params.city;
     if (params && params.type) f.type = params.type;
-    const sites = YCData.SITES.filter((s) => (f.type === "all" || s.type === f.type) && (f.city === "all" || s.city === f.city));
+    const sites = YCData.SITES.filter((s) => (f.type === "all" || s.type === f.type) && (f.city === "all" || (f.city === "pays" ? s.country === ACState.user.country : s.city === f.city)));
     const city = ACState.user.city;
     const typeMeta = f.type !== "all" ? YCData.SITE_TYPES.find((t) => t.id === f.type) : null;
     const filtered = !!typeMeta;
     const near = filtered ? [] : YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES, 3);
     const catalogTitle = typeMeta ? typeMeta.label : "Monuments, musées et traditions";
-    const catalogSub = sites.length + (sites.length > 1 ? " lieux" : " lieu") + (f.city !== "all" ? " · " + f.city : "");
+    const placeLabel = f.city === "pays" ? ACState.user.country : f.city === "all" ? "" : f.city;
+    const catalogSub = sites.length + (sites.length > 1 ? " lieux" : " lieu") + (placeLabel ? " · " + placeLabel : "");
     const chips = `<div class="flex flex-col lg:flex-row gap-3 mb-4">
           <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
-          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Ville"><option value="all" ${f.city === "all" ? "selected" : ""}>Toutes les villes</option>${YCData.DESTINATIONS.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Lieu"><option value="pays" ${f.city === "pays" ? "selected" : ""}>${esc(ACState.user.country)}</option><option value="all" ${f.city === "all" ? "selected" : ""}>Toutes les villes</option>${YCData.DESTINATIONS.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
         </div>
         ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuType('all');" })}`;
     const body = `
       ${filtered ? "" : `<section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[200px] lg:min-h-[280px] flex items-end">
         ${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}<div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent"></div>
         <div class="relative p-5 lg:p-8 w-full flex flex-col lg:flex-row lg:items-end gap-4">
-          <div class="flex-1"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body text-white/80 mt-1 max-w-[560px]">Monuments, musées et sites à Cotonou, Dakar, Lomé et Accra.</p></div>
+          <div class="flex-1"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body mt-1 max-w-[560px] opacity-80">Monuments, musées et sites · ${esc(ACState.user.country)}.</p></div>
           <button type="button" onclick="App.nav('culturalScanner')" class="card-dark !bg-white/10 hover:!bg-white/15 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px]"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
         </div>
       </section>
@@ -140,7 +143,31 @@
     const s = YCData.site(id);
     UI.openSheet(`<h3 class="t-h3 mb-1">Visite guidée</h3><p class="t-small text-ink-2 mb-4">${esc(s.name)} · ${s.visit.duration}</p><div class="grid grid-cols-2 gap-3">${UI.select("vg-day", "Jour", ["Demain", "Samedi", "Dimanche"], "Samedi")}${UI.select("vg-time", "Heure", ["09:00", "10:30", "14:00", "16:00"], "10:30")}</div><div class="mt-3">${UI.select("vg-lang", "Langue du guide", ["Français", "English"], "Français")}</div><div class="mt-5">${UI.primaryButton("Réserver (" + s.visit.price.split("(")[0].trim() + ")", `Screens._bookVisitConfirm('${id}')`, { icon: "tour" })}</div>`);
   };
-  Screens._bookVisitConfirm = (id) => { const s = YCData.site(id); const when = document.getElementById("vg-day").value + " " + document.getElementById("vg-time").value; UI.closeSheet(); ACStore.addActivity({ service: "reservation", title: "Visite guidée · " + s.name, amount: null, status: "À venir", icon: "tour", detail: { when, place: s.place } }); ACStore.addNotification("Visite réservée", s.name + " · " + when + ". Votre guide vous attendra à l'entrée.", "culture", "activities"); ACStore.emit(); UI.toast("Visite réservée · " + when, "success"); };
+  function visitAmount(price) {
+    if (!price || /gratuit/i.test(price)) return 0;
+    const digits = String(price).replace(/\s/g, "").match(/(\d+)/);
+    return digits ? parseInt(digits[1], 10) : 0;
+  }
+  Screens._bookVisitConfirm = function (id) {
+    const s = YCData.site(id); if (!s) return;
+    const when = document.getElementById("vg-day").value + " " + document.getElementById("vg-time").value;
+    const amount = visitAmount(s.visit && s.visit.price);
+    UI.closeSheet();
+    if (amount && Screens.needCard(ACState.prefs.paymentMethod || "wallet")) return;
+    Screens.requirePay(amount ? "Visite · " + ACStore.fmtFCFA(amount) : "Réservation de visite", function () { Screens._bookVisitPaid(id, when, amount); });
+  };
+  Screens._bookVisitPaid = function (id, when, amount) {
+    const s = YCData.site(id); if (!s) return;
+    const done = function (res) {
+      ACStore.addActivity({ service: "reservation", title: "Visite guidée · " + s.name, amount: amount || null, status: "À venir", icon: "tour", detail: { when, place: s.place } });
+      ACStore.addNotification("Visite réservée", s.name + " · " + when + ". Votre guide vous attendra à l'entrée.", "culture", "activities");
+      if (amount && window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu de visite", label: s.name, lines: [["Quand", when]] });
+      UI.toast("Visite réservée · " + when, "success");
+      App.back();
+    };
+    if (!amount) { done(); return; }
+    ACStore.whenPaid(ACStore.pay({ amount: amount, label: "Visite guidée · " + s.name, service: "culture", pointsEarned: Math.round(amount / 100), method: ACState.prefs.paymentMethod || "wallet", activity: false }), done, function (res) { App.nav("paymentFailed", { retry: "cultureDetail", retryParams: id, amount: amount, reason: res.reason }); });
+  };
 
   /* Audio-guide : synthèse vocale du navigateur (repli : message) */
   let speaking = false;

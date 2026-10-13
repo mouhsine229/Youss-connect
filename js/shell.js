@@ -151,7 +151,7 @@
 
   // Sélecteur de ville (change la base de tous les services)
   function openCityPicker() {
-    UI.openSheet(`<h3 class="t-h3 mb-1">${t("your_city")}</h3><p class="t-small text-ink-2 mb-4">Change la ville des restos, des courses et de la carte.</p>
+    UI.openSheet(`<h3 class="t-h3 mb-1">${t("your_city")}</h3><p class="t-small text-ink-2 mb-4">Change le pays affiché : restaurants, événements, marché, culture, courses et carte.</p>
       <div class="grid grid-cols-2 gap-3">${YCData.DESTINATIONS.map((c) => {
         const city = YCData.CITIES[c]; const on = ACState.user.city === c;
         return `<button type="button" onclick="Shell.pickCity('${c}')" class="relative h-28 rounded-2xl overflow-hidden text-left ${on ? "ring-2 ring-gold" : ""}">

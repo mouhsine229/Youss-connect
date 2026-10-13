@@ -11,7 +11,7 @@
 
   function results() {
     const c = YCData.cityOf(ACState.user.city);
-    const list = YCData.search(f.q, { kind: f.kind, city: f.city || null, rating: f.rating || null, maxPrice: f.maxPrice || null, available: f.available, maxKm: f.maxKm || null, from: f.maxKm ? { lat: c.lat, lng: c.lng } : null });
+    const list = YCData.search(f.q, { kind: f.kind, city: f.city || null, countryCode: f.city ? "" : ACState.user.countryCode, rating: f.rating || null, maxPrice: f.maxPrice || null, available: f.available, maxKm: f.maxKm || null, from: f.maxKm ? { lat: c.lat, lng: c.lng } : null });
     const groups = {}; list.forEach((r) => { (groups[r.kind] = groups[r.kind] || []).push(r); });
     return { list, groups };
   }

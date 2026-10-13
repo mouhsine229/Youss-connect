@@ -58,7 +58,7 @@
       <div class="card p-4">${details}${UI.row("Référence", esc(tx ? tx.ref : a.id.toUpperCase()))}${UI.row("Paiement", a.method === "cash" ? "Espèces" : a.method === "mobile" ? "Paiement mobile" : a.amount != null ? "Youss Wallet" : "Aucun")}</div>
       ${a.service === "transport" && d.from && d.to ? `<div class="card overflow-hidden"><div id="act-map" class="h-44 bg-surface-low"></div></div>` : ""}
       <div class="grid grid-cols-2 gap-3">${actions.map((x) => UI.button(x[1], x[2], { variant: x[0] === "cancel" ? "outline" : x[0] === "replay" || x[0] === "qr_code_2" ? "primary" : "outline", icon: x[0] })).join("")}</div>
-      ${a.amount != null ? UI.secondaryButton("Télécharger le reçu", "UI.toast('Reçu envoyé par e-mail (démo).','success')", { icon: "receipt_long" }) : ""}</div>`;
+      ${a.amount != null ? `<div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le reçu", "Screens._activityReceipt('" + a.id + "','down')", { icon: "download" })}${UI.secondaryButton("Partager", "Screens._activityReceipt('" + a.id + "','share')", { icon: "share" })}</div>` : ""}</div>`;
     Shell.render(container, { title: "Détail de l'activité", back: true, body, nav: false, showNav: true, onMount: () => {
       if (a.service === "transport" && d.from && d.to && document.getElementById("act-map")) {
         const c = YCData.cityOf(ACState.user.city);
@@ -70,4 +70,12 @@
     } });
   };
   Screens._cancelActivity = (id) => UI.confirm({ title: "Annuler la réservation ?", body: "L'établissement sera prévenu immédiatement.", okLabel: "Annuler la réservation", danger: true, icon: "event_busy", onOk: `(function(){var a=ACState.activities.find(function(x){return x.id==='${id}'});if(a){a.status='Annulé';ACStore.emit();UI.toast('Réservation annulée.','info');}})()` });
+  Screens._activityReceipt = function (id, mode) {
+    const a = ACState.activities.find((x) => x.id === id);
+    if (!a || !window.YCReceipt) return;
+    const tx = ACState.wallet.transactions.find((t) => t.label === a.title || (t.label && a.title && t.label.indexOf(a.title) >= 0));
+    const r = YCReceipt.fromTx(tx || { label: a.title, amount: -(a.amount || 0), ref: String(a.id).toUpperCase(), date: a.subtitle || "", status: "success", method: a.method }, { amount: a.amount, method: a.method === "cash" ? "Espèces" : a.method === "mobile" ? "Paiement mobile" : a.method === "card" ? "Carte bancaire" : "Youss Wallet" });
+    if (mode === "share") YCReceipt.share(r);
+    else { YCReceipt.download(r); UI.toast("Reçu téléchargé.", "success"); }
+  };
 })();

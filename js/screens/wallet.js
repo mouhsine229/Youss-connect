@@ -31,32 +31,54 @@
   }
 
   Screens.wallet = function (container) {
-    const tx = ACState.wallet.transactions.filter((t) => wf.filter === "all" || (wf.filter === "in" && t.type === "credit") || (wf.filter === "out" && t.type === "debit") || (wf.filter === "pending" && t.status === "pending"));
     const m = monthly();
     const actions = [["north_east", I18N.t("send"), "walletSend"], ["south_west", I18N.t("receive"), "walletReceive"], ["payments", I18N.t("pay"), "walletPay"], ["add", I18N.t("topup"), "walletTopup"], ["account_balance", I18N.t("withdraw"), "walletWithdraw"], ["qr_code_scanner", I18N.t("qrpay"), "walletQrPay"]];
     const body = `
       <div class="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8 items-start min-w-0 max-w-full">
         <div class="space-y-4 lg:sticky lg:top-24 min-w-0 max-w-full">
           <section class="card-dark p-5 sm:p-6 min-w-0">
-            <div class="flex items-center justify-between gap-2"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-white/70 hover:text-white flex-shrink-0" aria-label="${wf.masked ? "Afficher le solde" : "Masquer le solde"}">${icon(wf.masked ? "visibility" : "visibility_off", "text-[20px]")}</button></div>
+            <div class="flex items-center justify-between gap-2"><span class="t-caption text-gold">${I18N.t("balance")}</span><button type="button" onclick="Screens._wMask()" class="text-inverse-ink opacity-80 hover:opacity-100 flex-shrink-0" aria-label="${wf.masked ? "Afficher le solde" : "Masquer le solde"}">${icon(wf.masked ? "visibility" : "visibility_off", "text-[22px]")}</button></div>
             <p class="t-h1 sm:t-display mt-2 break-words leading-tight">${wf.masked ? "•••••• FCFA" : ACStore.fmtFCFA(ACState.wallet.balance)}</p>
-            <p class="t-small text-white/70 mt-1 truncate">${esc(ACState.user.fullName)} · ${esc(ACState.user.phone)}</p>
-            <p class="t-caption text-white/50 mt-4">30 derniers jours</p>
-            <div class="wallet-kpi-grid mt-2"><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Entrées</p><p class="t-small sm:t-title text-success truncate tabular-nums">+${ACStore.fmtFCFA(m.inn)}</p></div><div class="wallet-kpi-cell"><p class="t-caption text-white/60">Sorties</p><p class="t-small sm:t-title truncate tabular-nums">−${ACStore.fmtFCFA(m.out)}</p></div></div>
+            <p class="t-small mt-1 truncate opacity-80">${esc(ACState.user.fullName)} · ${esc(ACState.user.phone)}</p>
+            <p class="t-caption mt-4 opacity-70">30 derniers jours</p>
+            <div class="wallet-kpi-grid mt-2"><div class="wallet-kpi-cell"><p class="t-caption opacity-70">Entrées</p><p class="t-small sm:t-title text-success truncate tabular-nums">+${ACStore.fmtFCFA(m.inn)}</p></div><div class="wallet-kpi-cell"><p class="t-caption opacity-70">Sorties</p><p class="t-small sm:t-title truncate tabular-nums">−${ACStore.fmtFCFA(m.out)}</p></div></div>
           </section>
           <section class="wallet-action-grid" aria-label="Actions Wallet">${actions.map(walletActionBtn).join("")}</section>
           <p class="t-small text-ink-3 flex gap-2 min-w-0">${icon("info", "text-[16px] flex-shrink-0 mt-0.5")}<span class="min-w-0">${I18N.t("conceptual")}</span></p>
         </div>
-        <section class="min-w-0 max-w-full">
-          ${UI.sectionTitle(I18N.t("recent"), "Relevé", "UI.toast('Relevé PDF envoyé par e-mail (démo).','success')")}
-          <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-0.5 -mx-1 px-1 sm:mx-0 sm:px-0">${[["all", "Tout"], ["in", "Entrées"], ["out", "Sorties"], ["pending", "En attente"]].map((x) => UI.chip(x[1], `Screens._wFilter('${x[0]}')`, wf.filter === x[0])).join("")}</div>
-          ${tx.length ? `<div class="card divide-y divide-line">${tx.slice(0, 20).map(txRow).join("")}</div>` : UI.emptyState({ icon: "receipt_long", title: "Aucune transaction", body: "Vos opérations apparaîtront ici." })}
+        <section class="min-w-0 max-w-full space-y-3">
+          <div class="card p-5">
+            <p class="t-caption text-ink-3">Confidentialité</p>
+            <h2 class="t-h3 mt-1">Historique des transactions</h2>
+            <p class="t-small text-ink-2 mt-1">Le détail des opérations n'est pas affiché sur cet écran. Ouvrez l'historique pour le consulter, le télécharger ou le partager.</p>
+            ${UI.primaryButton("Historique des transactions", "App.nav('walletHistory')", { size: "lg", icon: "receipt_long", cls: "mt-4" })}
+          </div>
         </section>
       </div>`;
     Shell.render(container, { title: I18N.t("wallet"), subtitle: "Solde de démo", body, nav: "wallet" });
   };
-  Screens._wMask = () => { wf.masked = !wf.masked; App.replace("wallet"); };
-  Screens._wFilter = (f) => { wf.filter = f; App.replace("wallet"); };
+  Screens._wMask = () => { wf.masked = !wf.masked; App.replace("wallet", {}, { keepScroll: true }); };
+  Screens._wFilter = (f) => { wf.filter = f; App.replace("walletHistory", {}, { keepScroll: true }); };
+
+  Screens.walletHistory = function (container) {
+    const tx = ACState.wallet.transactions.filter((t) => wf.filter === "all" || (wf.filter === "in" && t.type === "credit") || (wf.filter === "out" && t.type === "debit") || (wf.filter === "pending" && t.status === "pending"));
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">${[["all", "Tout"], ["in", "Entrées"], ["out", "Sorties"], ["pending", "En attente"]].map((x) => UI.chip(x[1], `Screens._wFilter('${x[0]}')`, wf.filter === x[0])).join("")}</div>
+      ${tx.length ? `<div class="card divide-y divide-line">${tx.map(txRow).join("")}</div>` : UI.emptyState({ icon: "receipt_long", title: "Aucune transaction", body: "Vos opérations apparaîtront ici." })}
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le relevé", "Screens._downloadStatement()", { icon: "download" })}${UI.secondaryButton("Partager", "Screens._shareStatement()", { icon: "share" })}</div>
+    </div>`;
+    Shell.render(container, { title: "Historique des transactions", subtitle: tx.length + " opération" + (tx.length > 1 ? "s" : ""), back: true, body, nav: false, showNav: true });
+  };
+  Screens._downloadStatement = function () {
+    if (window.YCReceipt) YCReceipt.statement(ACState.wallet.transactions);
+    UI.toast("Relevé téléchargé.", "success");
+  };
+  Screens._shareStatement = function () {
+    const lines = ACState.wallet.transactions.slice(0, 12).map((t) => (t.type === "credit" ? "+" : "−") + ACStore.fmtFCFA(Math.abs(t.amount)) + " · " + t.label);
+    const text = "Historique YOUSS CONNECT\n" + lines.join("\n");
+    if (navigator.share) navigator.share({ title: "Historique YOUSS CONNECT", text: text }).catch(function () {});
+    else Screens._downloadStatement();
+  };
 
   Screens.walletTxnDetail = function (container, params) {
     const t = ACState.wallet.transactions.find((x) => x.id === params.id);
@@ -66,12 +88,21 @@
         <p class="t-display mt-3 ${t.type === "credit" ? "text-success" : ""}">${t.type === "credit" ? "+" : "−"}${ACStore.fmtFCFA(Math.abs(t.amount))}</p><p class="t-title mt-1">${esc(t.label)}</p><p class="t-small text-ink-2">${esc(t.date)}</p><div class="mt-3">${UI.badge(st[0], st[1])}</div>
         ${t.reason ? `<p class="t-small text-danger mt-2">${esc(t.reason)}</p>` : ""}</div>
       <div class="card p-4">${UI.row("Référence", esc(t.ref || "Non attribuée"))}${UI.row("Service", (t.service || "wallet").charAt(0).toUpperCase() + (t.service || "wallet").slice(1))}${UI.row("Moyen", t.external ? "Paiement mobile (conceptuel)" : "Youss Wallet")}${UI.row("Statut", st[0])}</div>
-      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Reçu PDF", "UI.toast('Reçu envoyé par e-mail (démo).','success')", { icon: "download" })}${UI.secondaryButton("Signaler", "App.nav('report')", { icon: "flag" })}</div>
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le reçu", `Screens._txReceipt('${t.id}','down')`, { icon: "download" })}${UI.secondaryButton("Partager le reçu", `Screens._txReceipt('${t.id}','share')`, { icon: "share" })}</div>
+      <div>${UI.secondaryButton("Signaler", "App.nav('report')", { icon: "flag" })}</div>
       ${t.status === "failed" ? UI.primaryButton("Réessayer le paiement", `App.nav('${t.retry || (String(t.label).indexOf("QR") >= 0 ? "walletQrPay" : "walletPay")}')`, { icon: "replay" }) : ""}
       ${t.status === "pending" ? `<div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Annuler", `Screens._cancelPending('${t.id}')`, { icon: "cancel" })}${UI.primaryButton("Confirmer", `Screens._confirmPending('${t.id}')`, { icon: "check" })}</div>` : ""}
     </div>` : UI.emptyState({ icon: "receipt_long", title: "Transaction introuvable", body: "" });
     Shell.render(container, { title: "Détail de la transaction", back: true, body, nav: false, showNav: true });
   };
+  Screens._txReceipt = function (id, mode) {
+    const t = ACState.wallet.transactions.find((x) => x.id === id);
+    if (!t || !window.YCReceipt) return;
+    const r = YCReceipt.fromTx(t);
+    if (mode === "share") YCReceipt.share(r);
+    else { YCReceipt.download(r); UI.toast("Reçu téléchargé.", "success"); }
+  };
+
   Screens._cancelPending = (id) => {
     const t = ACState.wallet.transactions.find((x) => x.id === id);
     if (!t || t.status !== "pending") return;
@@ -93,11 +124,12 @@
   const tp = { method: "mobile", amount: 0 };
   Screens.walletTopup = function (container) {
     const amounts = [2000, 5000, 10000, 25000, 50000, 100000];
-    const methods = [["mobile", "smartphone", "Paiement mobile", "Opérateur à définir · conceptuel"], ["card", "credit_card", "Carte bancaire", "Visa / Mastercard · conceptuel"], ["agent", "store", "Agent YOUSS CONNECT", "Dépôt en espèces chez un agent"]];
+    const saved = (ACState.wallet.cards || [])[0];
+    const methods = [["mobile", "smartphone", "Paiement mobile", "Opérateur à définir · conceptuel"], ["card", "credit_card", "Carte bancaire", saved ? saved.brand + " · " + saved.last4 + " · expire " + saved.exp : "Saisir les coordonnées de test"], ["agent", "store", "Agent YOUSS CONNECT", "Dépôt en espèces chez un agent"]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="card p-5"><p class="t-caption text-ink-3 mb-2">Montant</p><div class="amount-pick-grid">${amounts.map((a) => `<button type="button" onclick="Screens._topupPick(${a})" class="chip justify-center h-12 min-w-0 ${tp.amount === a ? "on" : ""}">${a.toLocaleString("fr-FR")}</button>`).join("")}</div>
         <label class="block mt-3"><span class="label">Ou montant personnalisé (FCFA)</span><input id="topup-amount" type="number" inputmode="numeric" min="500" step="500" value="${tp.amount || ""}" placeholder="Ex. 15 000" class="input input-lg text-xl font-bold" oninput="Screens._topupCustom(this.value)"/></label></div>
-      <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Méthode</p>${methods.map((m) => `<button type="button" onclick="Screens._topupMethod('${m[0]}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${tp.method === m[0] ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[1])}</span><span class="flex-1"><span class="block t-title">${m[2]}</span><span class="block t-small text-ink-2">${m[3]}</span></span>${tp.method === m[0] ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>
+      <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Méthode</p>${methods.map((m) => `<button type="button" onclick="Screens._topupMethod('${m[0]}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${tp.method === m[0] ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m[1])}</span><span class="flex-1"><span class="block t-title">${m[2]}</span><span class="block t-small text-ink-2">${m[3]}</span></span>${tp.method === m[0] ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}${tp.method === "card" ? `<div class="pt-2">${Screens.cardAddButton()}</div>` : ""}</div>
       ${UI.primaryButton("Recharger" + (tp.amount ? " · " + ACStore.fmtFCFA(tp.amount) : ""), "Screens._doTopup()", { size: "lg", icon: "add", id: "topup-go" })}
       <p class="t-small text-ink-3 text-center">${I18N.t("conceptual")}</p></div>`;
     Shell.render(container, { title: "Recharger mon Wallet", back: true, body, nav: false, showNav: true });
@@ -113,13 +145,23 @@
   Screens._doTopup = function () {
     const amount = tp.amount || parseInt((document.getElementById("topup-amount") || {}).value, 10);
     if (!amount || amount < 500) { UI.toast("Montant minimum : 500 FCFA.", "error"); return; }
+    if (tp.method === "card" && Screens.needCard("card")) return;
+    Screens.requirePay("Rechargement · " + ACStore.fmtFCFA(amount), function () { Screens._doTopupPaid(amount); });
+  };
+  Screens._doTopupPaid = function (amount) {
     if (tp.method === "agent") {
       const tx = ACStore.addTransaction({ label: "Dépôt chez un agent", amount, type: "credit", status: "pending", service: "wallet", balanceApplied: false });
       ACStore.emit();
       App.resetTo("paymentPending", { amount, title: "Dépôt en attente", body: "Présentez ce code à un agent YOUSS CONNECT. Le solde sera crédité après validation.", code: String(Math.floor(100000 + Math.random() * 899999)), txid: tx.id });
       return;
     }
-    ACStore.whenPaid(ACStore.creditWallet(amount, tp.method === "card" ? "Rechargement par carte" : "Rechargement par paiement mobile"), function () { tp.amount = 0; App.resetTo("paymentSuccess", { amount, title: "Wallet rechargé", body: "Votre nouveau solde est de " + ACStore.fmtFCFA(ACState.wallet.balance) + ".", next: "wallet" }); }, function (res) { UI.toast(res.message || "Rechargement impossible.", "error"); });
+    const card = (ACState.wallet.cards || [])[0];
+    const label = tp.method === "card" ? "Rechargement par carte" + (card ? " · " + card.brand + " " + card.last4 : "") + " (démo)" : "Rechargement par paiement mobile";
+    ACStore.whenPaid(ACStore.creditWallet(amount, label), function (res) {
+      tp.amount = 0;
+      if (window.YCReceipt && res && res.tx) YCReceipt.deliver(res.tx, { title: "Reçu de rechargement", method: tp.method === "card" ? "Carte bancaire · démo" : "Paiement mobile" });
+      App.resetTo("paymentSuccess", { amount, title: "Wallet rechargé", body: "Votre nouveau solde est de " + ACStore.fmtFCFA(ACState.wallet.balance) + ". Aucun débit bancaire réel n'a été effectué.", next: "wallet" });
+    }, function (res) { UI.toast(res.message || "Rechargement impossible.", "error"); });
   };
 
   // Envoyer
@@ -147,23 +189,67 @@
     UI.openSheet(`<h3 class="t-h3 mb-3">Confirmer l'envoi</h3><div class="card p-4 mb-4">${UI.row("Destinataire", esc(name))}${UI.row("Montant", ACStore.fmtFCFA(amount), true)}${UI.row("Frais", fee ? ACStore.fmtFCFA(fee) + " (hors réseau)" : "Gratuit")}${fee ? UI.row("Total débité", ACStore.fmtFCFA(amount + fee), true) : ""}${note ? UI.row("Note", esc(note)) : ""}</div>${UI.primaryButton("Confirmer avec mon code PIN", "UI.closeSheet();App.nav('securityPin',{action:'walletSendConfirm'})", { icon: "lock" })}`);
   };
 
-  // Code PIN (confirmation sécurisée)
+  // Confirmation PIN ou empreinte, obligatoire avant un paiement.
+  let purchaseJob = null;
+  Screens.bioReady = function () {
+    return ACState.user.biometricEnrolled !== false && ACState.prefs.biometric !== false;
+  };
+  Screens.requirePay = function (label, run) {
+    if (typeof run !== "function") return;
+    purchaseJob = run;
+    App.nav("securityPin", { action: "purchase", label: label || "Paiement" });
+  };
+  Screens._abandonPay = function () { purchaseJob = null; };
+  Screens.needCard = function (method) {
+    if (method !== "card") return false;
+    if ((ACState.wallet.cards || []).length) return false;
+    if (App.current) sessionStorage.setItem("yc-after-card", JSON.stringify({ id: App.current.id, params: App.current.params || {} }));
+    App.nav("addCard");
+    UI.toast("Ajoutez une carte pour continuer.", "info");
+    return true;
+  };
+  Screens.cardAddButton = function () {
+    return `<button type="button" onclick="Screens._openAddCard()" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left"><span class="menu-icon">${icon("add_card")}</span><span class="flex-1"><span class="block t-title">Ajouter une carte bancaire</span><span class="block t-small text-ink-2">Démo · le numéro complet n'est pas enregistré</span></span></button>`;
+  };
+  Screens._openAddCard = function () {
+    if (App.current) sessionStorage.setItem("yc-after-card", JSON.stringify({ id: App.current.id, params: App.current.params || {} }));
+    App.nav("addCard");
+  };
+  function syncCardMethods() {
+    const cards = ACState.wallet.cards || [];
+    ACState.paymentMethods = (ACState.paymentMethods || []).filter((m) => m.type !== "card");
+    cards.forEach((c) => {
+      ACState.paymentMethods.push({ id: c.id, type: "card", label: c.brand + " · " + c.last4, sub: "Expire " + c.exp + " · " + c.holder, icon: "credit_card", last4: c.last4 });
+    });
+  }
+  syncCardMethods();
+  Screens._syncCardMethods = syncCardMethods;
+
   Screens.securityPin = function (container, params) {
     params = params || {}; const action = params.action || "confirm";
-    const titles = { walletSendConfirm: "Confirmer l'envoi", changePin: "Nouveau code PIN", walletQrPayConfirm: "Confirmer le paiement", withdraw: "Confirmer le retrait", confirm: "Confirmation sécurisée" };
+    const titles = { walletSendConfirm: "Confirmer l'envoi", changePin: "Nouveau code PIN", walletQrPayConfirm: "Confirmer le paiement", withdraw: "Confirmer le retrait", purchase: "Confirmer le paiement", confirm: "Confirmation sécurisée" };
+    const bio = Screens.bioReady();
     const body = `<div class="max-w-narrow mx-auto w-full flex-1 flex flex-col items-center text-center py-6 space-y-5">
-      <div class="w-16 h-16 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("lock", "text-[30px]")}</div>
-      <div><h2 class="t-h2">${titles[action] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">Entrez votre code PIN à 4 chiffres. Démo : <b>0000</b></p></div>
-      <div class="flex gap-2 sm:gap-3 max-w-full justify-center px-2" onpaste="Screens._pinPaste(event)">${[0, 1, 2, 3].map((i) => `<input id="pin-${i}" type="password" inputmode="numeric" maxlength="1" class="input input-lg w-12 sm:w-14 flex-1 max-w-[3.5rem] text-center text-xl sm:text-2xl font-extrabold px-0" oninput="Screens._pinInput(${i},this)" onkeydown="if(event.key==='Backspace'&&!this.value&&${i}>0)document.getElementById('pin-${i - 1}').focus()" aria-label="Chiffre ${i + 1}"/>`).join("")}</div>
+      <div class="w-16 h-16 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon(bio ? "fingerprint" : "lock", "text-[30px]")}</div>
+      <div><h2 class="t-h2">${titles[action] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">${params.label ? esc(params.label) + "<br>" : ""}Code PIN à 4 chiffres ou empreinte. Démo : <b>0000</b></p></div>
+      <div class="flex gap-2 sm:gap-3 max-w-full justify-center px-2" onpaste="Screens._pinPaste(event)">${[0, 1, 2, 3].map((i) => `<input id="pin-${i}" type="password" inputmode="numeric" maxlength="1" autocomplete="off" class="input input-lg w-12 sm:w-14 flex-1 max-w-[3.5rem] text-center text-xl sm:text-2xl font-extrabold px-0" oninput="Screens._pinInput(${i},this)" onkeydown="if(event.key==='Backspace'&&!this.value&&${i}>0)document.getElementById('pin-${i - 1}').focus()" aria-label="Chiffre ${i + 1}"/>`).join("")}</div>
       ${UI.error("pin-error")}
-      <button type="button" onclick="Screens._biometric('${action}')" class="btn btn-outline">${icon("fingerprint", "text-[22px]")}Utiliser la biométrie</button>
-      <div class="w-full">${UI.primaryButton("Confirmer", `Screens._pinConfirm('${action}')`, { size: "lg" })}</div></div>`;
-    Shell.render(container, { title: "Code PIN", back: true, body, nav: false, hideSearch: true });
+      <button type="button" onclick="Screens._biometric('${action}')" class="btn btn-outline">${icon("fingerprint", "text-[22px]")}${bio ? "Utiliser l'empreinte" : "Enregistrer mon empreinte"}</button>
+      <div class="w-full">${UI.primaryButton("Confirmer", `Screens._pinConfirm('${action}')`, { size: "lg", icon: "lock" })}</div></div>`;
+    Shell.render(container, { title: "Confirmer", back: true, body, nav: false, hideSearch: true });
     setTimeout(() => { const f = document.getElementById("pin-0"); if (f) f.focus(); }, 50);
   };
   Screens._pinInput = (i, el) => { el.value = el.value.replace(/\D/g, "").slice(-1); if (el.value && i < 3) document.getElementById("pin-" + (i + 1)).focus(); };
   Screens._pinPaste = (ev) => { const t = (ev.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 4); if (!t) return; ev.preventDefault(); t.split("").forEach((c, i) => { const el = document.getElementById("pin-" + i); if (el) el.value = c; }); };
-  Screens._biometric = (action) => { UI.toast("Empreinte reconnue (simulation).", "success"); setTimeout(() => Screens._pinDone(action), 500); };
+  Screens._biometric = function (action) {
+    if (!Screens.bioReady()) {
+      UI.toast("Enregistrez votre empreinte pour payer ainsi.", "info");
+      App.nav("biometricSetup", { next: "securityPin", action: action || "purchase" });
+      return;
+    }
+    UI.toast("Empreinte reconnue.", "success");
+    Screens._pinDone(action);
+  };
   Screens._pinConfirm = function (action) {
     const wait = window.YCGuard && YCGuard.blocked("pin");
     if (wait) return UI.showError("pin-error", YCGuard.waitMsg(wait));
@@ -190,10 +276,16 @@
         App.resetTo("paymentPending", { amount: total, title: "Envoi en attente", body: "Le destinataire n'est pas encore sur YOUSS CONNECT : il recevra un SMS pour retirer les fonds sous 72 h.", txid: tx.id });
         return;
       }
-      ACStore.whenPaid(ACStore.payFromWallet({ amount: s.amount, label: "Envoi à " + s.name.split("·")[0].trim() + (s.note ? " · " + s.note : ""), service: "wallet" }), () => { pendingSend = null; App.resetTo("paymentSuccess", { amount: s.amount, title: "Argent envoyé", body: s.name.split("·")[0].trim() + " a reçu " + ACStore.fmtFCFA(s.amount) + ".", next: "wallet" }); }, (res) => App.nav("paymentFailed", { retry: "walletSend", amount: s.amount, reason: res.reason }));
+      ACStore.whenPaid(ACStore.payFromWallet({ amount: s.amount, label: "Envoi à " + s.name.split("·")[0].trim() + (s.note ? " · " + s.note : ""), service: "wallet" }), (res) => { pendingSend = null; if (window.YCReceipt && res && res.tx) YCReceipt.deliver(res.tx, { title: "Reçu d'envoi" }); App.resetTo("paymentSuccess", { amount: s.amount, title: "Argent envoyé", body: s.name.split("·")[0].trim() + " a reçu " + ACStore.fmtFCFA(s.amount) + ".", next: "wallet" }); }, (res) => App.nav("paymentFailed", { retry: "walletSend", amount: s.amount, reason: res.reason }));
     } else if (action === "changePin") { UI.toast("Code PIN mis à jour.", "success"); App.resetTo("security"); }
     else if (action === "walletQrPayConfirm") Screens._confirmQrPayPaid();
     else if (action === "withdraw") Screens._doWithdrawPaid();
+    else if (action === "purchase" && purchaseJob) {
+      const job = purchaseJob;
+      purchaseJob = null;
+      try { job(); }
+      catch (err) { console.error(err); UI.toast("Le paiement n'a pas abouti. Réessayez.", "error"); }
+    }
     else App.back();
   };
 
@@ -267,13 +359,12 @@
     const p = pendingQrPay || {}; let amount = p.amount;
     if (!amount) { const input = document.getElementById("yc-qrpay-amount"); amount = parseInt(input && input.value, 10); if (!isFinite(amount) || amount < 100) { UI.toast("Saisissez un montant valide.", "error"); return; } pendingQrPay.amount = amount; }
     UI.closeSheet();
-    if (amount >= 20000) { App.nav("securityPin", { action: "walletQrPayConfirm" }); return; }
-    Screens._confirmQrPayPaid();
+    App.nav("securityPin", { action: "walletQrPayConfirm" });
   };
   Screens._confirmQrPayPaid = function () {
     const p = pendingQrPay || {}; const amount = p.amount;
     const label = "Paiement QR · " + (p.name || p.to || "Marchand YOUSS CONNECT");
-    ACStore.whenPaid(ACStore.payFromWallet({ amount, label, service: "wallet", pointsEarned: Math.round(amount / 500) }), () => { pendingQrPay = null; App.resetTo("paymentSuccess", { amount, title: "Paiement effectué", body: label, next: "wallet" }); }, (res) => App.nav("paymentFailed", { retry: "walletQrPay", amount, reason: res.reason }));
+    ACStore.whenPaid(ACStore.payFromWallet({ amount, label, service: "wallet", pointsEarned: Math.round(amount / 500) }), (res) => { pendingQrPay = null; if (window.YCReceipt && res && res.tx) YCReceipt.deliver(res.tx, { title: "Reçu QR Pay" }); App.resetTo("paymentSuccess", { amount, title: "Paiement effectué", body: label, next: "wallet" }); }, (res) => App.nav("paymentFailed", { retry: "walletQrPay", amount, reason: res.reason }));
   };
   Screens._simulateQrScan = function () { YCScanner.stop(); const city = YCData.cityOf(ACState.user.city); const market = city.poi.find((p) => p.kind === "marche") || city.poi[0]; const amount = 1500 + Math.round(Math.random() * 30) * 100; Screens._qrPayFromScan({ type: "pay", to: "+" + ACState.user.dial.replace("+", "") + " 00 00 00 00", name: market.name + " · Stand 42", amount }); };
 
@@ -324,15 +415,22 @@
         { icon: "confirmation_number", label: "Événements à venir", sub: "Ce soir à " + esc(ACState.user.city), onclick: "App.nav('events')" },
         { icon: "workspace_premium", label: "+25 points Youss Bonus", sub: "Voir mes récompenses", onclick: "App.nav('rewards')" }
       ]) : ""}
-      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Reçu", "UI.toast('Reçu envoyé par e-mail (démo).','success')", { icon: "receipt_long" })}${UI.primaryButton(params.next === "wallet" ? "Retour au Wallet" : I18N.t("home_btn"), params.next === "wallet" ? "App.resetTo('wallet')" : "App.resetTo('home')")}</div></div>`;
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le reçu", "Screens._successReceipt('down')", { icon: "download" })}${UI.secondaryButton("Partager le reçu", "Screens._successReceipt('share')", { icon: "share" })}</div>
+      ${UI.primaryButton(params.next === "wallet" ? "Retour au Wallet" : I18N.t("home_btn"), params.next === "wallet" ? "App.resetTo('wallet')" : "App.resetTo('home')")}</div>`;
     Shell.render(container, { title: params.title || "Paiement réussi", back: "App.resetTo('home')", body, nav: false, hideSearch: true });
+  };
+  Screens._successReceipt = function (mode) {
+    const r = window.YCReceipt && YCReceipt.current();
+    if (!r) { UI.toast("Aucun reçu disponible pour cette opération.", "info"); return; }
+    if (mode === "share") YCReceipt.share(r);
+    else { YCReceipt.download(r); UI.toast("Reçu téléchargé.", "success"); }
   };
   Screens.paymentPending = function (container, params) {
     const amount = parseInt(params.amount, 10) || 0;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       ${UI.successHero({ icon: "hourglass_top", tone: "warn", title: params.title || "Paiement en attente", body: params.body || "La confirmation arrivera dès que le réseau sera disponible." })}
       <div class="card p-5 text-center">${amount ? `<p class="t-display">${ACStore.fmtFCFA(amount)}</p>` : ""}${params.code ? `<p class="t-caption text-ink-3 mt-3">Code de retrait / dépôt</p><p class="t-h1 tracking-[0.3em]">${esc(params.code)}</p><p class="t-small text-ink-2">Valable 24 h · ne le partagez qu'avec l'agent</p>` : `<div class="flex items-center justify-center gap-2 mt-2">${UI.spinner("!w-5 !h-5 !border-2")}<span class="t-small text-ink-2">Traitement en cours…</span></div>`}</div>
-      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Mes transactions", "App.resetTo('wallet')", { icon: "receipt_long" })}${UI.primaryButton("Simuler la confirmation", `Screens._confirmPending('${esc(params.txid || "")}')`, { icon: "check" })}</div></div>`;
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Historique des transactions", "App.nav('walletHistory')", { icon: "receipt_long" })}${UI.primaryButton("Simuler la confirmation", `Screens._confirmPending('${esc(params.txid || "")}')`, { icon: "check" })}</div></div>`;
     Shell.render(container, { title: "En attente", back: "App.resetTo('wallet')", body, nav: false, hideSearch: true });
   };
   Screens._confirmPending = (txid) => {
@@ -357,6 +455,7 @@
     if (a) a.status = "Terminé";
     ACStore.addNotification("Opération confirmée", t.label + " · " + ACStore.fmtFCFA(Math.abs(t.amount)), "wallet", "wallet");
     ACStore.emit();
+    if (window.YCReceipt) YCReceipt.deliver(t, { title: "Reçu YOUSS CONNECT" });
     App.resetTo("paymentSuccess", { amount: Math.abs(t.amount), title: "Opération confirmée", body: t.type === "credit" ? "Votre solde a été crédité." : "L'opération est confirmée.", next: "wallet" });
   };
   Screens.paymentFailed = function (container, params) {
@@ -369,5 +468,81 @@
       ${amount ? `<div class="card p-5 text-center"><p class="t-caption text-ink-3">Montant demandé</p><p class="t-display">${ACStore.fmtFCFA(amount)}</p><p class="t-small text-ink-2 mt-1">Solde disponible : ${ACStore.fmtFCFA(ACState.wallet.balance)}</p></div>` : ""}
       <div class="space-y-3">${params.reason === "insufficient_balance" ? UI.primaryButton("Recharger mon Wallet", `App.nav('walletTopup')`, { size: "lg", icon: "add" }) : UI.primaryButton(I18N.t("retry"), retry, { size: "lg", icon: "replay" })}${params.reason === "insufficient_balance" && params.retry ? UI.secondaryButton("Réessayer avec un autre moyen", retry, { icon: "payments" }) : ""}${UI.secondaryButton(I18N.t("home_btn"), "App.resetTo('home')")}</div></div>`;
     Shell.render(container, { title: "Paiement", back: true, body, nav: false, hideSearch: true });
+  };
+
+  function luhnOk(num) {
+    const s = String(num || "").replace(/\D/g, "");
+    if (s.length < 13 || s.length > 19) return false;
+    let sum = 0, alt = false;
+    for (let i = s.length - 1; i >= 0; i--) {
+      let n = parseInt(s.charAt(i), 10);
+      if (alt) { n *= 2; if (n > 9) n -= 9; }
+      sum += n;
+      alt = !alt;
+    }
+    return sum % 10 === 0;
+  }
+  function brandOf(num) {
+    const s = String(num || "").replace(/\D/g, "");
+    if (/^3[47]/.test(s)) return "American Express";
+    if (/^4/.test(s)) return "Visa";
+    if (/^5[1-5]/.test(s) || /^2/.test(s)) return "Mastercard";
+    return "Carte";
+  }
+  Screens._cardFormat = function (el) {
+    const d = el.value.replace(/\D/g, "").slice(0, 19);
+    el.value = d.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+  };
+  Screens.addCard = function (container) {
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
+      <div class="card p-5 space-y-3">
+        <p class="t-caption text-ink-3">Paiement de démonstration</p>
+        <h2 class="t-h3">Coordonnées de la carte</h2>
+        <p class="t-small text-ink-2">Saisissez une carte de test. Le numéro complet et le cryptogramme ne sont pas enregistrés : seuls la marque, le titulaire, l'expiration et les 4 derniers chiffres restent sur cet appareil.</p>
+        ${UI.field("card-holder", "Titulaire", { placeholder: "Nom imprimé sur la carte", autocomplete: "cc-name", icon: "person" })}
+        ${UI.field("card-number", "Numéro de carte", { placeholder: "4242 4242 4242 4242", inputmode: "numeric", maxlength: "23", autocomplete: "cc-number", icon: "credit_card", attrs: "oninput=\"Screens._cardFormat(this)\"" })}
+        <div class="grid grid-cols-2 gap-3">${UI.field("card-exp", "Expiration", { placeholder: "MM/AA", inputmode: "numeric", maxlength: "5", autocomplete: "cc-exp" })}${UI.field("card-cvv", "Cryptogramme", { placeholder: "123", type: "password", inputmode: "numeric", maxlength: "4", autocomplete: "cc-csc" })}</div>
+        ${UI.error("card-error")}
+      </div>
+      ${UI.primaryButton("Enregistrer la carte", "Screens._saveCard()", { size: "lg", icon: "lock" })}
+      <p class="t-small text-ink-3 text-center">Aucun montant n'est envoyé à une banque. Numéro de test accepté : 4242 4242 4242 4242.</p>
+    </div>`;
+    Shell.render(container, { title: "Carte bancaire", back: true, body, nav: false, showNav: true });
+  };
+  Screens._saveCard = function () {
+    const holder = ((document.getElementById("card-holder") || {}).value || "").trim();
+    const raw = ((document.getElementById("card-number") || {}).value || "").replace(/\D/g, "");
+    const exp = ((document.getElementById("card-exp") || {}).value || "").trim();
+    const cvv = ((document.getElementById("card-cvv") || {}).value || "").replace(/\D/g, "");
+    if (holder.length < 2) return UI.showError("card-error", "Indiquez le nom du titulaire.");
+    if (!luhnOk(raw)) return UI.showError("card-error", "Numéro de carte invalide. Essayez 4242 4242 4242 4242.");
+    const m = exp.match(/^(\d{2})\s*\/\s*(\d{2})$/);
+    if (!m) return UI.showError("card-error", "Expiration au format MM/AA.");
+    const month = parseInt(m[1], 10), year = 2000 + parseInt(m[2], 10);
+    if (month < 1 || month > 12) return UI.showError("card-error", "Mois d'expiration invalide.");
+    if (new Date(year, month, 1) <= new Date()) return UI.showError("card-error", "Cette carte est expirée.");
+    const brand = brandOf(raw);
+    if (cvv.length < (brand === "American Express" ? 4 : 3)) return UI.showError("card-error", "Cryptogramme incomplet.");
+    const card = { id: ACStore.uid("card"), brand: brand, last4: raw.slice(-4), exp: m[1] + "/" + m[2], holder: holder };
+    ACState.wallet.cards = ACState.wallet.cards || [];
+    ACState.wallet.cards.push(card);
+    ACState.prefs.cardId = card.id;
+    ACState.prefs.paymentMethod = "card";
+    Screens._preferCard = true;
+    Screens._syncCardMethods();
+    const num = document.getElementById("card-number"), sec = document.getElementById("card-cvv");
+    if (num) num.value = "";
+    if (sec) sec.value = "";
+    ACStore.quietly(function () { ACStore.emit(); });
+    UI.toast("Carte " + brand + " " + card.last4 + " enregistrée.", "success");
+    const rawBack = sessionStorage.getItem("yc-after-card");
+    sessionStorage.removeItem("yc-after-card");
+    if (rawBack) {
+      try {
+        const back = JSON.parse(rawBack);
+        if (back && back.id && window.YCGuard && YCGuard.screenOk(back.id)) { App.back(); return; }
+      } catch (e) { /* retour simple */ }
+    }
+    App.back();
   };
 })();

@@ -48,6 +48,10 @@
   };
   Screens._doRedeem = function (id) {
     const c = YCData.REWARDS.find((x) => x.id === id); if (!c || ACState.rewards.points < c.cost) return;
+    Screens.requirePay("Échange · " + c.label, function () { Screens._doRedeemNow(id); });
+  };
+  Screens._doRedeemNow = function (id) {
+    const c = YCData.REWARDS.find((x) => x.id === id); if (!c || ACState.rewards.points < c.cost) return;
     ACState.rewards.points -= c.cost;
     const code = "YB-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     ACState.rewards.history.unshift({ id: ACStore.uid("rwd"), label: "Échange : " + c.label, points: -c.cost, date: "Aujourd'hui" });

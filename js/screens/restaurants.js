@@ -10,7 +10,12 @@
   function list() {
     const q = YCData.norm(filters.q).trim(), words = q ? q.split(/\s+/) : [];
     let out = YCData.RESTAURANTS.filter((r) => {
-      if (!filters.allCities && r.city !== ACState.user.city) return false;
+      if (!filters.allCities) {
+      const local = YCData.restaurantsIn(ACState.user.city);
+      const sameCity = r.city === ACState.user.city;
+      const sameCountry = YCData.countryCodeOfCity(r.city) && YCData.countryCodeOfCity(r.city) === ACState.user.countryCode;
+      if (!sameCity && (local.length || !sameCountry)) return false;
+    }
       if (filters.cat !== "Tout" && r.cat !== filters.cat) return false;
       if (!words.length) return true;
       const hay = YCData.norm([r.name, r.cat, r.area, r.city, r.tags.join(" "), r.menu.map((m) => m.name).join(" ")].join(" "));
@@ -155,16 +160,16 @@
     ACState.cart.restaurant = restId;
     const ex = ACState.cart.items.find((i) => i.id === dishId);
     if (ex) ex.qty += 1; else ACState.cart.items.push({ id: dishId, name: d.name, price: d.price, qty: 1, img: d.img });
-    ACStore.emit(); UI.toast(d.name + " ajouté au panier", "success");
-    if (App.current && App.current.id === "restaurantDetail") App.replace("restaurantDetail", App.current.params);
+    ACStore.quietly(function () { ACStore.emit(); }); UI.toast(d.name + " ajouté au panier", "success");
+    if (App.current && App.current.id === "restaurantDetail") App.replace("restaurantDetail", App.current.params, { keepScroll: true });
   };
   Screens._cartSeed = function (restId, dishIds) { ACState.cart.restaurant = restId; ACState.cart.items = []; const r = YCData.restaurant(restId); dishIds.forEach((id) => { const d = r.menu.find((x) => x.id === id); if (d) ACState.cart.items.push({ id: d.id, name: d.name, price: d.price, qty: 1, img: d.img }); }); ACStore.emit(); };
   Screens._cartQty = function (id, delta, restId) {
     const it = ACState.cart.items.find((i) => i.id === id); if (!it) return;
     it.qty += delta; if (it.qty <= 0) ACState.cart.items = ACState.cart.items.filter((i) => i.id !== id);
     if (!ACState.cart.items.length) ACState.cart.restaurant = null;
-    ACStore.emit();
-    App.replace(App.current.id, App.current.params);
+    ACStore.quietly(function () { ACStore.emit(); });
+    App.replace(App.current.id, App.current.params, { keepScroll: true });
   };
   Screens.cartRestaurant = function (container) {
     const r = YCData.restaurant(ACState.cart.restaurant), items = ACState.cart.items;
@@ -192,9 +197,10 @@
     if (!r || !items.length) { App.resetTo("cartRestaurant"); return; }
     if (params.step != null) co.step = parseInt(params.step, 10) || 0;
     if (!co.address) co.address = (ACState.addresses.find((a) => a.isDefault) || ACState.addresses[0] || {}).id;
+    if (Screens._preferCard) { co.method = "card"; Screens._preferCard = false; }
     if (!co.method) co.method = ACState.prefs.paymentMethod || "wallet";
     const sub = items.reduce((s, i) => s + i.price * i.qty, 0), fee = co.mode === "pickup" ? 0 : r.fee, service = 200, total = sub + fee + service;
-    const addr = ACState.addresses.find((a) => a.id === co.address), method = ACState.paymentMethods.find((m) => m.type === co.method);
+    const addr = ACState.addresses.find((a) => a.id === co.address), method = ACState.paymentMethods.find((m) => m.type === co.method) || ACState.paymentMethods[0] || { icon: "payments", label: "Paiement", type: "wallet" };
     const steps = ["Adresse", "Paiement", "Confirmation"];
     let stepHtml = "";
     if (co.step === 0) stepHtml = `
@@ -207,7 +213,7 @@
       ${UI.primaryButton(I18N.t("continue"), "Screens._coStep(1)", { size: "lg", iconRight: "arrow_forward" })}`;
     else if (co.step === 1) stepHtml = `
       <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Choisir le paiement</p>${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._coMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1 min-w-0"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· solde ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${co.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}
-        ${co.method === "wallet" && ACState.wallet.balance < total ? `<p class="t-small text-danger font-semibold">Solde insuffisant (${ACStore.fmtFCFA(total)} requis). <button type="button" onclick="App.nav('walletTopup')" class="underline">Recharger</button></p>` : ""}</div>
+        ${co.method === "wallet" && ACState.wallet.balance < total ? `<p class="t-small text-danger font-semibold">Solde insuffisant (${ACStore.fmtFCFA(total)} requis). <button type="button" onclick="App.nav('walletTopup')" class="underline">Recharger</button></p>` : ""}${Screens.cardAddButton()}</div>
       <div class="flex gap-3">${UI.secondaryButton(I18N.t("back"), "Screens._coStep(0)")}${UI.primaryButton(I18N.t("continue"), "Screens._coStep(2)", { size: "lg", iconRight: "arrow_forward" })}</div>`;
     else stepHtml = `
       <div class="card p-4 space-y-3">
@@ -215,7 +221,7 @@
         <div class="flex items-center gap-3"><span class="menu-icon">${icon(method.icon)}</span><div class="flex-1"><p class="t-caption text-ink-3">Paiement</p><p class="t-title">${method.label}</p></div><button type="button" onclick="Screens._coStep(1)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
         <div class="divider"></div>${items.map((i) => `<div class="flex justify-between t-small"><span>${i.qty} × ${esc(i.name)}</span><span>${ACStore.fmtFCFA(i.price * i.qty)}</span></div>`).join("")}
       </div>
-      <div class="flex gap-3">${UI.secondaryButton(I18N.t("back"), "Screens._coStep(1)")}${UI.primaryButton("Confirmer la commande · " + ACStore.fmtFCFA(total), `Screens._payRestaurant(${total})`, { size: "lg", icon: "check" })}</div>`;
+      <div class="sticky bottom-0 z-30 -mx-4 sm:-mx-5 lg:mx-0 px-4 sm:px-5 lg:px-0 py-3 lg:py-0 bg-surface/95 lg:bg-transparent backdrop-blur lg:backdrop-blur-none border-t lg:border-0 border-line">${UI.secondaryButton(I18N.t("back"), "Screens._coStep(1)")}<div class="h-2"></div>${UI.primaryButton("Confirmer la commande · " + ACStore.fmtFCFA(total), "Screens._payRestaurant()", { size: "lg", icon: "lock", id: "yc-pay-rest" })}</div>`;
     const body = `<div class="grid lg:grid-cols-[1fr_380px] gap-6"><div class="space-y-5">${UI.stepper(steps, co.step)}${stepHtml}</div>
       <aside class="card p-5 lg:sticky lg:top-24 self-start"><p class="t-h3 mb-3">${esc(r.name)}</p>${UI.row("Sous-total", ACStore.fmtFCFA(sub))}${UI.row(co.mode === "pickup" ? "À emporter" : "Livraison", ACStore.fmtFCFA(fee))}${UI.row("Service", ACStore.fmtFCFA(service))}<div class="divider my-2"></div>${UI.row("Total", ACStore.fmtFCFA(total), true)}<p class="t-small text-ink-3 mt-2">Livraison estimée : ${r.time}</p></aside></div>`;
     Shell.render(container, { title: "Commander", subtitle: steps[co.step], back: co.step > 0 ? `Screens._coStep(${co.step - 1})` : true, body, nav: false, narrow: false });
@@ -224,18 +230,27 @@
   Screens._coMode = (m) => { co.mode = m; App.replace("checkoutRestaurant", { step: 0 }); };
   Screens._coAddress = (id) => { co.address = id; App.replace("checkoutRestaurant", { step: 0 }); };
   Screens._coMethod = (t) => { co.method = t; App.replace("checkoutRestaurant", { step: 1 }); };
-  Screens._payRestaurant = function (total) {
+  Screens._payRestaurant = function () {
     const r = YCData.restaurant(ACState.cart.restaurant);
     if (!r) { UI.toast("Restaurant introuvable.", "error"); return; }
     if (isKitchenPaused(r.id)) { UI.toast("Ce restaurant est en pause. Réessayez plus tard.", "info"); return; }
+    if (Screens.needCard(co.method)) return;
+    const items = ACState.cart.items.slice();
+    const sub = items.reduce((s, i) => s + i.price * i.qty, 0);
+    const total = sub + (co.mode === "pickup" ? 0 : r.fee) + 200;
+    Screens.requirePay("Commande · " + r.name, function () { Screens._payRestaurantNow(total); });
+  };
+  Screens._payRestaurantNow = function (total) {
+    const r = YCData.restaurant(ACState.cart.restaurant);
+    if (!r) { UI.toast("Restaurant introuvable.", "error"); return; }
     const items = ACState.cart.items.slice();
     const addr = ACState.addresses.find((a) => a.id === co.address);
-    ACStore.whenPaid(ACStore.pay({ amount: total, label: "Commande " + r.name, service: "restaurant", pointsEarned: Math.round(total / 100), method: co.method, activity: false }), function () {
+    ACStore.whenPaid(ACStore.pay({ amount: total, label: "Commande " + r.name, service: "restaurant", pointsEarned: Math.round(total / 100), method: co.method, activity: false }), function (res) {
       const order = ACStore.createOrder({ type: "restaurant", title: r.name, img: r.img, items, total, address: co.mode === "pickup" ? "À emporter · " + r.name : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: r.time, from: { lat: r.lat, lng: r.lng }, to: addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null, note: ACState.cart.note, restaurantId: r.id, courier: YCData.courierFor(r.city) });
       ACStore.addActivity({ service: "restaurant", title: "Commande " + r.name, amount: total, status: "En cours", icon: "restaurant", orderId: order.id, detail: { items: items.map((i) => i.name + " × " + i.qty), address: order.address } });
       ACStore.addNotification("Commande confirmée", r.name + " a reçu votre commande " + order.number + ". Préparation en cours.", "restaurant", "orderTracking?id=" + order.id);
       ACState.cart.items = []; ACState.cart.restaurant = null; ACState.cart.note = ""; co.step = 0;
-      ACStore.emit();
+      if (window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu commande", label: r.name, lines: [["Commande", order.number]] });
       App.resetTo("orderConfirmed", { id: order.id });
     }, function (res) { App.nav("paymentFailed", { retry: "checkoutRestaurant", amount: total, reason: res.reason }); });
   };

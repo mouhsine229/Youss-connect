@@ -246,8 +246,10 @@
     let el = document.getElementById("ac-toast");
     if (!el) { el = document.createElement("div"); el.id = "ac-toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
     const tones = { success: "bg-inverse text-inverse-ink", error: "bg-danger text-white", info: "bg-inverse text-inverse-ink", warn: "bg-warn text-white" };
+    el.dataset.i18nSkip = "1";
     el.className = "toast " + (tones[tone] || tones.info);
     el.innerHTML = `<span class="inline-flex items-center gap-2">${icon(tone === "error" ? "error" : tone === "success" ? "check_circle" : "info", "text-[18px] " + (tone === "success" ? "text-gold" : ""))}<span>${esc(message)}</span></span>`;
+    el.style.pointerEvents = "none";
     el.style.opacity = "1"; el.style.transform = "translate(-50%, 0)";
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translate(-50%, 8px)"; }, 2400);
@@ -317,16 +319,26 @@
     if (!I18N.set(id)) return;
     toast(I18N.t("lang_done"), "success");
     ACStore.emit();
+    if (I18N.apply) I18N.apply(document.body);
+    if (I18N.applyTitle) I18N.applyTitle();
   }
 
   /* Format court d'une heure ISO/epoch */
   function timeAgo(at) {
     if (!at) return "";
+    const en = window.I18N && I18N.lang === "en";
     const diff = Math.max(0, Date.now() - at) / 1000;
-    if (diff < 60) return "À l'instant";
-    if (diff < 3600) return "Il y a " + Math.round(diff / 60) + " min";
-    if (diff < 86400) return "Il y a " + Math.round(diff / 3600) + " h";
-    return "Il y a " + Math.round(diff / 86400) + " j";
+    if (diff < 60) return en ? "Just now" : "À l'instant";
+    if (diff < 3600) {
+      const n = Math.round(diff / 60);
+      return en ? n + " min ago" : "Il y a " + n + " min";
+    }
+    if (diff < 86400) {
+      const n = Math.round(diff / 3600);
+      return en ? n + " h ago" : "Il y a " + n + " h";
+    }
+    const n = Math.round(diff / 86400);
+    return en ? n + " d ago" : "Il y a " + n + " j";
   }
 
   window.UI = {

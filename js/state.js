@@ -23,11 +23,11 @@
       kitchen: { restId: "rest1", dishes: [], paused: false, ticket: [] },
       user: {
         name: "Alassane", fullName: "Alassane Koffi", phone: "+229 97 00 00 00", email: "alassane@example.com",
-        city: "Cotonou", country: "Bénin", countryCode: "BJ", dial: "+229", avatar: IMG + "avatars/avatar-alassane.jpg", verified: true, since: "2025"
+        city: "Cotonou", country: "Bénin", countryCode: "BJ", dial: "+229", avatar: IMG + "avatars/avatar-alassane.jpg", verified: true, since: "2025", biometricEnrolled: true
       },
       prefs: { theme: "light", paymentMethod: "wallet", location: true, recs: true, notif: { transport: true, orders: true, delivery: true, events: true, wallet: true, promos: false, rewards: true, dnd: false } },
       wallet: {
-        balance: 248500, currency: "FCFA",
+        balance: 248500, currency: "FCFA", cards: [],
         transactions: [
           { id: "txn_seed1", label: "Rechargement du Wallet", amount: 25000, type: "credit", status: "success", date: "Hier à 09:12", ref: "YC-TX-84120", service: "wallet" },
           { id: "txn_seed2", label: "Course vers Haie Vive", amount: -2500, type: "debit", status: "success", date: "Hier à 14:20", ref: "YC-TX-84133", service: "transport" },
@@ -122,6 +122,10 @@
           out.wallet = Object.assign({}, base.wallet, out.wallet && typeof out.wallet === "object" ? out.wallet : {});
           const bal = Number(out.wallet.balance);
           out.wallet.balance = isFinite(bal) ? Math.max(0, Math.min(bal, 10000000)) : base.wallet.balance;
+          if (!Array.isArray(out.wallet.cards)) out.wallet.cards = [];
+          out.wallet.cards = out.wallet.cards.filter(function (c) { return c && c.last4 && !c.pan && !c.cvv; }).map(function (c) {
+            return { id: String(c.id || ""), brand: String(c.brand || "Carte"), last4: String(c.last4).replace(/\D/g, "").slice(-4), exp: String(c.exp || ""), holder: String(c.holder || "") };
+          });
           return out;
         }
       }
@@ -146,9 +150,16 @@
   }
 
   // Abonnements
+  let quietDepth = 0;
   function emit() {
     persist();
+    if (quietDepth) return;
     listeners.forEach((fn) => { try { fn(State); } catch (e) { console.error(e); } });
+  }
+  function quietly(fn) {
+    quietDepth++;
+    try { return fn(); }
+    finally { quietDepth--; }
   }
   function subscribe(fn) {
     listeners.push(fn);
@@ -187,12 +198,31 @@
     return t;
   }
 
-  /* Résout un paiement local (objet) ou distant (Promise). */
+  /* Résout un paiement local (objet) ou distant (Promise).
+     Le rendu est suspendu pendant le callback pour que la navigation
+     parte avant le rafraîchissement de l'écran en cours. */
   function whenPaid(result, onOk, onFail) {
-    Promise.resolve(result).then(function (res) {
-      if (res && res.ok) { if (onOk) onOk(res); }
-      else if (onFail) onFail(res || { ok: false, reason: "error" });
-    }).catch(function () { if (onFail) onFail({ ok: false, reason: "error" }); });
+    const apply = function (res) {
+      quietDepth++;
+      try {
+        if (res && res.ok) { if (onOk) onOk(res); }
+        else if (onFail) onFail(res || { ok: false, reason: "error" });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        quietDepth--;
+      }
+      emit();
+    };
+    if (result && typeof result.then === "function") {
+      Promise.resolve(result).then(apply).catch(function () { if (onFail) onFail({ ok: false, reason: "error" }); });
+      return;
+    }
+    apply(result);
+  }
+  function activeCard() {
+    const cards = State.wallet.cards || [];
+    return cards.find(function (c) { return c.id === State.prefs.cardId; }) || cards[0] || null;
   }
 
   // Paiement commun à tous les services.
@@ -207,13 +237,22 @@
     if (typeof navigator !== "undefined" && navigator.onLine === false && method !== "cash") {
       return { ok: false, reason: "offline" };
     }
+    let tx = null;
+    const card = method === "card" ? activeCard() : null;
     if (method === "wallet") {
       if (amount > State.wallet.balance) return { ok: false, reason: "insufficient_balance" };
       State.wallet.balance -= amount;
-      addTransaction({ label: opts.label, amount: -amount, type: "debit", service: opts.service, meta: opts.meta || null });
+      tx = addTransaction({ label: opts.label, amount: -amount, type: "debit", service: opts.service, method: "wallet", meta: opts.meta || null });
       addNotification("Paiement confirmé", opts.label + " réglé via Youss Wallet (" + fmtFCFA(amount) + ").", "wallet", "wallet");
-    } else if (method === "mobile") {
-      addTransaction({ label: opts.label + " (paiement mobile)", amount: -amount, type: "debit", service: opts.service, status: "success", external: true });
+    } else if (method === "card" && !card) {
+      return { ok: false, reason: "error" };
+    } else if (method === "mobile" || method === "card" || method === "cash") {
+      const via = method === "card" && card ? " · " + card.brand + " " + card.last4 : method === "cash" ? " · espèces" : " (paiement mobile)";
+      tx = addTransaction({
+        label: opts.label + via, amount: -amount, type: "debit", service: opts.service, status: "success",
+        external: method !== "wallet", method: method,
+        meta: Object.assign({}, opts.meta || {}, card ? { brand: card.brand, last4: card.last4 } : {})
+      });
     }
     if (opts.activity !== false) {
       addActivity(Object.assign({ service: opts.service, title: opts.label, amount, status: "Terminé", icon: iconForService(opts.service), method }, opts.activity || {}));
@@ -222,8 +261,7 @@
       addRewardPoints(pointsEarned, opts.label);
       addNotification("Points Youss Bonus", "+" + pointsEarned + " points ajoutés à votre solde Youss Bonus.", "rewards", "rewards");
     }
-    emit();
-    return { ok: true, method };
+    return { ok: true, method: method, tx: tx };
   }
   const payFromWallet = (opts) => pay(Object.assign({}, opts, { method: "wallet" }));
 
@@ -232,10 +270,9 @@
     if (amount < 500 || amount > 1000000) return { ok: false, reason: "invalid_amount", message: "Montant de recharge invalide." };
     if (window.YCBackend && YCBackend.isLive()) return YCBackend.topup(amount, label);
     State.wallet.balance += amount;
-    addTransaction({ label, amount, type: "credit", service: "wallet" });
+    const tx = addTransaction({ label, amount, type: "credit", service: "wallet", method: "topup" });
     addNotification("Rechargement réussi", label + " (" + fmtFCFA(amount) + ") ajouté à votre solde.", "wallet", "wallet");
-    emit();
-    return { ok: true };
+    return { ok: true, tx: tx };
   }
 
   // Commandes (restaurants & market)
@@ -274,9 +311,25 @@
     return { idx, steps, progress: p, current: steps[idx], done: p >= 100 };
   }
 
+  function setPlace(code, cityName) {
+    const country = YCData.countryOf(code);
+    const known = country.cities.indexOf(cityName) >= 0 || !!YCData.CITIES[cityName];
+    State.user.city = known ? cityName : country.cities[0];
+    State.user.country = country.name;
+    State.user.countryCode = country.code;
+    State.user.dial = country.dial;
+    emit();
+  }
+  function setCity(name) {
+    const c = YCData.CITIES[name];
+    if (c) { setPlace(c.code, name); return; }
+    const country = (YCData.COUNTRIES || []).find((x) => x.cities.indexOf(name) >= 0);
+    if (country) setPlace(country.code, name);
+  }
+
   window.ACState = State;
   window.ACStore = {
-    subscribe, emit, reset, uid, fmtFCFA, nowLabel, isoNow,
+    subscribe, emit, quietly, reset, uid, fmtFCFA, nowLabel, isoNow,
     addNotification, addActivity, addRewardPoints, addTransaction, iconForService,
     pay, payFromWallet, creditWallet, whenPaid,
     createOrder, orderProgress, orderStep, ORDER_STEPS,
@@ -284,11 +337,6 @@
     cartCount: () => State.cart.items.reduce((s, i) => s + i.qty, 0),
     marketCount: () => State.cart.market.reduce((s, i) => s + i.qty, 0),
     city: () => YCData.cityOf(State.user.city),
-    setCity: (name) => {
-      const c = YCData.CITIES[name]; if (!c) return;
-      State.user.city = name; State.user.country = c.country; State.user.countryCode = c.code;
-      State.user.dial = YCData.countryOf(c.code).dial;
-      emit();
-    }
+    setCity, setPlace
   };
 })();

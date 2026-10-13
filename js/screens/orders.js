@@ -21,6 +21,7 @@
         ${o.items.map((i) => `<div class="flex justify-between t-small"><span>${i.qty} × ${esc(i.name)}</span><span>${ACStore.fmtFCFA(i.price * i.qty)}</span></div>`).join("")}
         <div class="divider"></div>${UI.row("Total payé", ACStore.fmtFCFA(o.total), true)}${UI.row("Adresse", esc(o.address))}${UI.row("Youss Bonus", "+" + points + " points")}
       </div>
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le reçu", "Screens._orderReceipt('down')", { icon: "download" })}${UI.secondaryButton("Partager le reçu", "Screens._orderReceipt('share')", { icon: "share" })}</div>
       ${UI.primaryButton("Suivre ma commande", go("orderTracking", { id: o.id }), { size: "lg", icon: "near_me" })}
       ${UI.nextSteps(isMarket ? [
         { icon: "local_shipping", label: "Suivre la livraison", sub: "De la préparation jusqu'à la remise", onclick: go("orderTracking", { id: o.id }) },
@@ -34,6 +35,11 @@
       ${UI.secondaryButton(I18N.t("home_btn"), "App.resetTo('home')")}
     </div>`;
     Shell.render(container, { title: "Commande confirmée", back: "App.nav('home')", body, nav: false, hideSearch: true });
+  };
+  Screens._orderReceipt = function (mode) {
+    const r = window.YCReceipt && YCReceipt.current();
+    if (!r) { UI.toast("Aucun reçu disponible.", "info"); return; }
+    if (mode === "share") YCReceipt.share(r); else { YCReceipt.download(r); UI.toast("Reçu téléchargé.", "success"); }
   };
 
   Screens.orderTracking = function (container, params) {

@@ -197,7 +197,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.field("su-pass", I18N.t("password"), { type: "password", placeholder: "8 caractères min.", autocomplete: "new-password" })}${UI.field("su-pass2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}</div>
         <div id="su-strength" class="h-1 rounded-full bg-line overflow-hidden"><div class="h-full w-0 bg-gold transition-all"></div></div>
         ${UI.error("su-error")}
-        <label class="flex items-start gap-2 t-small text-ink-2"><input id="su-terms" type="checkbox" class="form-checkbox mt-0.5 rounded border-line text-gold focus:ring-gold/40"/>J'accepte les conditions d'utilisation et la politique de confidentialité.</label>
+        <label class="flex items-start gap-2 t-small text-ink-2"><input id="su-terms" type="checkbox" class="form-checkbox mt-0.5 rounded border-line text-gold focus:ring-gold/40"/><span>J'accepte les <button type="button" class="font-bold underline text-gold-deep dark:text-gold" onclick="event.preventDefault();event.stopPropagation();App.nav('terms')">conditions d'utilisation</button> et la <button type="button" class="font-bold underline text-gold-deep dark:text-gold" onclick="event.preventDefault();event.stopPropagation();App.nav('privacy')">politique de confidentialité</button>.</span></label>
         <button type="submit" class="btn btn-lg btn-primary btn-block">Recevoir le code OTP${icon("arrow_forward", "text-[20px]")}</button>
         <button type="button" onclick="App.nav('login')" class="w-full t-small text-center text-ink-2">J'ai déjà un compte · <span class="font-bold text-gold-deep dark:text-gold">${I18N.t("login")}</span></button>
       </form>`;
@@ -226,14 +226,15 @@
     if (pass !== pass2) return UI.showError("su-error", "Les mots de passe ne correspondent pas.");
     if (!document.getElementById("su-terms").checked) return UI.showError("su-error", "Veuillez accepter les conditions d'utilisation.");
     const c = YCData.countryOf(document.getElementById("su-country").value);
-    Object.assign(ACState.user, { fullName: first + " " + last, name: first, phone: p.phone, email: email || ACState.user.email, country: c.name, countryCode: c.code, dial: c.dial, city: document.getElementById("su-city").value, verified: false });
+    Object.assign(ACState.user, { fullName: first + " " + last, name: first, phone: p.phone, email: email || ACState.user.email, country: c.name, countryCode: c.code, dial: c.dial, city: document.getElementById("su-city").value, verified: false, biometricEnrolled: false });
+    ACState.prefs.biometric = false;
     ACStore.emit();
     if (window.YCBackend && YCBackend.configured()) {
       sessionStorage.setItem("yc-pending-name", ACState.user.fullName);
-      YCBackend.sendOtp(p.phone, ACState.user.fullName).then((res) => { if (res && res.error) UI.showError("su-error", YCBackend.explain(res.error)); else App.nav("otp", { next: "home" }); });
+      YCBackend.sendOtp(p.phone, ACState.user.fullName).then((res) => { if (res && res.error) UI.showError("su-error", YCBackend.explain(res.error)); else App.nav("otp", { next: "home", mode: "signup" }); });
       return;
     }
-    App.nav("otp", { next: "home" });
+    App.nav("otp", { next: "home", mode: "signup" });
   };
 
   // OTP
@@ -301,6 +302,7 @@
     ACState.session.authenticated = true; ACState.session.onboardingSeen = true;
     ACStore.emit();
     UI.toast("Bienvenue " + ACState.user.name + " !", "success");
+    if (mode === "signup") { App.resetTo("biometricSetup", { next: next || "home" }); return; }
     const after = sessionStorage.getItem("yc-after-login");
     if (after) {
       sessionStorage.removeItem("yc-after-login");
@@ -350,5 +352,78 @@
       return;
     }
     Shell.render(container, { title: I18N.t("nav_about"), subtitle: "Ce que fait l'application", back: true, body, nav: false, showNav: true });
+  };
+
+  function L(fr, en) { return window.I18N && I18N.lang === "en" ? en : fr; }
+  function legalScreen(container, title, blocks) {
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-4" data-i18n-skip="1">${blocks.map((b) => `<section class="card p-5"><h2 class="t-h3">${b[0]}</h2><p class="t-body text-ink-2 mt-2 leading-relaxed">${b[1]}</p></section>`).join("")}<p class="t-small text-ink-3 text-center">KYA CORPORATION · YOUSS CONNECT</p></div>`;
+    Shell.render(container, { title: title, back: true, body, nav: false, showNav: ACState.session.authenticated });
+  }
+  Screens.terms = function (container) {
+    legalScreen(container, L("Conditions d'utilisation", "Terms of use"), [
+      [L("Éditeur", "Publisher"), L("YOUSS CONNECT est une maquette éditée par KYA CORPORATION. Elle présente un service de mobilité, de commande et de paiement pour Cotonou, Dakar, Lomé et Accra.", "YOUSS CONNECT is a demonstration published by KYA CORPORATION. It presents mobility, ordering and payment for Cotonou, Dakar, Lomé and Accra.")],
+      [L("Compte", "Account"), L("L'inscription demande un nom, un téléphone et un mot de passe. Le code OTP de démonstration est 1234. Vous pouvez utiliser le compte de démo sans créer de compte réel.", "Sign-up asks for a name, a phone number and a password. The demonstration OTP is 1234. You can use the demo account without creating a real account.")],
+      [L("Services", "Services"), L("Transport, livraison, restaurants, billets, marché, culture et portefeuille sont des parcours de démonstration. Les prix, chauffeurs, vendeurs et événements sont fictifs. Aucun partenaire n'est présenté comme officiel.", "Rides, delivery, restaurants, tickets, market, culture and the wallet are demonstration flows. Prices, drivers, sellers and events are fictional. No partner is presented as official.")],
+      [L("Paiements", "Payments"), L("Chaque achat est confirmé par le code PIN (démo : 0000) ou par l'empreinte enregistrée. Aucun débit bancaire réel n'est effectué. Le numéro complet de carte et le cryptogramme ne sont pas enregistrés.", "Every purchase is confirmed with the PIN (demo: 0000) or the enrolled fingerprint. No real bank charge is made. The full card number and security code are not stored.")],
+      [L("Utilisation acceptable", "Acceptable use"), L("N'utilisez pas l'application pour usurper une identité, harceler quelqu'un ou tenter d'accéder au compte d'une autre personne. Les essais de code sont limités.", "Do not use the app to impersonate someone, harass anyone, or try to access another person's account. Code attempts are limited.")],
+      [L("Responsabilité", "Liability"), L("La maquette est fournie en l'état, pour évaluation. Elle ne constitue pas une offre de service de paiement, de transport ou de billetterie.", "The demo is provided as is, for evaluation. It is not an offer of payment, transport or ticketing services.")]
+    ]);
+  };
+  Screens.privacy = function (container) {
+    legalScreen(container, L("Politique de confidentialité", "Privacy policy"), [
+      [L("Responsable", "Controller"), L("KYA CORPORATION est responsable du traitement décrit ici. Cette politique concerne la maquette YOUSS CONNECT ouverte dans votre navigateur.", "KYA CORPORATION is responsible for the processing described here. This policy covers the YOUSS CONNECT demo opened in your browser.")],
+      [L("Données", "Data"), L("Le profil (nom, téléphone, e-mail, ville), les préférences, le solde de démonstration, les commandes, les billets et l'historique restent dans le stockage local de cet appareil.", "The profile (name, phone, email, city), preferences, demo balance, orders, tickets and history stay in this device's local storage.")],
+      [L("Carte bancaire", "Bank card"), L("Si vous enregistrez une carte de test, seuls la marque, le titulaire, la date d'expiration et les 4 derniers chiffres sont conservés. Le numéro complet et le cryptogramme sont effacés dès la validation.", "If you save a test card, only the brand, holder, expiry and last 4 digits are kept. The full number and security code are cleared as soon as you confirm.")],
+      [L("Biométrie", "Biometrics"), L("L'empreinte proposée à l'inscription est une simulation. Aucune image d'empreinte n'est capturée, envoyée ou stockée. L'application retient seulement que la confirmation biométrique est activée.", "The fingerprint offered at sign-up is a simulation. No fingerprint image is captured, sent or stored. The app only remembers that biometric confirmation is on.")],
+      [L("Partage", "Sharing"), L("Les données de la maquette ne sont pas vendues. Elles ne quittent pas l'appareil, sauf si vous activez vous-même un service distant déjà prévu dans l'application.", "Demo data is not sold. It does not leave the device, unless you yourself turn on a remote service already built into the app.")],
+      [L("Vos choix", "Your choices"), L("Vous pouvez retirer une carte, désactiver la biométrie, changer de ville et effacer la démonstration depuis les paramètres. La réinitialisation supprime les données locales de l'application.", "You can remove a card, turn biometrics off, change city and erase the demo from settings. Reset deletes the app's local data.")],
+      [L("Contact", "Contact"), L("Pour une question sur ces informations, écrivez à KYA CORPORATION depuis le centre d'aide de l'application.", "For a question about this notice, write to KYA CORPORATION from the app's help center.")]
+    ]);
+  };
+
+  Screens.biometricSetup = function (container, params) {
+    params = params || {};
+    const body = `<div class="max-w-narrow mx-auto w-full flex flex-col items-center text-center py-6 space-y-5" data-i18n-skip="1">
+      <button type="button" id="bio-pad" onclick="Screens._bioCapture()" class="w-28 h-28 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center" aria-label="${L("Enregistrer l'empreinte", "Enroll fingerprint")}">${icon("fingerprint", "text-[56px]")}</button>
+      <div><h2 class="t-h2">${L("Enregistrer votre empreinte", "Enroll your fingerprint")}</h2><p id="bio-status" class="t-body text-ink-2 mt-2">${L("Posez le doigt sur le capteur. Cette empreinte confirmera ensuite vos paiements, avec le code PIN en secours.", "Place your finger on the sensor. This fingerprint will then confirm your payments, with the PIN as backup.")}</p></div>
+      <p class="t-small text-ink-3 max-w-[360px]">${L("Simulation locale : aucune empreinte n'est envoyée ni conservée. L'appareil note seulement que la biométrie est activée.", "Local simulation: no fingerprint is sent or kept. The device only notes that biometrics are on.")}</p>
+      ${UI.primaryButton(L("Enregistrer l'empreinte", "Enroll fingerprint"), "Screens._bioCapture()", { size: "lg", icon: "fingerprint" })}
+      <button type="button" onclick="Screens._bioSkip()" class="t-small text-ink-2 underline">${L("Continuer avec le code PIN uniquement", "Continue with PIN only")}</button>
+    </div>`;
+    Shell.render(container, { title: L("Biométrie", "Biometrics"), back: true, body, nav: false, hideSearch: true });
+  };
+  function bioNext() {
+    const p = (App.current && App.current.params) || {};
+    const next = p.next || "home";
+    if (next === "securityPin") { App.replace("securityPin", { action: p.action || "purchase" }); return; }
+    if (window.YCGuard && next && !YCGuard.screenOk(next)) { App.resetTo("home"); return; }
+    App.resetTo(next);
+  }
+  let bioTimer = null;
+  Screens._bioCapture = function () {
+    const el = document.getElementById("bio-status");
+    const pad = document.getElementById("bio-pad");
+    if (el) el.textContent = L("Lecture de l'empreinte…", "Reading fingerprint…");
+    if (pad) pad.classList.add("animate-pulse");
+    clearTimeout(bioTimer);
+    bioTimer = setTimeout(function () {
+      ACStore.quietly(function () {
+        ACState.user.biometricEnrolled = true;
+        ACState.prefs.biometric = true;
+        ACStore.emit();
+      });
+      UI.toast(L("Empreinte enregistrée pour vos paiements.", "Fingerprint saved for your payments."), "success");
+      bioNext();
+    }, 900);
+  };
+  Screens._bioSkip = function () {
+    clearTimeout(bioTimer);
+    ACStore.quietly(function () {
+      ACState.user.biometricEnrolled = false;
+      ACState.prefs.biometric = false;
+      ACStore.emit();
+    });
+    UI.toast(L("Les paiements demanderont le code PIN.", "Payments will ask for the PIN."), "info");
+    bioNext();
   };
 })();

@@ -25,14 +25,13 @@
             <div class="mt-5 space-y-2.5 t-small">${[["call", u.phone], ["mail", u.email], ["flag", u.country], ["location_city", u.city]].map((x) => `<p class="flex items-center gap-2.5"><span class="text-ink-3">${icon(x[0], "text-[18px]")}</span><span class="truncate">${esc(x[1])}</span></p>`).join("")}</div>
             <div class="grid grid-cols-3 gap-2 mt-5 text-center">${[["Courses", counts.rides, "activities", { f: "transport" }], ["Commandes", counts.orders, "activities", { f: "restaurant" }], ["Billets", counts.tickets, "myTickets", {}]].map((s) => `<button type="button" onclick="${go(s[2], s[3])}" class="rounded-xl bg-surface-low p-3 hover:bg-card-high"><p class="t-h3">${s[1]}</p><p class="t-caption text-ink-3">${s[0]}</p></button>`).join("")}</div>
           </section>
-          <button type="button" onclick="App.nav('rewards')" class="w-full card-dark p-5 text-left"><p class="t-caption text-gold">Youss Bonus · niveau ${tier.id}</p><p class="t-h1 mt-1">${pts.toLocaleString("fr-FR")} pts</p><p class="t-small text-white/70 mt-1">${YCData.nextTier(pts) ? (YCData.nextTier(pts).min - pts).toLocaleString("fr-FR") + " pts avant " + YCData.nextTier(pts).id : "Niveau maximum"}</p></button>
+          <button type="button" onclick="App.nav('rewards')" class="w-full card-dark p-5 text-left"><p class="t-caption text-gold">Youss Bonus · niveau ${tier.id}</p><p class="t-h1 mt-1">${pts.toLocaleString("fr-FR")} pts</p><p class="t-small opacity-70 mt-1">${YCData.nextTier(pts) ? (YCData.nextTier(pts).min - pts).toLocaleString("fr-FR") + " pts avant " + YCData.nextTier(pts).id : "Niveau maximum"}</p></button>
         </div>
         <div class="space-y-5">
           <section><p class="t-caption text-ink-3 mb-2">Mon compte</p><div class="grid sm:grid-cols-2 gap-2.5">
             ${menuRow("person", "Modifier mon profil", "App.nav('editProfile')")}${menuRow("restaurant", "Mes commandes", go("activities", { f: "restaurant" }))}${menuRow("directions_car", "Mes courses", go("activities", { f: "transport" }))}${menuRow("qr_code_2", "Mes billets", "App.nav('myTickets')", { sub: ACState.tickets.length + " billet(s)" })}${menuRow("home_pin", "Mes adresses", "App.nav('addresses')", { sub: ACState.addresses.length + " adresse(s)" })}${menuRow("credit_card", "Moyens de paiement", "App.nav('paymentMethods')")}${menuRow("bookmark", "Lieux sauvegardés", "App.nav('savedPlaces')", { sub: ACState.saved.length + " lieu(x)" })}${menuRow("workspace_premium", "Youss Bonus", "App.nav('rewards')", { sub: pts.toLocaleString("fr-FR") + " points" })}</div></section>
-          <section><p class="t-caption text-ink-3 mb-2">Professionnel</p>${menuRow("business_center", "Youss Business", "App.nav('business')", { sub: "Espace professionnel · " + esc(ACState.business.profile.name) })}</section>
           <section><p class="t-caption text-ink-3 mb-2">Réglages</p><div class="grid sm:grid-cols-2 gap-2.5">
-            ${menuRow("security", I18N.t("security"), "App.nav('security')")}${menuRow("language", "Langues", "App.nav('languages')", { sub: (I18N.LANGS.find((l) => l.id === I18N.lang) || {}).label })}${menuRow("notifications", "Notifications", "App.nav('notificationPrefs')")}${menuRow(ACState.prefs.theme === "dark" ? "dark_mode" : "light_mode", I18N.t("theme"), "Screens._toggleTheme()", { sub: ACState.prefs.theme === "dark" ? I18N.t("theme_dark") : I18N.t("theme_light"), right: UI.toggle(ACState.prefs.theme === "dark", "Screens._toggleTheme()", "Thème sombre") })}${menuRow("help", I18N.t("help"), "App.nav('help')")}${menuRow("settings", I18N.t("settings"), "App.nav('settings')")}</div></section>
+            ${menuRow("security", I18N.t("security"), "App.nav('security')")}${menuRow("language", "Langues", "App.nav('languages')", { sub: (I18N.LANGS.find((l) => l.id === I18N.lang) || {}).label })}${menuRow("notifications", "Notifications", "App.nav('notificationPrefs')")}${menuRow(ACState.prefs.theme === "dark" ? "dark_mode" : "light_mode", I18N.t("theme"), "Screens._toggleTheme()", { sub: ACState.prefs.theme === "dark" ? I18N.t("theme_dark") : I18N.t("theme_light"), right: UI.toggle(ACState.prefs.theme === "dark", "Screens._toggleTheme()", "Thème sombre") })}${menuRow("help", I18N.t("help"), "App.nav('help')")}${menuRow("settings", I18N.t("settings"), "App.nav('settings')")}${menuRow("gavel", "Conditions d'utilisation", "App.nav('terms')")}${menuRow("privacy_tip", "Politique de confidentialité", "App.nav('privacy')")}</div></section>
           ${menuRow("logout", I18N.t("logout"), "Screens._logout()", { danger: true })}
           <p class="t-caption text-center">YOUSS CONNECT v2.0 · KYA CORPORATION</p>
         </div>
@@ -75,8 +74,9 @@
     const first = g("ep-first").trim(), last = g("ep-last").trim(), email = g("ep-email").trim();
     if (!first) { UI.toast("Le prénom est requis.", "error"); return; }
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { UI.toast("E-mail invalide.", "error"); return; }
-    const c = YCData.countryOf(g("ep-country"));
-    Object.assign(ACState.user, { name: first, fullName: (first + " " + last).trim(), phone: g("ep-phone").trim() || ACState.user.phone, email, country: c.name, countryCode: c.code, dial: c.dial, city: g("ep-city") });
+    const code = g("ep-country"), city = g("ep-city");
+    Object.assign(ACState.user, { name: first, fullName: (first + " " + last).trim(), phone: g("ep-phone").trim() || ACState.user.phone, email });
+    ACStore.setPlace(code, city);
     const finish = () => { ACStore.emit(); UI.toast("Profil mis à jour.", "success"); App.nav("profile"); };
     if (window.YCBackend && YCBackend.isLive()) { YCBackend.saveProfile(ACState.user).then((res) => { if (res && res.ok === false) UI.toast(res.message || "Enregistrement impossible.", "error"); else finish(); }); return; }
     finish();
@@ -119,12 +119,20 @@
   Screens.paymentMethods = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="space-y-2.5">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._defaultMethod('${m.type}')" class="w-full card p-4 flex items-center gap-3 text-left ${ACState.prefs.paymentMethod === m.type ? "ring-2 ring-gold" : ""}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1 min-w-0"><span class="t-title flex items-center gap-2">${m.label}${ACState.prefs.paymentMethod === m.type ? UI.badge("Par défaut", "gold") : ""}</span><span class="block t-small text-ink-2">${m.sub}${m.type === "wallet" ? " · " + ACStore.fmtFCFA(ACState.wallet.balance) : ""}</span></span>${ACState.prefs.paymentMethod === m.type ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`).join("")}</div>
-      ${UI.secondaryButton("Ajouter un moyen de paiement", "Screens._addPaymentInfo()", { icon: "add" })}
+      ${UI.primaryButton("Ajouter une carte bancaire", "Screens._openAddCard()", { icon: "add_card" })}
+      ${(ACState.wallet.cards || []).length ? UI.secondaryButton("Retirer la carte enregistrée", "Screens._removeCard()", { icon: "delete" }) : ""}
       <p class="t-small text-ink-3 text-center">${I18N.t("conceptual")}</p></div>`;
     Shell.render(container, { title: "Moyens de paiement", back: true, body, nav: false, showNav: true });
   };
   Screens._defaultMethod = (t) => { ACState.prefs.paymentMethod = t; ACStore.emit(); UI.toast("Moyen de paiement par défaut mis à jour.", "success"); };
-  Screens._addPaymentInfo = () => UI.openSheet(`<h3 class="t-h3 mb-1">Ajouter un moyen de paiement</h3><p class="t-small text-ink-2 mb-4">L'ajout de cartes et de comptes mobiles sera disponible après vérification d'identité (KYC) et selon les partenariats financiers de chaque pays.</p>${UI.field("pm-card", "Numéro de carte (démo)", { placeholder: "•••• •••• •••• ••••", icon: "credit_card", inputmode: "numeric" })}<div class="mt-4">${UI.primaryButton("Vérifier mon identité", "UI.closeSheet();App.nav('verifyAccount')", { icon: "verified_user" })}</div>`);
+  Screens._removeCard = function () {
+    ACState.wallet.cards = [];
+    ACState.prefs.cardId = "";
+    if (ACState.prefs.paymentMethod === "card") ACState.prefs.paymentMethod = "wallet";
+    if (Screens._syncCardMethods) Screens._syncCardMethods();
+    ACStore.emit();
+    UI.toast("Carte retirée de cet appareil.", "info");
+  };
 
   // Lieux sauvegardés
   Screens.savedPlaces = function (container) {
@@ -136,11 +144,11 @@
   // Sécurité
   Screens.security = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">Élevé</p><p class="t-small text-white/70">Compte vérifié, PIN actif, biométrie ${ACState.prefs.biometric === false ? "désactivée" : "activée"}</p></div></div>
+      <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">Élevé</p><p class="t-small opacity-80">Compte vérifié, PIN actif, biométrie ${ACState.prefs.biometric === false || ACState.user.biometricEnrolled === false ? "désactivée" : "activée"}</p></div></div>
       <div class="space-y-2.5">
         ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: ACState.user.verified ? "Identité vérifiée" : "Vérification requise", right: UI.badge(ACState.user.verified ? "Vérifié" : "À faire", ACState.user.verified ? "success" : "warn") })}
         ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: "Modifier le code à 4 chiffres" })}
-        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: "Empreinte ou visage pour les paiements", right: UI.toggle(ACState.prefs.biometric !== false, "Screens._toggleBio()", "Biométrie") })}
+        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: ACState.user.biometricEnrolled === false ? "Non enregistrée" : "Empreinte pour confirmer les paiements", right: UI.toggle(ACState.prefs.biometric !== false && ACState.user.biometricEnrolled !== false, "Screens._toggleBio()", "Biométrie") })}
         ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "3 appareils" })}
         ${menuRow("history", "Historique des connexions", "App.nav('loginHistory')", { sub: "Dernière : aujourd'hui, " + esc(ACState.user.city) })}
         ${menuRow("report", "Signalement", "App.nav('report')", { sub: "Signaler un chauffeur, un vendeur, un incident" })}
@@ -149,12 +157,20 @@
       </div></div>`;
     Shell.render(container, { title: I18N.t("security"), subtitle: "PIN, biométrie, appareils", back: true, body, nav: false, showNav: true });
   };
-  Screens._toggleBio = () => { ACState.prefs.biometric = ACState.prefs.biometric === false; ACStore.emit(); UI.toast("Biométrie " + (ACState.prefs.biometric === false ? "désactivée" : "activée") + ".", "success"); };
+  Screens._toggleBio = function () {
+    if (ACState.user.biometricEnrolled === false || ACState.prefs.biometric === false) {
+      App.nav("biometricSetup", { next: "security" });
+      return;
+    }
+    ACState.prefs.biometric = false;
+    ACStore.emit();
+    UI.toast("Biométrie désactivée. Les paiements demanderont le code PIN.", "info");
+  };
   Screens.verifyAccount = function (container) {
     const steps = [{ label: "Numéro de téléphone vérifié", icon: "call" }, { label: "E-mail confirmé", icon: "mail" }, { label: "Pièce d'identité", icon: "badge" }, { label: "Selfie de vérification", icon: "face" }];
     const done = ACState.user.verified ? 4 : 2;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5">${UI.timeline(steps, done)}</div>
-      ${!ACState.user.verified ? `<div class="card p-5 text-center"><span class="w-16 h-16 rounded-2xl bg-surface-low flex items-center justify-center mx-auto text-gold">${icon("badge", "text-[32px]")}</span><p class="t-title mt-3">Pièce d'identité</p><p class="t-small text-ink-2 mt-1">CNI, passeport ou permis. Les documents sont chiffrés et traités selon la réglementation de chaque pays.</p>${UI.primaryButton("Prendre une photo du document", "Screens._verifyDone()", { icon: "photo_camera", cls: "mt-4" })}</div>` : `<div class="card p-5 text-center">${icon("verified", "text-gold text-[40px]", true)}<p class="t-title mt-2">Votre compte est vérifié</p><p class="t-small text-ink-2">Plafonds Wallet étendus et accès à Youss Business.</p></div>`}</div>`;
+      ${!ACState.user.verified ? `<div class="card p-5 text-center"><span class="w-16 h-16 rounded-2xl bg-surface-low flex items-center justify-center mx-auto text-gold">${icon("badge", "text-[32px]")}</span><p class="t-title mt-3">Pièce d'identité</p><p class="t-small text-ink-2 mt-1">CNI, passeport ou permis. Les documents sont chiffrés et traités selon la réglementation de chaque pays.</p>${UI.primaryButton("Prendre une photo du document", "Screens._verifyDone()", { icon: "photo_camera", cls: "mt-4" })}</div>` : `<div class="card p-5 text-center">${icon("verified", "text-gold text-[40px]", true)}<p class="t-title mt-2">Votre compte est vérifié</p><p class="t-small text-ink-2">Les plafonds du portefeuille de démonstration sont étendus.</p></div>`}</div>`;
     Shell.render(container, { title: "Vérification du compte", back: true, body, nav: false, showNav: true });
   };
   Screens._verifyDone = () => { ACState.user.verified = true; ACStore.addNotification("Compte vérifié", "Votre identité a été validée. Plafonds Wallet étendus.", "wallet", "security"); ACStore.emit(); UI.toast("Documents reçus · compte vérifié (démo).", "success"); };
@@ -185,11 +201,11 @@
 
   // Aide
   Screens.help = function (container) {
-    const faq = [["Comment payer une course ?", "Wallet, espèces ou paiement mobile, au moment de confirmer. Le prix vient de l'itinéraire."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Course, commande, achat ou billet : vous gagnez des points. Vous les échangez ensuite."], ["Le wallet est-il réel ?", "Non, c'est de la démo. Un vrai lancement dépendrait des licences du pays."], ["Vendre sur l'app ?", "Ouvrez Youss Business, remplissez le profil, ajoutez des produits ou des prestations."]];
+    const faq = [["Comment payer une course ?", "Wallet, espèces ou paiement mobile, au moment de confirmer. Le prix vient de l'itinéraire."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Course, commande, achat ou billet : vous gagnez des points. Vous les échangez ensuite."], ["Le wallet est-il réel ?", "Non, c'est de la démo. Un vrai lancement dépendrait des licences du pays."], ["Vendre sur l'app ?", "La vente n'est pas proposée dans le compte personnel. Cette version montre l'achat, le transport et le portefeuille."]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="grid grid-cols-2 gap-3">${[["chat", "Chat avec l'assistance", "Réponse en quelques minutes", "UI.toast('Un conseiller vous répond dans quelques instants (démo).','success')"], ["call", "Appeler", "Du lundi au samedi, 8h - 20h", "UI.toast('Appel du support (démo).','info')"], ["play_circle", I18N.t("demo_tour"), "5 parcours guidés", "Demo.openMenu()"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]].map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
       <section><p class="t-caption text-ink-3 mb-2">Questions fréquentes</p><div class="card divide-y divide-line">${faq.map((q, i) => `<details class="group"><summary class="flex items-center justify-between gap-3 p-4 cursor-pointer list-none t-title">${q[0]}${icon("expand_more", "text-ink-3 transition-transform group-open:rotate-180")}</summary><p class="px-4 pb-4 t-body text-ink-2">${q[1]}</p></details>`).join("")}</div></section>
-      <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT v2.0</p><p class="t-small text-ink-2 mt-1">Maquette KYA CORPORATION. Données fictives, aucun partenaire officiel.</p><div class="flex gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "UI.toast('CGU disponibles dans la version finale.','info')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
+      <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT v2.0</p><p class="t-small text-ink-2 mt-1">Maquette KYA CORPORATION. Données fictives, aucun partenaire officiel.</p><div class="flex flex-wrap gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "App.nav('terms')", { variant: "outline", block: false, size: "sm" })}${UI.button("Confidentialité", "App.nav('privacy')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
     Shell.render(container, { title: I18N.t("help"), subtitle: "FAQ et contact", back: true, body, nav: false, showNav: true });
   };
 
@@ -207,6 +223,10 @@
       <section><p class="t-caption text-ink-3 mb-2">Démonstration</p><div class="card divide-y divide-line">
         <button type="button" onclick="Demo.openMenu()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("play_circle")}</span><div class="flex-1"><p class="t-title">${I18N.t("demo_tour")}</p><p class="t-small text-ink-2">Transport, restaurant, événement, commerce, culture</p></div>${icon("chevron_right", "text-ink-3")}</button>
         <button type="button" onclick="Screens._resetDemo()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon !bg-danger-soft !text-danger">${icon("restart_alt")}</span><div class="flex-1"><p class="t-title text-danger">Réinitialiser la démo</p><p class="t-small text-ink-2">Solde, panier, billets, activités et notifications d'origine</p></div></button></div></section>
+      <section><p class="t-caption text-ink-3 mb-2">Informations légales</p><div class="card divide-y divide-line">
+        <button type="button" onclick="App.nav('terms')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("gavel")}</span><div class="flex-1"><p class="t-title">Conditions d'utilisation</p></div>${icon("chevron_right", "text-ink-3")}</button>
+        <button type="button" onclick="App.nav('privacy')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("privacy_tip")}</span><div class="flex-1"><p class="t-title">Politique de confidentialité</p></div>${icon("chevron_right", "text-ink-3")}</button>
+      </div></section>
       <p class="t-caption text-ink-3 text-center">YOUSS CONNECT v2.0 · KYA CORPORATION</p></div>`;
     Shell.render(container, { title: I18N.t("settings"), back: true, body, nav: false, showNav: true });
   };
