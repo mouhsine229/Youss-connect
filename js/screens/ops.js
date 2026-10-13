@@ -191,7 +191,7 @@
       if (!box) return;
       const rows = res.data || [];
       box.innerHTML = rows.length ? rows.map(function (m) {
-        return `<div class="max-w-[85%] ${m.from_staff ? "ml-auto" : ""}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-ink text-white" : "bg-surface-low"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "text-right" : ""}">${m.from_staff ? "Console" : "Compte"} · ${esc(when(m.created_at))}</p></div>`;
+        return `<div class="max-w-[85%] ${m.from_staff ? "ml-auto" : ""}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-inverse text-inverse-ink" : "bg-surface-low"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "text-right" : ""}">${m.from_staff ? "Console" : "Compte"} · ${esc(when(m.created_at))}</p></div>`;
       }).join("") : `<p class="t-small text-ink-2">Aucun message.</p>`;
       box.scrollTop = box.scrollHeight;
     });

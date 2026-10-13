@@ -82,7 +82,7 @@
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[240px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(r.img, r.name)}
         <span class="absolute top-2.5 left-2.5 badge badge-dark">${esc(r.time)}</span>
-        ${r.partnerId ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${esc(String(r.rating))}</span>`}
+        ${r.partnerId ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">${icon("star", "text-gold text-[14px]", true)}${esc(String(r.rating))}</span>`}
       </div>
       <div class="p-3.5">
         <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${esc(r.name)}</h3>${r.partnerId ? "" : `<span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span>`}</div>
@@ -112,7 +112,7 @@
     return `<button type="button" onclick="${go("eventDetail", { id: e.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[260px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-36" : "ratio-16-10"} bg-card-high overflow-hidden">${img(e.img, e.name)}
         <div class="absolute inset-0 gradient-up"></div>
-        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-ink">${e.cat}</span>
+        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-[#0A0A0A]">${e.cat}</span>
         <div class="absolute bottom-2.5 left-3 right-3 text-white">
           <p class="t-caption text-gold">${YCData.fmtDate(e.date)} · ${e.time}</p>
           <h3 class="t-title leading-snug line-clamp-2">${e.name}</h3>
@@ -128,7 +128,7 @@
     const type = YCData.siteType(s.type);
     return `<button type="button" onclick="${go("cultureDetail", { id: s.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[220px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(s.img, s.name)}
-        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${type.label}</span>
+        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-[#0A0A0A]">${icon(type.icon, "text-[14px]")}${type.label}</span>
         ${s.unesco ? `<span class="absolute top-2.5 right-2.5 badge badge-gold">UNESCO</span>` : ""}
       </div>
       <div class="p-3.5"><h3 class="t-title line-clamp-2 leading-snug">${s.name}</h3><p class="t-small text-ink-2 truncate mt-0.5">${s.place}</p></div>

@@ -79,7 +79,7 @@
         ${UI.img(e.img, e.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
         <div class="absolute inset-0 gradient-up"></div>
         <div class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem] lg:px-8 lg:pb-8">
-          <span class="badge bg-white/95 text-ink mb-2 w-max">${esc(e.cat)}</span>
+          <span class="badge bg-white/95 text-[#0A0A0A] mb-2 w-max">${esc(e.cat)}</span>
           <h2 class="t-h1 lg:t-display max-w-[760px]">${esc(e.name)}</h2>
         </div>
         <button type="button" onclick="Screens._shareEvent('${e.id}')" class="absolute top-4 right-4 z-10 icon-btn" aria-label="Partager">${icon("share")}</button>

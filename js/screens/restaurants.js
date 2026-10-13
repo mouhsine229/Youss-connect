@@ -64,7 +64,7 @@
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left">
       <div class="relative ratio-16-10 bg-card-high overflow-hidden">${UI.img(r.img, r.name)}
         <span class="absolute top-2.5 left-2.5 badge ${isKitchenPaused(r.id) ? "badge-warn" : open ? "badge-success" : "badge-neutral"}">${isKitchenPaused(r.id) ? "En pause" : open ? "Ouvert" : "Fermé"} · ${esc(r.time)}</span>
-        ${live ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${r.rating} <span class="text-ink-3 font-normal">(${r.reviews})</span></span>`}
+        ${live ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">${icon("star", "text-gold text-[14px]", true)}${r.rating} <span class="text-ink-3 font-normal">(${r.reviews})</span></span>`}
       </div>
       <div class="p-4"><div class="flex items-start justify-between gap-2"><h3 class="t-h3 truncate">${esc(r.name)}</h3>${live ? "" : `<span class="t-small text-ink-2 whitespace-nowrap mt-1">${r.km} km</span>`}</div>
         <p class="t-small text-ink-2 mt-0.5">${esc(r.cat)} · ${esc(r.area)}, ${esc(r.city)}</p>

@@ -70,7 +70,7 @@
         ${UI.img(c.hero, c.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
         <div class="absolute inset-0 gradient-up"></div>
         <div class="relative z-10 flex flex-col min-h-[18rem] p-5 text-white lg:min-h-[22rem] lg:p-8">
-          <div class="flex justify-end">${!isHome ? `<button type="button" onclick="Shell.pickCity('${esc(c.name)}')" class="btn btn-sm bg-white/95 text-ink max-w-full h-auto min-h-9 whitespace-normal text-left py-2">${icon("swap_horiz", "text-[18px]")}Utiliser ${esc(c.name)} comme ville</button>` : `<span class="badge badge-gold">Votre ville</span>`}</div>
+          <div class="flex justify-end">${!isHome ? `<button type="button" onclick="Shell.pickCity('${esc(c.name)}')" class="btn btn-sm bg-white/95 text-[#0A0A0A] max-w-full h-auto min-h-9 whitespace-normal text-left py-2">${icon("swap_horiz", "text-[18px]")}Utiliser ${esc(c.name)} comme ville</button>` : `<span class="badge badge-gold">Votre ville</span>`}</div>
           <div class="mt-auto max-w-[640px]"><p class="t-caption text-gold">${esc(c.country)} · Destination</p><h2 class="t-display">${esc(c.name)}</h2><p class="t-body text-white/85 mt-1">${esc(c.tagline)}</p></div>
         </div>
       </section>
@@ -126,7 +126,7 @@
           ${UI.img(gallery[0], s.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
           <div class="absolute inset-0 gradient-up"></div>
           <div class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem]">
-            <div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${esc(type.label)}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div>
+            <div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-[#0A0A0A]">${icon(type.icon, "text-[14px]")}${esc(type.label)}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div>
             <h2 class="t-h1 lg:t-display">${esc(s.name)}</h2>
             <p class="t-body text-white/85 mt-1">${icon("location_on", "text-[16px]")} ${esc(s.place)}</p>
           </div>

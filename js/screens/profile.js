@@ -299,7 +299,7 @@
       const box = document.getElementById("help-chat");
       if (!box) return;
       box.innerHTML = rows.length ? rows.map(function (m) {
-        return `<div class="max-w-[85%] ${m.from_staff ? "" : "ml-auto"}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-surface-low" : "bg-ink text-white"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "" : "text-right"}">${m.from_staff ? "Assistance" : "Vous"}</p></div>`;
+        return `<div class="max-w-[85%] ${m.from_staff ? "" : "ml-auto"}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-surface-low" : "bg-inverse text-inverse-ink"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "" : "text-right"}">${m.from_staff ? "Assistance" : "Vous"}</p></div>`;
       }).join("") : `<p class="t-small text-ink-2">Écrivez votre message. La console KYA répond ici.</p>`;
       box.scrollTop = box.scrollHeight;
     });
