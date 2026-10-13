@@ -19,7 +19,7 @@
       ${UI.img(s.img, "", "img-cover transition-transform duration-500 group-hover:scale-105")}
       <div class="absolute inset-0 gradient-up"></div>
       <span class="absolute top-2.5 left-2.5 w-9 h-9 rounded-full bg-white/95 text-ink flex items-center justify-center">${icon(s.icon, "text-[20px]")}</span>
-      <div class="absolute bottom-2.5 left-3 right-3 text-white"><h3 class="t-title lg:t-h3 leading-tight">${I18N.t(s.label)}</h3><p class="t-small text-white/75 hidden sm:block">${s.sub}</p></div>
+      <div class="absolute bottom-2.5 left-3 right-3 text-white"><h3 class="t-title lg:t-h3 leading-tight line-clamp-2">${I18N.t(s.label)}</h3><p class="t-small text-white/75 hidden sm:block">${s.sub}</p></div>
     </button>`;
   }
 

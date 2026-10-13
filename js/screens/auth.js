@@ -16,14 +16,14 @@
   // Splash
   Screens.splash = function (container) {
     container.innerHTML = `
-      <div id="yc-splash" class="min-h-dvh bg-white flex flex-col items-center justify-center text-center px-6 relative overflow-hidden select-none">
+      <div id="yc-splash" class="splash min-h-dvh bg-white flex flex-col items-center justify-center text-center px-6 py-8 relative overflow-hidden select-none">
         <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gold/10 blur-3xl"></div>
         <div class="absolute -bottom-40 -left-24 w-[28rem] h-[28rem] rounded-full bg-gold/10 blur-3xl"></div>
-        <img src="./assets/youss-logo-full.png" alt="YOUSS CONNECT" class="w-[220px] lg:w-[280px] h-auto object-contain animate-pop" width="280" height="248"/>
-        <p class="mt-6 t-caption text-[#0A0A0A]/60 tracking-[0.3em] animate-fade-in" style="animation-delay:.3s">Portée par KYA CORPORATION</p>
+        <img src="./assets/youss-logo-full.png" alt="YOUSS CONNECT" class="splash-logo h-auto object-contain animate-pop" width="280" height="248"/>
+        <p class="mt-5 t-caption text-[#0A0A0A]/60 tracking-[0.22em] sm:tracking-[0.3em] animate-fade-in" style="animation-delay:.3s">Portée par KYA CORPORATION</p>
         <p class="mt-3 t-body lg:text-[17px] text-[#0A0A0A]/80 max-w-[320px] leading-relaxed animate-fade-in" style="animation-delay:.45s">Se déplacer, commander, sortir et payer. Quatre villes.</p>
-        <div class="mt-10 w-40 h-1 rounded-full bg-[#0A0A0A]/10 overflow-hidden"><div id="yc-splash-bar" class="h-full bg-gold w-0 transition-[width] duration-[1600ms] ease-out"></div></div>
-        <p class="absolute bottom-6 t-caption text-[#0A0A0A]/40">Cotonou · Dakar · Lomé · Accra</p>
+        <div class="mt-8 w-40 h-1 rounded-full bg-[#0A0A0A]/10 overflow-hidden"><div id="yc-splash-bar" class="h-full bg-gold w-0 transition-[width] duration-[1600ms] ease-out"></div></div>
+        <p class="mt-8 t-caption text-[#0A0A0A]/40">Cotonou · Dakar · Lomé · Accra</p>
       </div>`;
     requestAnimationFrame(() => { const b = document.getElementById("yc-splash-bar"); if (b) b.style.width = "100%"; });
     setTimeout(Screens._leaveSplash, 1900);
@@ -50,27 +50,27 @@
     const s = ONBOARD[i];
     const dots = ONBOARD.map((_, n) => `<button type="button" onclick="App.replace('onboarding',{i:${n}})" class="h-1.5 rounded-full transition-all ${n === i ? "w-8 bg-gold" : "w-3 bg-white/25"}" aria-label="Écran ${n + 1}"></button>`).join("");
     container.innerHTML = `
-      <div class="min-h-dvh bg-[#0A0A0A] text-white flex flex-col lg:grid lg:grid-cols-2">
-        <div class="relative flex-1 lg:h-dvh overflow-hidden">
-          <img src="${s.img}" alt="" class="absolute inset-0 w-full h-full object-cover animate-kenburns" key="${i}"/>
-          <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/30 to-[#0A0A0A]/40 lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-[#0A0A0A]"></div>
-          <header class="absolute top-0 inset-x-0 p-5 lg:p-8 flex items-center justify-between">
-            <div class="flex items-center gap-2.5"><img src="./assets/youss-logo-transparent.png" alt="" class="w-9 h-9 object-contain bg-white rounded-xl p-1"/><span class="font-extrabold tracking-tight">YOUSS CONNECT</span></div>
-            ${i > 0 ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="lg:hidden t-small font-semibold text-white/80 h-9 px-3 rounded-full bg-white/10">${I18N.t("skip")}</button>` : `<span></span>`}
+      <div class="onb">
+        <div class="onb-photo">
+          <img src="${s.img}" alt="" class="absolute inset-0 w-full h-full object-cover" key="${i}"/>
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/20 to-[#0A0A0A]/35 lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-[#0A0A0A]"></div>
+          <header class="absolute top-0 inset-x-0 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 lg:p-8 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0"><img src="./assets/youss-logo-transparent.png" alt="" class="w-9 h-9 object-contain bg-white rounded-xl p-1 shrink-0"/><span class="font-extrabold tracking-tight truncate">YOUSS CONNECT</span></div>
+            ${i > 0 ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="lg:hidden shrink-0 t-small font-semibold text-white/90 h-9 px-3 rounded-full bg-black/35">${I18N.t("skip")}</button>` : ""}
           </header>
         </div>
-        <div class="relative px-6 pb-8 pt-2 lg:p-16 xl:p-24 flex flex-col justify-center lg:h-dvh">
+        <div class="onb-copy">
           ${i > 0 ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="hidden lg:inline-flex absolute top-8 right-8 t-small font-semibold text-white/70 hover:text-white">${I18N.t("skip")}</button>` : ""}
-          <span class="badge bg-gold/15 text-gold w-max mb-4">${s.tag} · ${i + 1}/${ONBOARD.length}</span>
-          <h1 class="t-display text-balance animate-screen-in">${s.title}</h1>
-          <p class="t-body lg:text-[17px] lg:leading-[28px] text-white/75 mt-4 max-w-[480px] animate-screen-in" style="animation-delay:.05s">${s.body}</p>
-          <div class="flex items-center gap-1.5 mt-8">${dots}</div>
-          <div class="flex flex-col sm:flex-row gap-3 mt-8 max-w-[480px]">
-            ${i > 0 ? `<button type="button" onclick="App.replace('onboarding',{i:${i - 1}})" class="btn btn-lg bg-white/10 text-white sm:w-auto" aria-label="${I18N.t("back")}">${icon("arrow_back")}</button>` : ""}
-            <button type="button" onclick="${last ? "Screens._finishOnboarding('login')" : `App.replace('onboarding',{i:${i + 1}})`}" class="btn btn-lg btn-primary flex-1">${last ? I18N.t("start") : I18N.t("next")}${icon("arrow_forward", "text-[20px]")}</button>
+          <span class="badge bg-gold/15 text-gold w-max mb-3">${s.tag} · ${i + 1}/${ONBOARD.length}</span>
+          <h1 class="onb-title text-balance">${s.title}</h1>
+          <p class="t-body lg:text-[17px] lg:leading-[28px] text-white/75 mt-3 max-w-[480px]">${s.body}</p>
+          <div class="flex items-center gap-1.5 mt-5">${dots}</div>
+          <div class="onb-actions">
+            ${i > 0 ? `<button type="button" onclick="App.replace('onboarding',{i:${i - 1}})" class="onb-back" aria-label="${I18N.t("back")}">${icon("arrow_back")}</button>` : ""}
+            <button type="button" onclick="${last ? "Screens._finishOnboarding('login')" : `App.replace('onboarding',{i:${i + 1}})`}" class="onb-next">${last ? I18N.t("start") : I18N.t("next")}${icon("arrow_forward", "text-[20px]")}</button>
           </div>
-          ${last ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="mt-4 t-small text-white/70 hover:text-white text-left">J'ai déjà un compte · <span class="font-bold text-gold">Se connecter</span></button>` : ""}
-          <p class="mt-10 t-caption text-white/35">Portée par KYA CORPORATION</p>
+          ${last ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="mt-3 t-small text-white/70 hover:text-white text-left">J'ai déjà un compte · <span class="font-bold text-gold">Se connecter</span></button>` : ""}
+          <p class="mt-auto pt-4 t-caption text-white/35">Portée par KYA CORPORATION</p>
         </div>
       </div>`;
   };

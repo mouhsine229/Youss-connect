@@ -87,11 +87,11 @@
     if (o.homeHeader) {
       return `<header class="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-line/70">
         <div class="max-w-content mx-auto px-5 lg:px-10 h-[68px] lg:h-[76px] flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3 min-w-0">
+          <div class="flex items-center gap-3 min-w-0 flex-1">
             <button type="button" onclick="App.nav('profile')" class="lg:hidden flex-shrink-0">${UI.avatar(user, "w-11 h-11")}</button>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <h1 class="t-h3 lg:t-h2 truncate">${t("hello")}, ${UI.esc(user.name)}</h1>
-              <button type="button" onclick="Shell.openCityPicker()" class="t-small text-ink-2 flex items-center gap-1 truncate">${icon("location_on", "text-[15px] text-gold", true)}${UI.esc(user.city)}, ${UI.esc(user.country)}${icon("expand_more", "text-[16px]")}</button>
+              <button type="button" onclick="Shell.openCityPicker()" class="flex w-full min-w-0 items-center gap-1 text-left">${icon("location_on", "text-[15px] text-gold", true)}<span class="min-w-0 truncate t-small text-ink-2">${UI.esc(user.city)}, ${UI.esc(user.country)}</span>${icon("expand_more", "text-[16px] text-ink-3")}</button>
             </div>
           </div>
           <div class="flex items-center gap-2">${searchBtn}${cityBtn}${bell}</div>
