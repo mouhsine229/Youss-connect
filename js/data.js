@@ -6,10 +6,10 @@
   const IMG = "./assets/img/";
 
   const COUNTRIES = [
-    { code: "BJ", name: "Bénin", dial: "+229", flag: "🇧🇯", currency: "FCFA", cities: ["Cotonou", "Porto-Novo", "Ouidah", "Abomey", "Parakou", "Bohicon"] },
-    { code: "SN", name: "Sénégal", dial: "+221", flag: "🇸🇳", currency: "FCFA", cities: ["Dakar", "Saint-Louis", "Thiès", "Mbour"] },
-    { code: "TG", name: "Togo", dial: "+228", flag: "🇹🇬", currency: "FCFA", cities: ["Lomé", "Kara", "Sokodé", "Kpalimé"] },
-    { code: "GH", name: "Ghana", dial: "+233", flag: "🇬🇭", currency: "GHS", cities: ["Accra", "Kumasi", "Takoradi", "Cape Coast"] }
+    { code: "BJ", name: "Bénin", dial: "+229", flag: "🇧🇯", currency: "FCFA", cities: ["Cotonou", "Porto-Novo", "Ouidah", "Abomey", "Parakou", "Bohicon"], bbox: [0.75, 6.15, 3.90, 12.50] },
+    { code: "SN", name: "Sénégal", dial: "+221", flag: "🇸🇳", currency: "FCFA", cities: ["Dakar", "Saint-Louis", "Thiès", "Mbour"], bbox: [-17.60, 12.20, -11.30, 16.75] },
+    { code: "TG", name: "Togo", dial: "+228", flag: "🇹🇬", currency: "FCFA", cities: ["Lomé", "Kara", "Sokodé", "Kpalimé"], bbox: [-0.20, 6.00, 1.85, 11.20] },
+    { code: "GH", name: "Ghana", dial: "+233", flag: "🇬🇭", currency: "GHS", cities: ["Accra", "Kumasi", "Takoradi", "Cape Coast"], bbox: [-3.30, 4.65, 1.25, 11.25] }
   ];
 
   /* Villes de démonstration (destinations + bases Transport/Livraison) */
@@ -481,6 +481,23 @@
     const hub = code && countryOf(code).cities.find((n) => CITIES[n]);
     return (hub && CITIES[hub]) || CITIES.Cotonou;
   };
+  const inCountry = (lat, lng, code) => {
+    const b = (countryOf(code).bbox) || null;
+    if (!b || lat == null || lng == null) return false;
+    return lng >= b[0] && lat >= b[1] && lng <= b[2] && lat <= b[3];
+  };
+  const countryCodeAt = (lat, lng) => {
+    const hits = COUNTRIES.filter((c) => inCountry(lat, lng, c.code));
+    if (!hits.length) return "";
+    if (hits.length === 1) return hits[0].code;
+    let best = hits[0], bestD = Infinity;
+    hits.forEach((c) => {
+      const hub = cityOf(c.cities[0]);
+      const d = distanceKm(lat, lng, hub.lat, hub.lng);
+      if (d < bestD) { bestD = d; best = c; }
+    });
+    return best.code;
+  };
   const siteType = (id) => SITE_TYPES.find((t) => t.id === id) || SITE_TYPES[0];
 
   /* Index de recherche global : construit depuis les données réelles */
@@ -516,8 +533,8 @@
       }
       if (f.kind && f.kind !== "all" && item.kind !== f.kind) return false;
       if (f.city && item.city && item.city !== f.city) return false;
-      if (!f.city && f.countryCode && item.kind !== "service" && item.kind !== "destination") {
-        const code = item.city ? countryCodeOfCity(item.city) : "";
+      if (!f.city && f.countryCode && item.kind !== "service") {
+        const code = countryCodeOfCity(item.city || item.title);
         if (code && code !== f.countryCode) return false;
       }
       if (f.rating && (item.rating || 0) < f.rating) return false;
@@ -533,7 +550,7 @@
   window.YCData = {
     IMG, COUNTRIES, CITIES, DESTINATIONS, RESTAURANTS, RESTAURANT_CATS, SELLERS, PRODUCTS, PRODUCT_CATS,
     EVENTS, EVENT_CATS, SITE_TYPES, SITES, DRIVERS, COURIERS, REWARDS, TIERS,
-    distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, countryCodeOfCity, siteType, search,
+    distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, countryCodeOfCity, countryCodeAt, inCountry, siteType, search,
     restaurant: (id) => { const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r; }, product: (id) => byId(PRODUCTS, id), event: (id) => byId(allEvents(), id), site: (id) => byId(SITES, id), allEvents, extraDishes,
     seller: (id) => SELLERS[id], driverFor: (city, vehicle) => DRIVERS.find((d) => d.city === city && d.vehicle === vehicle) || DRIVERS.find((d) => d.city === city) || DRIVERS[0],
     courierFor: (city) => COURIERS.find((c) => c.city === city) || COURIERS[0],

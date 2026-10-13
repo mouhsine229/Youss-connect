@@ -111,7 +111,7 @@
         <div class="absolute inset-0 lg:static lg:h-full">
           <div id="tr-map" class="absolute inset-0 lg:relative lg:h-full w-full"></div>
           <div class="absolute top-3 right-3 z-10 flex flex-col gap-2">
-            <button type="button" onclick="Screens._useMyPosition()" class="icon-btn" title="Ma position" aria-label="Ma position">${icon("my_location")}</button>
+            <button type="button" onclick="Screens._useMyPosition('from')" class="icon-btn" title="Ma position" aria-label="Ma position">${icon("my_location")}</button>
             <button type="button" onclick="Shell.openCityPicker()" class="icon-btn" title="Changer de ville" aria-label="Changer de ville">${icon("public")}</button>
           </div>
         </div>
@@ -124,8 +124,11 @@
     map = M().create("tr-map", { interactive: true, zoomPosition: "bottomright" });
     if (!map) { refreshPanel(); return; }
     refreshMarkers();
-    map.onClick((p) => Screens._setTripPoint(trip.pickMode, { name: "Point sur la carte (" + p.lat.toFixed(4) + ", " + p.lng.toFixed(4) + ")", lat: p.lat, lng: p.lng }));
-    M().locate((pos) => { if (map) map.setUser([pos.lat, pos.lng]); });
+    map.onClick((p) => {
+      if (YCData.countryCodeAt(p.lat, p.lng) !== ACState.user.countryCode) { UI.toast("Ce point est en dehors du pays choisi.", "info"); return; }
+      Screens._setTripPoint(trip.pickMode, { name: "Point sur la carte (" + p.lat.toFixed(4) + ", " + p.lng.toFixed(4) + ")", lat: p.lat, lng: p.lng });
+    });
+    M().locate((pos) => { if (map && pos.ok) map.setUser([pos.lat, pos.lng]); });
     refreshPanel();
     loadRoute();
   }
@@ -171,17 +174,23 @@
   }
 
   // Saisie et suggestions
+  function hereRow(role) {
+    return `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._useMyPosition('${role || "from"}')" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line">
+      <span class="w-9 h-9 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center flex-shrink-0">${icon("my_location", "text-[18px]")}</span>
+      <span class="min-w-0 flex-1"><span class="block t-small font-semibold truncate">Utiliser ma position actuelle</span><span class="block t-small text-ink-3 truncate">Demande l'accès à votre position · ${esc(ACState.user.country)}</span></span>
+    </button>`;
+  }
   function renderSuggestions(list, opts) {
     const box = document.getElementById("place-suggestions"); if (!box) return;
     lastSuggestions = list;
-    if (!list.length && !(opts && opts.loading)) {
-      box.innerHTML = `<p class="px-4 py-4 t-small text-ink-2">${opts && opts.query ? "Aucun lieu trouvé pour « " + esc(opts.query) + " »" : "Saisissez une adresse, un quartier ou un lieu"}</p>`;
-    } else {
-      box.innerHTML = list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._pickSuggestion(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0">
+    const role = suggestRole || "to";
+    const empty = !list.length && !(opts && opts.loading)
+      ? `<p class="px-4 py-4 t-small text-ink-2">${opts && opts.query ? "Aucun lieu dans " + esc(ACState.user.country) + " pour « " + esc(opts.query) + " »" : "Saisissez une adresse, un quartier ou un lieu dans " + esc(ACState.user.country)}</p>`
+      : list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._pickSuggestion(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0">
         <span class="w-9 h-9 rounded-full bg-surface-low text-ink flex items-center justify-center flex-shrink-0">${icon(s.icon || "place", "text-[18px]")}</span>
         <span class="min-w-0 flex-1"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span>${icon("north_west", "text-[16px] text-ink-3")}
       </button>`).join("") + (opts && opts.loading ? `<p class="px-4 py-2.5 t-small text-ink-3 flex items-center gap-2 border-t border-line">${UI.spinner("!w-4 !h-4 !border-2")}Recherche en cours…</p>` : "");
-    }
+    box.innerHTML = hereRow(role) + empty;
     box.classList.remove("hidden");
   }
   const hideSuggestions = () => { const b = document.getElementById("place-suggestions"); if (b) b.classList.add("hidden"); };
@@ -212,8 +221,10 @@
       if (!p || req !== suggestReq || !App.current || App.current.id !== "transport") return;
       // entre-temps l'utilisateur a pu choisir un lieu sur la carte ou dans les raccourcis
       const now = role === "from" ? trip.from : trip.to; if ((now ? now.name : null) !== before) return;
-      if (p.approx) UI.toast("Adresse gardée telle quelle, position approximative. Vous pouvez l'ajuster sur la carte.", "info");
-      const el = document.getElementById(role === "from" ? "from-input" : "dest-input"); if (fromEnter && el) el.blur();
+      const el = document.getElementById(role === "from" ? "from-input" : "dest-input");
+      if (p.outside) { UI.toast("Ce lieu est en dehors du pays choisi.", "info"); if (el) el.value = before || ""; refreshPanel(); return; }
+      if (p.approx) UI.toast("Adresse gardée telle quelle, position approximative dans " + ACState.user.country + ".", "info");
+      if (fromEnter && el) el.blur();
       Screens._setTripPoint(role, { name: p.name, lat: p.lat, lng: p.lng });
       if (fromEnter && role === "from" && !trip.to) { const d = document.getElementById("dest-input"); if (d) setTimeout(() => d.focus(), 60); }
     });
@@ -237,12 +248,21 @@
   Screens._pickPoi = function (p) { Screens._setTripPoint(trip.pickMode, { name: p.name, lat: p.lat, lng: p.lng }); UI.toast((trip.pickMode === "to" && trip.to && trip.to.name === p.name ? "Destination : " : "Départ : ") + p.name.split("(")[0].trim(), "info"); };
   Screens._swapTripPoints = function () { const f = trip.from; trip.from = trip.to; trip.to = f; trip.route = null; updateDistance(); syncTrip(); refreshMarkers(); refreshPanel(); loadRoute(); };
   Screens._pickVehicle = function (id) { trip.vehicle = id; updateDistance(); syncTrip(); refreshPanel(); };
-  Screens._useMyPosition = function () {
-    UI.toast("Localisation en cours…", "info");
+  Screens._useMyPosition = function (role) {
+    const target = role === "to" || role === "from" ? role : (suggestRole || "from");
+    UI.toast("Demande d'accès à votre position…", "info");
     M().locate((pos) => {
-      Screens._setTripPoint("from", { name: pos.ok ? "Ma position actuelle" : "Ma position (estimée)", lat: pos.lat, lng: pos.lng });
-      trip.pickMode = "to"; if (map) { map.setUser([pos.lat, pos.lng]); map.setView(pos.lat, pos.lng, 14); }
-      UI.toast("Départ = votre position", "success");
+      if (!pos.ok) {
+        if (pos.denied) UI.toast("Accès refusé. Autorisez la position dans votre navigateur, puis réessayez.", "error");
+        else if (pos.outside) UI.toast("Votre position est en dehors du pays choisi. Les destinations restent dans ce pays.", "info");
+        else UI.toast("Position indisponible. Réessayez.", "error");
+        return;
+      }
+      hideSuggestions();
+      Screens._setTripPoint(target, { name: "Position actuelle", lat: pos.lat, lng: pos.lng });
+      if (target === "from") trip.pickMode = trip.to ? trip.pickMode : "to";
+      if (map) { map.setUser([pos.lat, pos.lng]); map.setView(pos.lat, pos.lng, 15); }
+      UI.toast(target === "from" ? "Départ placé sur votre position." : "Destination placée sur votre position.", "success");
     });
   };
 

@@ -112,10 +112,11 @@
   function showSuggest(list) {
     const box = document.getElementById("dl-suggest"); if (!box) return;
     lastList = list;
-    // le champ est dans un span.relative, donc on mesure par rapport à la section
     const field = document.getElementById("dl-" + activeField);
     if (field) { const sec = box.offsetParent || box.parentElement; const fr = field.getBoundingClientRect(), sr = sec.getBoundingClientRect(); box.style.top = (fr.bottom - sr.top + 6) + "px"; }
-    box.innerHTML = list.length ? list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlPick(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0"><span class="menu-icon !w-9 !h-9">${icon(s.icon || "place", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span></button>`).join("") : `<p class="px-4 py-3 t-small text-ink-2">Aucun lieu connu. Validez avec Entrée pour garder l'adresse telle quelle.</p>`;
+    const here = `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlUseHere()" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line"><span class="menu-icon !w-9 !h-9 !bg-gold-soft !text-gold-deep">${icon("my_location", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">Utiliser ma position actuelle</span><span class="block t-small text-ink-3 truncate">Demande l'accès à votre position · ${esc(ACState.user.country)}</span></span></button>`;
+    const rows = list.length ? list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlPick(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0"><span class="menu-icon !w-9 !h-9">${icon(s.icon || "place", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span></button>`).join("") : `<p class="px-4 py-3 t-small text-ink-2">Aucun lieu dans ${esc(ACState.user.country)}. Validez avec Entrée pour garder une adresse de ce pays.</p>`;
+    box.innerHTML = here + rows;
     box.classList.remove("hidden");
   }
   const hideSuggest = () => { const b = document.getElementById("dl-suggest"); if (b) b.classList.add("hidden"); };
@@ -144,9 +145,10 @@
     M().resolveTyped(t, ACState.user.city).then((p) => {
       if (!p || !App.current || App.current.id !== "delivery") return;
       if ((parcel[role] ? parcel[role].name : null) !== before) return; // choisi ailleurs entre-temps
+      if (p.outside) { UI.toast("Ce lieu est en dehors du pays choisi.", "info"); const f = document.getElementById("dl-" + role); if (f) f.value = before || ""; return; }
       parcel[role] = { name: p.name, lat: p.lat, lng: p.lng, city: ACState.user.city, approx: !!p.approx };
       parcel.route = null;
-      if (p.approx) UI.toast("Adresse enregistrée. Le livreur confirmera la position exacte avec vous.", "info");
+      if (p.approx) UI.toast("Adresse enregistrée dans " + ACState.user.country + ". Le livreur confirmera la position exacte avec vous.", "info");
       // si l'utilisateur est déjà en train de taper dans l'autre champ, on ne casse pas sa saisie
       if (otherFocused()) { pendingRerender = true; const f = document.getElementById("dl-" + role); if (f) f.value = p.name; estimate(); drawMiniMap(); return; }
       pendingRerender = false; rerenderKeepFocus();
@@ -163,7 +165,27 @@
   }
   let picking = false;
   Screens._dlBlur = (role) => { clearTimeout(suggestTimer); if (picking) return; setTimeout(() => { hideSuggest(); const f = document.getElementById("dl-" + role); if (f) commitTyped(role, f.value); }, 160); };
-  Screens._dlPick = (i) => { const s = lastList[i]; if (!s) return; hideSuggest(); picking = true; parcel[activeField] = { name: s.name, lat: s.lat, lng: s.lng, city: ACState.user.city }; parcel.route = null; rerender(); picking = false; };
+  Screens._dlPick = (i) => {
+    const s = lastList[i]; if (!s) return;
+    if (YCData.countryCodeAt(s.lat, s.lng) !== ACState.user.countryCode) { UI.toast("Ce lieu est en dehors du pays choisi.", "info"); return; }
+    hideSuggest(); picking = true; parcel[activeField] = { name: s.name, lat: s.lat, lng: s.lng, city: ACState.user.city }; parcel.route = null; rerender(); picking = false;
+  };
+  Screens._dlUseHere = function () {
+    const role = activeField || "from";
+    UI.toast("Demande d'accès à votre position…", "info");
+    M().locate((pos) => {
+      if (!pos.ok) {
+        if (pos.denied) UI.toast("Accès refusé. Autorisez la position dans votre navigateur, puis réessayez.", "error");
+        else if (pos.outside) UI.toast("Votre position est en dehors du pays choisi. Les destinations restent dans ce pays.", "info");
+        else UI.toast("Position indisponible. Réessayez.", "error");
+        return;
+      }
+      hideSuggest(); picking = true;
+      parcel[role] = { name: "Position actuelle", lat: pos.lat, lng: pos.lng, city: ACState.user.city };
+      parcel.route = null; rerender(); picking = false;
+      UI.toast(role === "from" ? "Départ placé sur votre position." : "Destination placée sur votre position.", "success");
+    });
+  };
 
   Screens._deliveryContinue = function () {
     saveFields();

@@ -305,7 +305,19 @@
     "Confidentialité": "Privacy",
     "Le détail des opérations n'est pas affiché sur cet écran. Ouvrez l'historique pour le consulter, le télécharger ou le partager.": "Transaction details are not shown on this screen. Open the history to review, download or share them.",
     "Démo · le numéro complet n'est pas enregistré": "Demo · the full number is not stored",
-    "Continuer avec le code PIN uniquement": "Continue with PIN only"
+    "Continuer avec le code PIN uniquement": "Continue with PIN only",
+    "Utiliser ma position actuelle": "Use my current location",
+    "Demande l'accès à votre position": "Asks for access to your location",
+    "Position actuelle": "Current location",
+    "Autour de moi": "Around me",
+    "Demande d'accès à votre position…": "Asking for access to your location…",
+    "Accès refusé. Autorisez la position dans votre navigateur, puis réessayez.": "Access denied. Allow location in your browser, then try again.",
+    "Votre position est en dehors du pays choisi. Les destinations restent dans ce pays.": "Your position is outside the selected country. Destinations stay in this country.",
+    "Ce point est en dehors du pays choisi.": "This point is outside the selected country.",
+    "Ce lieu est en dehors du pays choisi.": "This place is outside the selected country.",
+    "Départ placé sur votre position.": "Pickup set to your location.",
+    "Destination placée sur votre position.": "Destination set to your location.",
+    "Position indisponible. Réessayez.": "Location unavailable. Try again."
   };
   const EXACT = { "Cuisine": "Kitchen" };
   function lockCore() { addPhrases(CORE); addPhrases(EXTRA); }
