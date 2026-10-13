@@ -473,7 +473,22 @@
     "Les avis de ce restaurant s'afficheront ici lorsqu'ils seront enregistrés.": "Reviews for this restaurant will appear here once they are saved.",
     "Youss Wallet ou espèces": "Youss Wallet or cash",
     "Merci de nous rejoindre.": "Thank you for joining us.",
-    "Chargement du restaurant…": "Loading the restaurant…"
+    "Chargement du restaurant…": "Loading the restaurant…",
+    "Ce compte n'ouvre pas la console. Utilisez le compte de KYA CORPORATION.": "This account does not open the console. Use the KYA CORPORATION account.",
+    "Le mot de passe doit contenir au moins 10 caractères, avec une lettre et un chiffre.": "The password must contain at least 10 characters, with a letter and a digit.",
+    "Choisissez un code moins simple.": "Choose a less simple code.",
+    "Choisissez un code différent.": "Choose a different code.",
+    "Saisissez d'abord le code actuel.": "Enter the current code first.",
+    "Choisissez le nouveau code PIN.": "Choose the new PIN.",
+    "Trop de codes incorrects. Réessayez dans une heure.": "Too many incorrect codes. Try again in an hour.",
+    "Trop de comptes créés depuis ce réseau. Réessayez dans une heure.": "Too many accounts created from this network. Try again in an hour.",
+    "10 caractères min.": "10 characters min.",
+    "Journal de la console": "Console log",
+    "Aucune action enregistrée.": "No action recorded.",
+    "Pièce acceptée": "Document accepted",
+    "Pièce refusée": "Document rejected",
+    "Restaurant créé": "Restaurant created",
+    "Mot de passe cuisine renouvelé": "Kitchen password renewed"
   };
   const EXACT = { "Cuisine": "Kitchen" };
   function lockCore() { addPhrases(CORE); addPhrases(EXTRA); }

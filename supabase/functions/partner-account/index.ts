@@ -1,11 +1,28 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
+const ORIGINS = [
+  "https://mouhsine229.github.io",
+  "http://127.0.0.1:4173",
+  "http://localhost:4173",
+  "http://127.0.0.1:4174",
+  "http://localhost:4174"
+];
+let cors: Record<string, string> = {
+  "Access-Control-Allow-Origin": "https://mouhsine229.github.io",
+  Vary: "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
+function useCors(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  cors = {
+    "Access-Control-Allow-Origin": ORIGINS.indexOf(origin) >= 0 ? origin : "https://mouhsine229.github.io",
+    Vary: "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
+  };
+}
 
 const DOMAIN = "@kitchen.youssconnect.app";
 const LOGIN = /^[A-Z0-9][A-Z0-9-]{2,22}[A-Z0-9]$/;
@@ -36,6 +53,7 @@ function clip(value: unknown, max: number) {
 }
 
 Deno.serve(async (req: Request) => {
+  useCors(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ ok: false, message: "Méthode refusée." }, 405);
 

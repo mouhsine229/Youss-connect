@@ -201,14 +201,16 @@ revoke all on function public.handle_new_user() from public, anon, authenticated
 revoke all on function public.wallet_pay(integer, text, text, integer, jsonb) from public, anon, authenticated;
 revoke all on function public.wallet_topup(integer, text) from public, anon, authenticated;
 grant execute on function public.wallet_pay(integer, text, text, integer, jsonb) to authenticated;
+revoke update (pin_hash) on public.profiles from public, anon, authenticated;
 
 create table if not exists public.user_records (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  kind text not null check (kind in ('activity', 'ticket', 'order', 'notification', 'address')),
+  kind text not null check (kind in ('activity', 'ticket', 'order', 'notification', 'address', 'reward', 'favorite', 'saved')),
   local_id text not null check (char_length(local_id) between 1 and 80),
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   unique (user_id, kind, local_id)
 );
 
@@ -227,7 +229,9 @@ create policy "own records insert" on public.user_records for insert with check 
 create policy "own records update" on public.user_records for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "own records delete" on public.user_records for delete using ((select auth.uid()) = user_id);
 
-create or replace function public.save_records(p_rows jsonb)
+-- La version à deux arguments (listes + suppressions) est dans supabase/harden.sql.
+-- Ce fichier garde la même signature pour une installation neuve.
+create or replace function public.save_records(p_rows jsonb, p_drop jsonb default '[]'::jsonb)
 returns void
 language plpgsql
 security definer
@@ -240,10 +244,16 @@ declare
   lid text;
   body jsonb;
 begin
-  if uid is null or jsonb_typeof(p_rows) is distinct from 'array' then
+  if uid is null then
     return;
   end if;
-  if jsonb_array_length(p_rows) > 80 then
+  if p_rows is null or jsonb_typeof(p_rows) is distinct from 'array' then
+    p_rows := '[]'::jsonb;
+  end if;
+  if p_drop is null or jsonb_typeof(p_drop) is distinct from 'array' then
+    p_drop := '[]'::jsonb;
+  end if;
+  if jsonb_array_length(p_rows) > 80 or jsonb_array_length(p_drop) > 80 then
     return;
   end if;
   for row in select value from jsonb_array_elements(p_rows)
@@ -251,21 +261,34 @@ begin
     k := row->>'kind';
     lid := left(coalesce(row->>'local_id', ''), 80);
     body := coalesce(row->'payload', '{}'::jsonb);
-    if k not in ('activity', 'ticket', 'order', 'notification', 'address') then
+    if k not in ('activity', 'ticket', 'order', 'notification', 'address', 'reward', 'favorite', 'saved') then
       continue;
     end if;
     if char_length(lid) < 1 or octet_length(body::text) > 12000 then
       continue;
     end if;
-    insert into public.user_records (user_id, kind, local_id, payload)
-    values (uid, k, lid, body)
-    on conflict (user_id, kind, local_id) do update set payload = excluded.payload;
+    insert into public.user_records (user_id, kind, local_id, payload, updated_at)
+    values (uid, k, lid, body, now())
+    on conflict (user_id, kind, local_id) do update
+      set payload = excluded.payload, updated_at = now();
+  end loop;
+  for row in select value from jsonb_array_elements(p_drop)
+  loop
+    k := row->>'kind';
+    lid := left(coalesce(row->>'local_id', ''), 80);
+    if k not in ('activity', 'ticket', 'order', 'notification', 'address', 'reward', 'favorite', 'saved') then
+      continue;
+    end if;
+    if char_length(lid) < 1 then
+      continue;
+    end if;
+    delete from public.user_records where user_id = uid and kind = k and local_id = lid;
   end loop;
 end;
 $$;
 
-revoke all on function public.save_records(jsonb) from public, anon, authenticated;
-grant execute on function public.save_records(jsonb) to authenticated;
+revoke all on function public.save_records(jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.save_records(jsonb, jsonb) to authenticated;
 
 -- Pièces d'identité, assistance, console et clé d'appareil.
 -- Aucune image d'empreinte ou de visage n'est stockée : seulement la clé publique WebAuthn.
@@ -378,12 +401,7 @@ begin
   if exists (select 1 from public.staff where user_id = auth.uid()) then
     return 'member';
   end if;
-  perform pg_advisory_xact_lock(2041301);
-  if exists (select 1 from public.staff) then
-    return 'denied';
-  end if;
-  insert into public.staff (user_id, role) values (auth.uid(), 'admin');
-  return 'created';
+  return 'denied';
 end;
 $$;
 
@@ -551,18 +569,16 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'insufficient_balance');
   end if;
 
-  if exists (select 1 from public.device_keys where user_id = uid) then
-    select id into cid
-    from public.auth_confirmations
-    where user_id = uid and used = false and expires_at > now()
-    order by created_at desc
-    limit 1
-    for update;
-    if cid is null then
-      return jsonb_build_object('ok', false, 'reason', 'confirm');
-    end if;
-    update public.auth_confirmations set used = true where id = cid;
+  select id into cid
+  from public.auth_confirmations
+  where user_id = uid and used = false and expires_at > now()
+  order by created_at desc
+  limit 1
+  for update;
+  if cid is null then
+    return jsonb_build_object('ok', false, 'reason', 'confirm');
   end if;
+  update public.auth_confirmations set used = true where id = cid;
 
   update public.wallets
     set balance = balance - p_amount,

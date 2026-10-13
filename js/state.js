@@ -129,6 +129,7 @@
               if (official.cities.indexOf(out.user.city) < 0) out.user.city = official.cities[0];
             }
           }
+          if (out.prefs && out.prefs.pinHash) delete out.prefs.pinHash;
           if (!Array.isArray(out.wallet.cards)) out.wallet.cards = [];
           out.wallet.cards = out.wallet.cards.filter(function (c) { return c && c.last4 && !c.pan && !c.cvv; }).map(function (c) {
             return { id: String(c.id || ""), brand: String(c.brand || "Carte"), last4: String(c.last4).replace(/\D/g, "").slice(-4), exp: String(c.exp || ""), holder: String(c.holder || "") };
@@ -145,7 +146,11 @@
     function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(State)); } catch (e) { /* quota / privé */ }
+      try {
+        var snapshot = JSON.parse(JSON.stringify(State));
+        if (snapshot.prefs) delete snapshot.prefs.pinHash;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+      } catch (e) { /* quota / privé */ }
       if (window.YCBackend && YCBackend.isLive() && YCBackend.saveLists) YCBackend.saveLists();
     }, 120);
   }

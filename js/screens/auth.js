@@ -177,7 +177,7 @@
           ${UI.select("su-country", "Pays", YCData.COUNTRIES.map((x) => ({ value: x.code, label: x.flag + " " + x.name })), c.code, "Screens._syncCities()")}
           ${UI.select("su-city", "Ville", c.cities, c.cities[0])}
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.field("su-pass", I18N.t("password"), { type: "password", placeholder: "8 caractères min.", autocomplete: "new-password" })}${UI.field("su-pass2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.field("su-pass", I18N.t("password"), { type: "password", placeholder: "10 caractères min.", autocomplete: "new-password" })}${UI.field("su-pass2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}</div>
         <div id="su-strength" class="h-1 rounded-full bg-line overflow-hidden"><div class="h-full w-0 bg-gold transition-all"></div></div>
         ${UI.error("su-error")}
         <label class="flex items-start gap-2 t-small text-ink-2"><input id="su-terms" type="checkbox" class="form-checkbox mt-0.5 rounded border-line text-gold focus:ring-gold/40"/><span>J'accepte les <button type="button" class="font-bold underline text-gold-deep dark:text-gold" onclick="event.preventDefault();event.stopPropagation();App.nav('terms')">conditions d'utilisation</button> et la <button type="button" class="font-bold underline text-gold-deep dark:text-gold" onclick="event.preventDefault();event.stopPropagation();App.nav('privacy')">politique de confidentialité</button>.</span></label>
@@ -187,7 +187,7 @@
     container.innerHTML = authFrame(form, { back: "App.back()" });
     const pass = document.getElementById("su-pass");
     if (pass) pass.addEventListener("input", function () {
-      const v = this.value; let s = 0; if (v.length >= 8) s++; if (/[A-Z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^\w]/.test(v)) s++;
+      const v = this.value; let s = 0; if (v.length >= 10) s++; if (/[A-Za-z]/.test(v) && /\d/.test(v)) s++; if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++; if (/[^\w]/.test(v)) s++;
       const bar = document.querySelector("#su-strength > div"); if (bar) { bar.style.width = (s * 25) + "%"; bar.className = "h-full transition-all " + (s < 2 ? "bg-danger" : s < 4 ? "bg-warn" : "bg-success"); }
     });
   };
@@ -205,7 +205,7 @@
     if (!first || !last) return UI.showError("su-error", "Indiquez votre prénom et votre nom.");
     if (!p.ok) return UI.showError("su-error", "Indiquez un numéro de téléphone valide.");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return UI.showError("su-error", "Indiquez une adresse e-mail. Elle sert à ouvrir le compte.");
-    if (pass.length < 8) return UI.showError("su-error", "Le mot de passe doit contenir au moins 8 caractères.");
+    if (pass.length < 10 || !/[A-Za-z]/.test(pass) || !/\d/.test(pass)) return UI.showError("su-error", "Le mot de passe doit contenir au moins 10 caractères, avec une lettre et un chiffre.");
     if (pass !== pass2) return UI.showError("su-error", "Les mots de passe ne correspondent pas.");
     if (!document.getElementById("su-terms").checked) return UI.showError("su-error", "Veuillez accepter les conditions d'utilisation.");
     if (!window.YCBackend || !YCBackend.configured() || !YCBackend.isReady()) return UI.showError("su-error", "Le compte est momentanément indisponible. Réessayez.");
@@ -288,7 +288,7 @@
   Screens.terms = function (container) {
     legalScreen(container, L("Conditions d'utilisation", "Terms of use"), [
       [L("Éditeur", "Publisher"), L("YOUSS CONNECT est éditée par KYA CORPORATION. Le service couvre Cotonou, Dakar, Lomé et Accra.", "YOUSS CONNECT is published by KYA CORPORATION. The service covers Cotonou, Dakar, Lomé and Accra.")],
-      [L("Compte", "Account"), L("L'inscription demande un nom, un téléphone, un e-mail et un mot de passe d'au moins 8 caractères. Le compte est enregistré pour YOUSS CONNECT. Le code SMS n'est pas encore ouvert.", "Sign-up asks for a name, a phone number, an email and a password of at least 8 characters. The account is stored for YOUSS CONNECT. SMS codes are not open yet.")],
+      [L("Compte", "Account"), L("L'inscription demande un nom, un téléphone, un e-mail et un mot de passe d'au moins 10 caractères, avec une lettre et un chiffre. Le compte est enregistré pour YOUSS CONNECT. Le code SMS n'est pas encore ouvert.", "Sign-up asks for a name, a phone number, an email and a password of at least 10 characters, with a letter and a digit. The account is stored for YOUSS CONNECT. SMS codes are not open yet.")],
       [L("Services", "Services"), L("Les restaurants, produits, événements, chauffeurs et prix montrés dans les quatre villes sont des exemples. Aucun partenaire n'est présenté comme officiel.", "Restaurants, products, events, drivers and prices shown in the four cities are examples. No partner is presented as official.")],
       [L("Paiements", "Payments"), L("Youss Wallet débite le solde du compte. La recharge, la carte et le paiement mobile ne sont pas encaissés tant qu'un prestataire n'est pas branché. Les espèces se règlent à la livraison ou au chauffeur. Le code PIN est celui que vous choisissez. Le numéro complet de carte et le cryptogramme ne sont pas enregistrés.", "Youss Wallet debits the account balance. Top-up, card and mobile payment are not collected until a provider is connected. Cash is paid on delivery or to the driver. The PIN is the one you choose. The full card number and security code are not stored.")],
       [L("Utilisation acceptable", "Acceptable use"), L("N'utilisez pas l'application pour usurper une identité, harceler quelqu'un ou tenter d'accéder au compte d'une autre personne. Les essais de code sont limités.", "Do not use the app to impersonate someone, harass anyone, or try to access another person's account. Code attempts are limited.")],

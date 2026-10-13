@@ -156,7 +156,7 @@
         });
       };
       paint();
-      poll = setInterval(paint, 4000);
+      poll = setInterval(function () { if (!document.hidden) paint(); }, 4000);
     });
   };
   Screens._proPause = function () {
