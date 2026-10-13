@@ -147,7 +147,7 @@
   function pay(opts) {
     opts = opts || {};
     if (typeof navigator !== "undefined" && navigator.onLine === false) return Promise.resolve({ ok: false, reason: "offline" });
-    return client.rpc("wallet_pay", { p_amount: Math.round(opts.amount), p_label: opts.label || "Paiement", p_service: opts.service || "wallet", p_points: opts.pointsEarned || 0, p_meta: opts.meta || {} }).then(function (res) {
+    return client.rpc("wallet_pay", { p_amount: Math.round(opts.amount), p_label: opts.label || "Paiement", p_service: opts.service || "wallet", p_points: Math.min(Math.max(Math.round(opts.pointsEarned || 0), 0), Math.round(opts.amount / 100)), p_meta: opts.meta || {} }).then(function (res) {
       if (res.error) return { ok: false, reason: "error", message: explain(res.error) };
       var body = res.data || { ok: false, reason: "error" };
       if (!body.ok) return body;

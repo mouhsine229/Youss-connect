@@ -132,7 +132,7 @@
     const screenId = App.current ? App.current.id : "";
     const active = activeFor(o.nav, screenId);
     if (o.full) {
-      container.innerHTML = `<div class="min-h-dvh flex flex-col screen-enter">${o.body}</div>${Demo.bar()}`;
+      container.innerHTML = `<div class="min-h-dvh flex flex-col screen-enter">${demoBar()}${o.body}</div>${Demo.bar()}`;
     } else {
       const wrap = o.fill
         ? `<main id="main" class="flex-1 min-h-0 flex flex-col relative screen-enter">${o.body}</main>`
@@ -140,6 +140,7 @@
       container.innerHTML = `<div class="lg:flex min-h-dvh">
         ${sidebar(active)}
         <div class="flex-1 min-w-0 flex flex-col h-dvh">
+          ${demoBar()}
           ${header(o, screenId)}
           ${wrap}
           ${o.nav === false && !o.showNav ? "" : bottomNav(active)}
@@ -168,7 +169,11 @@
     UI.toast("Vous êtes maintenant à " + name + ".", "success");
   }
 
+  function demoBar() {
+    return `<div class="bg-gold text-[#0A0A0A] px-3 py-1.5 text-center text-[12.5px] leading-[18px] font-semibold">Démo locale · aucun paiement réel · données gardées sur cet appareil</div>`;
+  }
+
   function openDemoMenu() { Demo.openMenu(); }
 
-  window.Shell = { render, openCityPicker, pickCity, openDemoMenu, TABS, SERVICES };
+  window.Shell = { render, openCityPicker, pickCity, openDemoMenu, demoBar, TABS, SERVICES };
 })();

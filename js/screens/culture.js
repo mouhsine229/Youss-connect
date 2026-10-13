@@ -22,30 +22,35 @@
   // Hub
   Screens.culture = function (container, params) {
     if (seenCountry !== ACState.user.country) { seenCountry = ACState.user.country; if (!(params && params.city)) f.city = "pays"; }
-    if (params && params.city) f.city = params.city;
+    if (f.city === "all") f.city = "pays";
+    const placeCities = [];
+    YCData.SITES.forEach((s) => { if (s.country === ACState.user.country && placeCities.indexOf(s.city) < 0) placeCities.push(s.city); });
+    if (params && params.city && (params.city === "pays" || placeCities.indexOf(params.city) >= 0)) f.city = params.city;
+    if (f.city !== "pays" && placeCities.indexOf(f.city) < 0) f.city = "pays";
     if (params && params.type) f.type = params.type;
-    const sites = YCData.SITES.filter((s) => (f.type === "all" || s.type === f.type) && (f.city === "all" || (f.city === "pays" ? s.country === ACState.user.country : s.city === f.city)));
+    const sites = YCData.SITES.filter((s) => s.country === ACState.user.country && (f.type === "all" || s.type === f.type) && (f.city === "pays" || s.city === f.city));
     const city = ACState.user.city;
     const typeMeta = f.type !== "all" ? YCData.SITE_TYPES.find((t) => t.id === f.type) : null;
     const filtered = !!typeMeta;
-    const near = filtered ? [] : YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES, 3);
+    const near = filtered ? [] : YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES.filter((s) => s.country === ACState.user.country), 3);
     const catalogTitle = typeMeta ? typeMeta.label : "Monuments, musées et traditions";
     const placeLabel = f.city === "pays" ? ACState.user.country : f.city === "all" ? "" : f.city;
     const catalogSub = sites.length + (sites.length > 1 ? " lieux" : " lieu") + (placeLabel ? " · " + placeLabel : "");
     const chips = `<div class="flex flex-col lg:flex-row gap-3 mb-4">
           <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
-          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Lieu"><option value="pays" ${f.city === "pays" ? "selected" : ""}>${esc(ACState.user.country)}</option><option value="all" ${f.city === "all" ? "selected" : ""}>Toutes les villes</option>${YCData.DESTINATIONS.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Lieu"><option value="pays" ${f.city === "pays" ? "selected" : ""}>${esc(ACState.user.country)}</option>${placeCities.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
         </div>
         ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuType('all');" })}`;
     const body = `
-      ${filtered ? "" : `<section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[200px] lg:min-h-[280px] flex items-end">
-        ${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}<div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent"></div>
-        <div class="relative p-5 lg:p-8 w-full flex flex-col lg:flex-row lg:items-end gap-4">
-          <div class="flex-1"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body mt-1 max-w-[560px] opacity-80">Monuments, musées et sites · ${esc(ACState.user.country)}.</p></div>
-          <button type="button" onclick="App.nav('culturalScanner')" class="card-dark !bg-white/10 hover:!bg-white/15 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px]"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
+      ${filtered ? "" : `<section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[220px] lg:min-h-[280px]">
+        <div class="absolute inset-0">${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}</div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/50 to-[#0A0A0A]/20"></div>
+        <div class="relative z-10 p-5 lg:p-8 min-h-[220px] lg:min-h-[280px] flex flex-col justify-end lg:flex-row lg:items-end gap-4">
+          <div class="flex-1 min-w-0"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body mt-1 max-w-[560px] opacity-80">Monuments, musées et sites · ${esc(ACState.user.country)}.</p></div>
+          <button type="button" onclick="App.nav('culturalScanner')" class="card-dark !bg-white/10 hover:!bg-white/15 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px]"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center flex-shrink-0 animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span class="min-w-0"><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
         </div>
       </section>
-      <section>${UI.sectionTitle("Villes")}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div></section>
+      <section>${UI.sectionTitle("Villes", "", "", esc(ACState.user.country))}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.filter((c) => YCData.CITIES[c].code === ACState.user.countryCode).map((c) => UI.destinationCard(c, true)).join("")}</div></section>
       <section>${UI.sectionTitle("Près de " + esc(city), "Carte", go("exploreAround", {}))}<div class="grid sm:grid-cols-3 gap-3">${near.map((s) => UI.siteCard(s)).join("")}</div></section>`}
       <section id="cu-catalog">${UI.sectionTitle(catalogTitle, "", "", catalogSub)}${typeMeta && TYPE_INTRO[typeMeta.id] ? `<p class="t-body text-ink-2 mb-4">${TYPE_INTRO[typeMeta.id]}</p>` : ""}
         ${chips}
@@ -81,7 +86,7 @@
     Shell.render(container, { title: c.name, subtitle: c.country + " · Destination", back: true, body, nav: false, showNav: true, onMount: () => { const m = YCMap.create("dest-map", { interactive: false, zoomControl: false, lat: c.lat, lng: c.lng, zoom: 11 }); if (m) sites.filter((s) => YCData.distanceKm(s.lat, s.lng, c.lat, c.lng) < 40).forEach((s) => m.addPoi([s.lat, s.lng], YCData.siteType(s.type).icon, "<b>" + esc(s.name) + "</b>", () => App.nav("cultureDetail", { id: s.id }))); } });
   };
   Screens._cityRestaurants = (c) => { Shell.pickCity(c); App.nav("restaurants"); };
-  Screens._cityEvents = (c) => { App.nav("events", { city: c }); };
+  Screens._cityEvents = (c) => { if (YCData.countryCodeOfCity(c) && YCData.countryCodeOfCity(c) !== ACState.user.countryCode) Shell.pickCity(c); App.nav("events", { city: c }); };
 
   // Fiche site (Aperçu / Histoire / Visite / Infos)
   const st = { tab: "overview" };
@@ -92,8 +97,8 @@
     if (params.tab) st.tab = params.tab;
     const type = YCData.siteType(s.type);
     const scanned = !!params.scanned;
-    const near = YCData.nearby(s.lat, s.lng, YCData.SITES, 4, s.id);
-    const rests = YCData.nearby(s.lat, s.lng, YCData.RESTAURANTS, 2);
+    const near = YCData.nearby(s.lat, s.lng, YCData.SITES.filter((x) => x.country === s.country), 4, s.id);
+    const rests = YCData.nearby(s.lat, s.lng, YCData.RESTAURANTS.filter((x) => YCData.countryCodeOfCity(x.city) === YCData.countryCodeOfCity(s.city)), 2);
     const saved = ACState.saved.indexOf(s.id) >= 0;
     const gallery = [s.img].concat(near.slice(0, 2).map((n) => n.img));
     const tabContent = {
@@ -106,7 +111,7 @@
           <button type="button" onclick="Screens._videoPreview('${s.id}')" class="card card-press p-4 flex items-center gap-3 text-left"><span class="w-12 h-12 rounded-full bg-inverse text-inverse-ink flex items-center justify-center">${icon("movie", "text-[24px]")}</span><span><span class="block t-title">Vidéo de présentation</span><span class="block t-small text-ink-2">Aperçu immersif · 45 s</span></span></button>
         </div>`,
       visit: `<div class="card divide-y divide-line">${[["schedule", "Horaires", s.visit.hours], ["payments", "Tarif", s.visit.price], ["timer", "Durée conseillée", s.visit.duration], ["tips_and_updates", "Conseil", s.visit.tips]].map((x) => `<div class="p-4 flex gap-3"><span class="menu-icon">${icon(x[0])}</span><div><p class="t-caption text-ink-3">${x[1]}</p><p class="t-body font-semibold">${x[2]}</p></div></div>`).join("")}</div>
-        <div class="mt-4 grid sm:grid-cols-2 gap-3">${UI.button("Y aller en transport", `Screens._transportPreset({toLatLng:{name:${UI.js(s.name)},lat:${s.lat},lng:${s.lng}}});App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Réserver une visite guidée", `Screens._bookVisit('${s.id}')`, { variant: "primary", icon: "tour" })}</div>`,
+        <div class="mt-4 grid sm:grid-cols-2 gap-3">${UI.button("Y aller en transport", `Screens._goRide(${UI.js(s.name)},${s.lat},${s.lng})`, { variant: "dark", icon: "directions_car" })}${UI.button("Réserver une visite guidée", `Screens._bookVisit('${s.id}')`, { variant: "primary", icon: "tour" })}</div>`,
       info: `<div class="card overflow-hidden"><div id="site-map" class="h-56 bg-surface-low"></div><div class="p-4">${UI.row("Adresse", s.place)}${UI.row("Coordonnées", s.lat.toFixed(4) + ", " + s.lng.toFixed(4))}${UI.row("Type", type.label)}${s.unesco ? UI.row("Patrimoine", "UNESCO") : ""}${UI.row("Langues du guide", "Français, English")}</div></div>
         <button type="button" onclick="Screens._showSiteQr('${s.id}')" class="mt-3 w-full card p-4 flex items-center gap-3 text-left"><span class="menu-icon">${icon("qr_code_2")}</span><span class="flex-1"><span class="block t-title">QR Code du site</span><span class="block t-small text-ink-2">À afficher sur place pour tester le scanner</span></span>${icon("chevron_right", "text-ink-3")}</button>`
     };
@@ -128,7 +133,7 @@
         <aside class="space-y-4 lg:sticky lg:top-24">
           ${UI.nextSteps([
             { icon: "restaurant", label: "Restaurants autour", sub: rests[0] ? rests[0].name + " · " + YCMap.fmtKm(rests[0].dist) : "Voir les restaurants", onclick: rests[0] ? go("restaurantDetail", { id: rests[0].id }) : "App.nav('restaurants')" },
-            { icon: "directions_car", label: "Y aller en transport", sub: "Course vers " + esc(s.name.split(" ").slice(0, 3).join(" ")), onclick: `Screens._transportPreset({toLatLng:{name:${UI.js(s.name)},lat:${s.lat},lng:${s.lng}}});App.nav('transport')` },
+            { icon: "directions_car", label: "Y aller en transport", sub: "Course vers " + esc(s.name.split(" ").slice(0, 3).join(" ")), onclick: `Screens._goRide(${UI.js(s.name)},${s.lat},${s.lng})` },
             { icon: "confirmation_number", label: "Événements à " + esc(s.city), sub: "Concerts, festivals, spectacles", onclick: "App.nav('events')" },
             { icon: "travel_explore", label: "Destination " + esc(s.city), sub: "Page complète de la ville", onclick: go("destination", { city: s.city }) }
           ], "Autour de ce lieu")}
@@ -190,7 +195,7 @@
     const s = YCData.site(id);
     UI.openSheet(`<div class="relative rounded-2xl overflow-hidden bg-black aspect-video"><img src="${s.img}" alt="" class="w-full h-full object-cover animate-kenburns opacity-90"/><div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
       <div class="absolute bottom-4 left-4 right-4 text-white"><p class="t-caption text-gold">Aperçu vidéo · démonstration</p><p class="t-h3">${esc(s.name)}</p><div class="h-1 rounded-full bg-white/25 mt-2 overflow-hidden"><div class="h-full bg-gold" style="width:0%;transition:width 45s linear" id="vid-bar"></div></div></div></div>
-      <p class="t-small text-ink-2 mt-3">La version finale intégrera des vidéos produites avec les offices du tourisme et les acteurs culturels locaux.</p>`, { wide: true });
+      <p class="t-small text-ink-2 mt-3">Démo : aucune vidéo n'est lue. L'aperçu montre la photo du lieu.</p>`, { wide: true });
     requestAnimationFrame(() => { const b = document.getElementById("vid-bar"); if (b) b.style.width = "100%"; });
   };
   Screens._showSiteQr = function (id) {

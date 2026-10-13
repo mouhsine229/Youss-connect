@@ -112,6 +112,7 @@ declare
   uid uuid := auth.uid();
   bal integer;
   pts integer;
+  earned integer;
   km numeric;
 begin
   if uid is null then
@@ -120,6 +121,7 @@ begin
   if p_amount is null or p_amount <= 0 or p_amount > 2000000 then
     return jsonb_build_object('ok', false, 'reason', 'invalid_amount');
   end if;
+  earned := least(greatest(coalesce(p_points, 0), 0), p_amount / 100);
 
   select balance, points into bal, pts
   from public.wallets where user_id = uid for update;
@@ -132,7 +134,7 @@ begin
 
   update public.wallets
     set balance = balance - p_amount,
-        points = points + greatest(coalesce(p_points, 0), 0),
+        points = points + earned,
         updated_at = now()
     where user_id = uid
     returning balance, points into bal, pts;
@@ -187,6 +189,6 @@ begin
 end;
 $$;
 
-revoke all on function public.wallet_pay(integer, text, text, integer, jsonb) from public;
-revoke all on function public.wallet_topup(integer, text) from public;
+revoke all on function public.wallet_pay(integer, text, text, integer, jsonb) from public, anon, authenticated;
+revoke all on function public.wallet_topup(integer, text) from public, anon, authenticated;
 grant execute on function public.wallet_pay(integer, text, text, integer, jsonb) to authenticated;

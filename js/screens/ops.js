@@ -24,6 +24,7 @@
   function layout(active, title, body) {
     const item = (n) => `<a href="#/${n.id}" onclick="event.preventDefault();App.nav('${n.id}')" class="ops-nav ${active === n.id ? "on" : ""}">${icon(n.icon, "text-[18px]")}<span>${n.label}</span></a>`;
     document.getElementById("app").innerHTML = `
+      ${Shell.demoBar()}
       <div class="min-h-dvh lg:flex bg-[#0F1115] text-white">
         <aside class="hidden lg:flex flex-col w-[240px] sticky top-0 h-dvh border-r border-white/10 px-3 py-5">
           <div class="px-2 mb-6"><p class="t-caption text-gold">KYA CORPORATION</p><p class="t-title mt-1">Console interne</p></div>
@@ -33,7 +34,7 @@
         <div class="flex-1 min-w-0 min-h-dvh flex flex-col bg-surface text-ink">
           <header class="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-line">
             <div class="px-4 lg:px-8 h-14 flex items-center justify-between gap-3">
-              <div class="min-w-0"><h1 class="t-h3 truncate">${title}</h1><p class="t-caption">Session nominative · 2FA actif (démo)</p></div>
+              <div class="min-w-0"><h1 class="t-h3 truncate">${title}</h1><p class="t-caption">Démo sur cet appareil · pas un accès réel</p></div>
               <button type="button" onclick="Screens._opsOut()" class="lg:hidden t-small font-semibold">Quitter</button>
             </div>
             <nav class="lg:hidden flex gap-1 overflow-x-auto no-scrollbar px-3 pb-2">${NAV.map((n) => `<button type="button" onclick="App.nav('${n.id}')" class="chip ${active === n.id ? "on" : ""} whitespace-nowrap">${n.label}</button>`).join("")}</nav>
@@ -45,11 +46,11 @@
 
   Screens.opsLogin = function (container) {
     if (gateOn()) { App.replace("opsHome"); return; }
-    container.innerHTML = `<div class="min-h-dvh bg-[#0F1115] text-white flex items-center justify-center px-5 py-10">
+    container.innerHTML = `${Shell.demoBar()}<div class="min-h-dvh bg-[#0F1115] text-white flex items-center justify-center px-5 py-10">
       <div class="w-full max-w-[400px]">
         <p class="t-caption text-gold">Accès réservé</p>
         <h1 class="t-h1 mt-2">Console KYA</h1>
-        <p class="t-small text-white/55 mt-2">Compte nominatif. Mot de passe + code à 4 chiffres. Lien : #/kya-ops</p>
+        <p class="t-small text-white/55 mt-2">Espace de démonstration. Rien n'est envoyé. Mot de passe quelconque, 8 caractères, puis le code 1234.</p>
         <form class="card p-5 mt-8 space-y-3 text-ink" onsubmit="event.preventDefault();Screens._opsLogin()">
           ${UI.field("ops-mail", "E-mail professionnel", { type: "email", value: "ops@kyacorp.africa", autocomplete: "username" })}
           ${UI.field("ops-pass", "Mot de passe", { type: "password", placeholder: "••••••••", autocomplete: "current-password" })}
@@ -70,11 +71,11 @@
     App.nav("opsOtp", { mail });
   };
   Screens.opsOtp = function (container, params) {
-    container.innerHTML = `<div class="min-h-dvh bg-[#0F1115] text-white flex items-center justify-center px-5 py-10">
+    container.innerHTML = `${Shell.demoBar()}<div class="min-h-dvh bg-[#0F1115] text-white flex items-center justify-center px-5 py-10">
       <div class="w-full max-w-[400px]">
         <p class="t-caption text-gold">Deuxième facteur</p>
         <h1 class="t-h1 mt-2">Code de confirmation</h1>
-        <p class="t-small text-white/55 mt-2">Envoyé à ${esc((params && params.mail) || "ops@kyacorp.africa")}. Démo : 1234.</p>
+        <p class="t-small text-white/55 mt-2">Code de la maquette : 1234. Il n'est pas envoyé par e-mail.</p>
         <div class="card p-5 mt-6 text-ink">${UI.field("ops-otp", "Code", { inputmode: "numeric", maxlength: 4, placeholder: "1234" })}${UI.error("ops-otp-err")}
         <button type="button" onclick="Screens._opsOtpOk()" class="btn btn-lg btn-primary btn-block mt-4">Entrer</button></div>
       </div>

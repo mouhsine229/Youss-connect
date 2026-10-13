@@ -43,7 +43,7 @@
   Screens.businessProfile = function (container) {
     const p = B().profile;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="card p-5 flex items-center gap-4">${UI.avatar({ name: p.name }, "w-16 h-16 text-xl")}<div class="flex-1"><p class="t-title">Logo de la boutique</p><p class="t-small text-ink-2">PNG ou JPG, 512 × 512 px</p></div>${UI.button("Changer", "UI.toast('Import du logo disponible dans la version finale.','info')", { variant: "outline", block: false, size: "sm" })}</div>
+      <div class="card p-5 flex items-center gap-4">${UI.avatar({ name: p.name }, "w-16 h-16 text-xl")}<div class="flex-1"><p class="t-title">Logo de la boutique</p><p class="t-small text-ink-2">PNG ou JPG, 512 × 512 px</p></div>${UI.button("Changer", "UI.toast('Démo : l\\'import du logo n\\'est pas branché.','info')", { variant: "outline", block: false, size: "sm" })}</div>
       <div class="card p-5 space-y-3">${UI.field("bp-name", "Nom de l'entreprise", { value: p.name })}${UI.select("bp-cat", "Catégorie", ["Mode & artisanat", "Restaurant", "Commerce", "Transport", "Événementiel", "Culture & tourisme", "Services"], p.category)}
         <div class="grid grid-cols-2 gap-3">${UI.select("bp-city", "Ville", YCData.DESTINATIONS, p.city)}${UI.field("bp-hours", "Horaires", { value: p.hours })}</div>${UI.field("bp-address", "Adresse", { value: p.address, icon: "location_on" })}${UI.field("bp-phone", "Téléphone", { value: p.phone, type: "tel", icon: "call" })}
         <label class="block"><span class="label">Description</span><textarea id="bp-desc" class="textarea">${esc(p.desc)}</textarea></label></div>

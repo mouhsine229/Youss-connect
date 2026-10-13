@@ -116,6 +116,8 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .hscroll { @apply flex gap-3 overflow-x-auto no-scrollbar max-w-full min-w-0 -mx-5 px-5 lg:mx-0 lg:px-0 lg:flex-wrap; }
   .hscroll > * { @apply flex-shrink-0; }
+  /* Une colonne ne doit pas élargir la page : le texte passe à la ligne. */
+  .grid > * { min-width: 0; }
 
   /* Icônes Material Symbols */
   /* le nom de l'icône (arrow_back...) ne doit pas apparaître en texte brut avant le chargement de la police */

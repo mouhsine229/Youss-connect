@@ -33,6 +33,7 @@
   function layout(active, title, body) {
     const r = rest();
     document.getElementById("app").innerHTML = `
+      ${Shell.demoBar()}
       <div class="min-h-dvh flex flex-col bg-surface">
         <header class="sticky top-0 z-20 bg-card border-b border-line">
           <div class="px-4 h-14 flex items-center justify-between gap-3">
@@ -48,7 +49,7 @@
   Screens.proJoin = function (container, params) {
     const t = (params && params.t) || "";
     const ok = t.toUpperCase() === TOKEN;
-    container.innerHTML = `<div class="min-h-dvh flex items-center justify-center px-5 py-10">
+    container.innerHTML = `${Shell.demoBar()}<div class="min-h-dvh flex items-center justify-center px-5 py-10">
       <div class="w-full max-w-[420px]">
         <p class="t-caption">Invitation prestataire</p>
         <h1 class="t-h1 mt-1">Ouvrir la cuisine</h1>
@@ -64,11 +65,11 @@
   };
   Screens.proLogin = function (container) {
     if (on()) { App.replace("proHome"); return; }
-    container.innerHTML = `<div class="min-h-dvh flex items-center justify-center px-5 py-10">
+    container.innerHTML = `${Shell.demoBar()}<div class="min-h-dvh flex items-center justify-center px-5 py-10">
       <div class="w-full max-w-[400px]">
         <p class="t-caption">Espace restaurant</p>
         <h1 class="t-h1 mt-1">Connexion cuisine</h1>
-        <p class="t-small text-ink-2 mt-2">Téléphone du gérant. Code démo 1234.</p>
+        <p class="t-small text-ink-2 mt-2">Maquette. Le code n'est pas envoyé. Il est 1234.</p>
         ${UI.field("pr-phone", "Téléphone", { value: "+229 97 11 22 33", type: "tel" })}
         ${UI.field("pr-otp", "Code", { inputmode: "numeric", maxlength: 4, placeholder: "1234" })}
         <button type="button" onclick="Screens._proPin()" class="btn btn-lg btn-primary btn-block mt-4">Entrer</button>
@@ -108,6 +109,8 @@
   Screens._proAdvance = function (id) {
     const o = tickets().find((x) => x.id === id); if (!o) return;
     o.status = o.status === "Nouvelle" ? "En préparation" : o.status === "En préparation" ? "Prête" : "Livrée";
+    const order = (ACState.orders || []).find((x) => x.id === o.orderId || x.number === o.number);
+    if (order) order.kitchenStatus = o.status;
     ACStore.emit();
   };
 

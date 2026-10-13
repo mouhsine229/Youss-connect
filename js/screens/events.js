@@ -9,17 +9,29 @@
   const sel = { ticket: null, qty: 1, holder: "", method: null };
   const CATS = ["Tous"].concat(YCData.EVENT_CATS);
 
+  function eventInCountry(e) {
+    if (e.country && e.country === ACState.user.country) return true;
+    return YCData.countryCodeOfCity(e.city) === ACState.user.countryCode;
+  }
+  function eventCities() {
+    const names = [];
+    YCData.allEvents().forEach((e) => { if (eventInCountry(e) && names.indexOf(e.city) < 0) names.push(e.city); });
+    return names;
+  }
   function list() {
     const q = YCData.norm(f.q);
-    const scope = f.city && f.city !== "Toutes" ? (YCData.countryOf(YCData.countryCodeOfCity(f.city)) || {}).name : "";
-    return YCData.allEvents().filter((e) => (f.cat === "Tous" || e.cat === f.cat) && (f.city === "Toutes" || !f.city || e.city === f.city || e.country === (YCData.CITIES[f.city] || {}).country || (scope && e.country === scope)) && (!q || YCData.norm(e.name + " " + e.place + " " + e.city + " " + e.cat).includes(q)))
+    return YCData.allEvents().filter((e) => eventInCountry(e) && (f.cat === "Tous" || e.cat === f.cat) && (!f.city || e.city === f.city) && (!q || YCData.norm(e.name + " " + e.place + " " + e.city + " " + e.cat).includes(q)))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
   Screens.events = function (container, params) {
-    if (seenCity !== ACState.user.city) { seenCity = ACState.user.city; f.city = ACState.user.city; }
+    if (seenCity !== ACState.user.city) {
+      seenCity = ACState.user.city;
+      f.city = eventCities().indexOf(ACState.user.city) >= 0 ? ACState.user.city : "";
+    }
     if (params && params.cat) f.cat = params.cat;
-    if (params && params.city) f.city = params.city;
+    if (params && params.city && eventCities().indexOf(params.city) >= 0) f.city = params.city;
+    if (f.city && eventCities().indexOf(f.city) < 0) f.city = "";
     const items = list();
     const featured = items[0];
     const body = `
@@ -27,7 +39,7 @@
         <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white max-w-[640px]"><span class="badge badge-gold mb-2">À la une · ${featured.cat}</span><h2 class="t-h1 lg:t-display">${featured.name}</h2><p class="t-body text-white/80 mt-1.5 flex flex-wrap gap-x-3">${icon("calendar_today", "text-[16px]")} ${YCData.fmtDate(featured.date)} · ${featured.time}<span>${icon("location_on", "text-[16px]")} ${featured.place}</span></p><p class="t-title mt-2">dès ${ACStore.fmtFCFA(YCData.minPrice(featured))}</p></div></button>` : ""}
       <div class="flex flex-col lg:flex-row gap-3">
         <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="ev-q" type="search" value="${esc(f.q)}" placeholder="Rechercher un événement, un lieu…" oninput="Screens._evType(this.value)" class="input input-lg pl-12"/></label>
-        <select class="select lg:w-56" onchange="Screens._evCity(this.value)" aria-label="Ville">${["Toutes"].concat(YCData.DESTINATIONS).map((c) => `<option ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+        <select class="select lg:w-56" onchange="Screens._evCity(this.value)" aria-label="Ville"><option value="" ${f.city ? "" : "selected"}>${esc(ACState.user.country)}</option>${eventCities().map((c) => `<option value="${esc(c)}" ${f.city === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
       </div>
       <div class="hscroll">${CATS.map((c) => UI.chip(c, `Screens._evCat('${c}')`, f.cat === c)).join("")}</div>
       <div id="ev-list"></div>`;
@@ -43,7 +55,7 @@
   Screens._evType = (v) => { f.q = v; renderList(); };
   Screens._evCat = (c) => { f.cat = c; App.replace("events"); };
   Screens._evCity = (c) => { f.city = c; App.replace("events"); };
-  Screens._evReset = () => { f.cat = "Tous"; f.city = ACState.user.city; f.q = ""; App.replace("events"); };
+  Screens._evReset = () => { f.cat = "Tous"; f.city = ""; f.q = ""; App.replace("events"); };
 
   // Fiche
   Screens.eventDetail = function (container, params) {
@@ -77,7 +89,7 @@
           <div><h3 class="t-h3 mb-2">À propos</h3><p class="t-body text-ink-2 leading-relaxed">${e.body}</p></div>
           <div><h3 class="t-h3 mb-2">Programme</h3><div class="card divide-y divide-line">${e.program.map((p) => `<div class="p-3.5 flex gap-3 t-body"><span class="font-bold text-gold-deep dark:text-gold w-14 flex-shrink-0">${p.split(" ")[0]}</span><span>${p.split(" ").slice(1).join(" ")}</span></div>`).join("")}</div></div>
           <div class="card p-4 flex items-center gap-3">${UI.avatar({ name: e.organizer }, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Organisateur</p><p class="t-title truncate">${e.organizer}</p></div><button type="button" onclick="UI.toast('Message envoyé à l\\'organisateur.','success')" class="btn btn-sm btn-outline">Contacter</button></div>
-          <div class="card overflow-hidden"><div id="ev-map" class="h-48 lg:h-56 bg-surface-low"></div><div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="flex-1"><p class="t-title">${e.place}</p><p class="t-small text-ink-2">Transport, restaurants et hébergements à proximité.</p></div>${UI.button("Y aller en transport", `Screens._transportPreset({toLatLng:{name:${UI.js(e.place)},lat:${e.lat},lng:${e.lng}}});App.nav('transport')`, { variant: "dark", block: false, icon: "directions_car" })}</div></div>
+          <div class="card overflow-hidden"><div id="ev-map" class="h-48 lg:h-56 bg-surface-low"></div><div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="flex-1"><p class="t-title">${e.place}</p><p class="t-small text-ink-2">Transport, restaurants et hébergements à proximité.</p></div>${UI.button("Y aller en transport", `Screens._goRide(${UI.js(e.place)},${e.lat},${e.lng})`, { variant: "dark", block: false, icon: "directions_car" })}</div></div>
           ${nearbyRest.length ? `<div>${UI.sectionTitle("Dîner avant ou après", "Voir tout", "App.nav('restaurants')")}<div class="grid sm:grid-cols-2 gap-3">${nearbyRest.map((r) => UI.restaurantCard(r)).join("")}</div></div>` : ""}
           <div class="lg:hidden">${ticketPanel}</div>
         </div>
@@ -158,7 +170,7 @@
       <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le reçu", "Screens._ticketReceipt('down')", { icon: "download" })}${UI.secondaryButton("Partager le reçu", "Screens._ticketReceipt('share')", { icon: "share" })}</div>
       ${UI.primaryButton("Voir mon billet et le QR Code", go("ticketDetail", { id: tk.id }), { size: "lg", icon: "qr_code_2" })}
       ${UI.nextSteps([
-        { icon: "directions_car", label: "Réserver un transport", sub: "Vers " + esc(tk.place), onclick: `Screens._transportPreset({toLatLng:{name:${UI.js(tk.place)},lat:${tk.lat || e.lat || 0},lng:${tk.lng || e.lng || 0}}});App.nav('transport')` },
+        { icon: "directions_car", label: "Réserver un transport", sub: "Vers " + esc(tk.place), onclick: `Screens._goRide(${UI.js(tk.place)},${tk.lat || e.lat || "NaN"},${tk.lng || e.lng || "NaN"})` },
         { icon: "restaurant", label: "Restaurants à proximité", sub: "Dîner avant le spectacle", onclick: go("restaurants", {}) },
         { icon: "calendar_add_on", label: "Ajouter au calendrier", sub: YCData.fmtDate(tk.date) + " · " + tk.time, onclick: `Screens._addCalendar('${tk.id}')` }
       ])}
@@ -224,7 +236,7 @@
       </div>
       <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Partager", `Screens._shareTicket('${tk.id}')`, { icon: "share" })}${UI.secondaryButton("Calendrier", `Screens._addCalendar('${tk.id}')`, { icon: "calendar_add_on" })}</div>
       ${UI.nextSteps([
-        { icon: "directions_car", label: "Y aller en transport", sub: esc(tk.place), onclick: `Screens._transportPreset({toLatLng:{name:${UI.js(tk.place)},lat:${tk.lat || 6.37},lng:${tk.lng || 2.39}}});App.nav('transport')` },
+        { icon: "directions_car", label: "Y aller en transport", sub: esc(tk.place), onclick: `Screens._goRide(${UI.js(tk.place)},${tk.lat || "NaN"},${tk.lng || "NaN"})` },
         { icon: "restaurant", label: "Restaurants autour", sub: "Avant ou après", onclick: "App.nav('restaurants')" }
       ])}
     </div>`;

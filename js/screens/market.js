@@ -83,7 +83,7 @@
             <button type="button" onclick="Screens._toggleFavorite('${p.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Favori">${icon("favorite", fav ? "text-danger" : "", fav)}</button>
             <style>#pd-main{object-position:${positions[gal.idx]}}</style>
           </div>
-          <div class="grid grid-cols-4 gap-2">${positions.map((pos, i) => `<button type="button" onclick="Screens._pdGal(${i},'${p.id}')" class="ratio-1-1 rounded-xl overflow-hidden border-2 ${gal.idx === i ? "border-gold" : "border-transparent"}"><img src="${p.img}" alt="" class="img-cover" style="object-position:${pos}"/></button>`).join("")}<button type="button" onclick="UI.toast('Vidéo produit disponible dans la version finale.','info')" class="ratio-1-1 rounded-xl bg-inverse text-inverse-ink flex flex-col items-center justify-center t-caption">${icon("play_circle", "text-[24px]")}Vidéo</button></div>
+          <div class="grid grid-cols-4 gap-2">${positions.map((pos, i) => `<button type="button" onclick="Screens._pdGal(${i},'${p.id}')" class="ratio-1-1 rounded-xl overflow-hidden border-2 ${gal.idx === i ? "border-gold" : "border-transparent"}"><img src="${p.img}" alt="" class="img-cover" style="object-position:${pos}"/></button>`).join("")}<button type="button" onclick="UI.toast('Démo : pas de vidéo produit.','info')" class="ratio-1-1 rounded-xl bg-inverse text-inverse-ink flex flex-col items-center justify-center t-caption">${icon("play_circle", "text-[24px]")}Vidéo</button></div>
         </div>
         <div class="space-y-5">
           <div><span class="badge badge-neutral">${p.cat}</span><h2 class="t-h1 mt-2">${p.name}</h2>

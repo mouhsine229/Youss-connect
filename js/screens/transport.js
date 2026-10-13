@@ -60,13 +60,25 @@
   }
 
   /* Préréglage utilisé par le mode démo et les ponts (« Y aller ») */
+  function inCountryPoint(p) {
+    return !!(p && isFinite(p.lat) && isFinite(p.lng) && YCData.countryCodeAt(p.lat, p.lng) === ACState.user.countryCode);
+  }
+  Screens._goRide = function (name, lat, lng) {
+    const p = { name: name || "Destination", lat: Number(lat), lng: Number(lng) };
+    if (!inCountryPoint(p)) { UI.toast("Ce lieu est en dehors du pays choisi. Changez de ville pour y aller.", "info"); return; }
+    Screens._transportPreset({ toLatLng: p });
+    App.nav("transport");
+  };
   Screens._transportPreset = function (o) {
     o = o || {};
     const city = YCData.cityOf(ACState.user.city);
     const find = (name) => { if (!name) return null; const n = YCData.norm(name); return city.poi.find((p) => YCData.norm(p.name).includes(n) || n.includes(YCData.norm(p.name).split(" (")[0])) || null; };
-    if (o.fromLatLng) trip.from = o.fromLatLng; else if (o.from) { const p = find(o.from); if (p) trip.from = { name: p.name, lat: p.lat, lng: p.lng }; }
-    if (o.toLatLng) trip.to = o.toLatLng; else if (o.to) { const p = find(o.to); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; } else if (o.toName) { const p = find(o.toName); trip.to = p ? { name: p.name, lat: p.lat, lng: p.lng } : { name: o.toName, lat: city.lat + 0.01, lng: city.lng + 0.01 }; }
-    if (!trip.from) { const home = ACState.addresses[0]; trip.from = home && home.lat ? { name: home.label + " · " + home.detail.split(",")[0], lat: home.lat, lng: home.lng } : { name: city.poi[0].name, lat: city.poi[0].lat, lng: city.poi[0].lng }; }
+    if (o.fromLatLng) { if (inCountryPoint(o.fromLatLng)) trip.from = o.fromLatLng; else UI.toast("Ce lieu est en dehors du pays choisi.", "info"); }
+    else if (o.from) { const p = find(o.from); if (p) trip.from = { name: p.name, lat: p.lat, lng: p.lng }; }
+    if (o.toLatLng) { if (inCountryPoint(o.toLatLng)) trip.to = o.toLatLng; else UI.toast("Ce lieu est en dehors du pays choisi.", "info"); }
+    else if (o.to) { const p = find(o.to); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; }
+    else if (o.toName) { const p = find(o.toName); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; else UI.toast("Ce lieu est en dehors du pays choisi.", "info"); }
+    if (!trip.from) { const home = ACState.addresses[0]; trip.from = home && home.lat && inCountryPoint(home) ? { name: home.label + " · " + home.detail.split(",")[0], lat: home.lat, lng: home.lng } : { name: city.poi[0].name, lat: city.poi[0].lat, lng: city.poi[0].lng }; }
     if (o.vehicle) trip.vehicle = o.vehicle;
     trip.route = null; trip.status = "idle"; trip.driver = null; updateDistance(); syncTrip();
   };
@@ -143,8 +155,15 @@
   }
   Screens._pickOperator = function (id) {
     const o = OPERATORS.find((x) => x.id === id);
-    if (!o || !o.available) { UI.toast("Partenariat pas encore ouvert. Course via YOUSS Ride.", "info"); return; }
+    if (!o || !o.available) return;
     trip.operator = id; syncTrip(); refreshPanel();
+  };
+  Screens._waitOperator = function (id) {
+    const bag = ACState.prefs.waitlist || (ACState.prefs.waitlist = {});
+    bag[id] = Date.now();
+    ACStore.emit();
+    refreshPanel();
+    UI.toast("Demande notée sur cet appareil. YOUSS Ride reste disponible.", "info");
   };
   function refreshPanel() {
     updateDistance();
@@ -161,9 +180,16 @@
     }).join("");
     if (ops) ops.innerHTML = OPERATORS.map((o) => {
       const sel = trip.operator === o.id;
-      return `<button type="button" onclick="Screens._pickOperator('${o.id}')" class="w-full rounded-2xl border p-3 flex items-center justify-between gap-3 text-left ${sel ? "border-gold bg-gold/10" : "border-line"} ${o.available ? "" : "opacity-60"}">
-        <span class="min-w-0"><span class="block t-title">${o.label}${o.available ? "" : " · bientôt"}</span><span class="block t-small text-ink-2">${o.sub}</span></span>
-        ${sel && o.available ? icon("check_circle", "text-gold", true) : ""}
+      if (!o.available) {
+        const asked = ACState.prefs.waitlist && ACState.prefs.waitlist[o.id];
+        return `<div class="w-full rounded-2xl border border-line p-3 flex items-center justify-between gap-3 text-left">
+          <span class="min-w-0"><span class="block t-title">${o.label}</span><span class="block t-small text-ink-2">Partenariat en cours. YOUSS Ride assure la course.</span></span>
+          <button type="button" onclick="Screens._waitOperator('${o.id}')" class="btn btn-sm btn-outline flex-shrink-0">${asked ? "Noté" : "Me prévenir"}</button>
+        </div>`;
+      }
+      return `<button type="button" onclick="Screens._pickOperator('${o.id}')" class="w-full rounded-2xl border p-3 flex items-center justify-between gap-3 text-left ${sel ? "border-gold bg-gold/10" : "border-line"}">
+        <span class="min-w-0"><span class="block t-title">${o.label}</span><span class="block t-small text-ink-2">${o.sub}</span></span>
+        ${sel ? icon("check_circle", "text-gold", true) : ""}
       </button>`;
     }).join("");
     if (btn) btn.innerHTML = `${I18N.t("continue")}${trip.km ? " · " + ACStore.fmtFCFA(trip.price) : ""}${icon("arrow_forward", "text-[20px]")}`;

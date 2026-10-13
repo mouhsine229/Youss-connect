@@ -294,6 +294,13 @@
   };
   function createOrder(o) {
     const order = Object.assign({ id: uid("ord"), number: "YC-" + (o.type === "market" ? "MK" : "RS") + "-" + Math.floor(100000 + Math.random() * 899999), createdAt: Date.now(), durationSec: o.type === "market" ? 150 : 110, rated: null }, o);
+    if (o.type === "restaurant" && o.restaurantId === "rest1") {
+      order.kitchenStatus = "Nouvelle";
+      State.kitchen = State.kitchen || { restId: "rest1", dishes: [], paused: false, ticket: [] };
+      const items = (o.items || []).map((i) => i.name + (i.qty > 1 ? " × " + i.qty : "")).join(", ");
+      State.kitchen.ticket = (State.kitchen.ticket || []).filter((t) => t.orderId !== order.id);
+      State.kitchen.ticket.unshift({ id: order.id, orderId: order.id, number: order.number, client: State.user.name || "Client", items: items || order.title, total: order.total || 0, status: "Nouvelle", at: "À l'instant" });
+    }
     State.orders.unshift(order);
     emit();
     return order;
@@ -305,6 +312,17 @@
   }
   function orderStep(order) {
     const steps = ORDER_STEPS[order.type] || ORDER_STEPS.restaurant;
+    if (order.kitchenStatus) {
+      const map = { "Nouvelle": 0, "En préparation": 1, "Prête": 2, "Livrée": steps.length - 1 };
+      let idx = map[order.kitchenStatus];
+      if (idx == null) idx = 0;
+      idx = Math.max(0, Math.min(idx, steps.length - 1));
+      const done = order.kitchenStatus === "Livrée";
+      const current = Object.assign({}, steps[idx]);
+      if (order.kitchenStatus === "Prête") current.label = "Prête au restaurant";
+      if (done) current.label = steps[steps.length - 1].label;
+      return { idx: idx, steps: steps, progress: done ? 100 : steps[idx].after, current: current, done: done };
+    }
     const p = orderProgress(order);
     let idx = 0;
     steps.forEach((s, i) => { if (p >= s.after) idx = i; });
