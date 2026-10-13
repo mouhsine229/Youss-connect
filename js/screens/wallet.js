@@ -235,26 +235,38 @@
     params = params || {}; const action = params.action || "confirm";
     const titles = { walletSendConfirm: "Confirmer l'envoi", changePin: "Nouveau code PIN", walletQrPayConfirm: "Confirmer le paiement", withdraw: "Confirmer le retrait", purchase: "Confirmer le paiement", confirm: "Confirmation sécurisée" };
     const known = !!(ACState.prefs && ACState.prefs.pinHash);
-    const hint = action === "changePin" || !known ? "Choisissez un code PIN à 4 chiffres. Il confirmera vos paiements." : "Saisissez votre code PIN.";
+    const safeAction = ["walletSendConfirm", "changePin", "walletQrPayConfirm", "withdraw", "purchase", "confirm"].indexOf(action) >= 0 ? action : "confirm";
+    const hint = safeAction === "changePin" || !known ? "Choisissez un code PIN à 4 chiffres. Il confirmera vos paiements." : "Saisissez votre code PIN.";
+    const sensor = window.YCBiometric && YCBiometric.sensor();
+    const bioBtn = accountLive() && ACState.user.biometricEnrolled && sensor && safeAction !== "changePin"
+      ? `<button type="button" onclick="Screens._biometric('${safeAction}')" class="btn btn-lg btn-primary btn-block">${icon(sensor.icon, "text-[20px]")}${esc(sensor.confirm)}</button><p class="t-small text-ink-3">Ou le code PIN, en secours.</p>`
+      : (accountLive() && ACState.user.biometricEnrolled && safeAction !== "changePin" ? `<p class="t-small text-ink-3 max-w-[360px]">Sur cet appareil, confirmez avec le code PIN. Face ID et l'empreinte restent sur le téléphone enregistré.</p>` : "");
     const body = `<div class="max-w-narrow mx-auto w-full flex-1 flex flex-col items-center text-center py-6 space-y-5">
       <div class="w-16 h-16 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("lock", "text-[30px]")}</div>
-      <div><h2 class="t-h2">${titles[action] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">${params.label ? esc(params.label) + "<br>" : ""}${hint}</p></div>
+      <div><h2 class="t-h2">${titles[safeAction] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">${params.label ? esc(params.label) + "<br>" : ""}${hint}</p></div>
+      ${bioBtn}
       <div class="flex gap-2 sm:gap-3 max-w-full justify-center px-2" onpaste="Screens._pinPaste(event)">${[0, 1, 2, 3].map((i) => `<input id="pin-${i}" type="password" inputmode="numeric" maxlength="1" autocomplete="off" class="input input-lg w-12 sm:w-14 flex-1 max-w-[3.5rem] text-center text-xl sm:text-2xl font-extrabold px-0" oninput="Screens._pinInput(${i},this)" onkeydown="if(event.key==='Backspace'&&!this.value&&${i}>0)document.getElementById('pin-${i - 1}').focus()" aria-label="Chiffre ${i + 1}"/>`).join("")}</div>
       ${UI.error("pin-error")}
-      <div class="w-full">${UI.primaryButton("Confirmer", `Screens._pinConfirm('${action}')`, { size: "lg", icon: "lock" })}</div></div>`;
+      <div class="w-full">${UI.primaryButton("Confirmer", `Screens._pinConfirm('${safeAction}')`, { size: "lg", icon: "lock" })}</div></div>`;
     Shell.render(container, { title: "Confirmer", back: true, body, nav: false, hideSearch: true });
     setTimeout(() => { const f = document.getElementById("pin-0"); if (f) f.focus(); }, 50);
   };
   Screens._pinInput = (i, el) => { el.value = el.value.replace(/\D/g, "").slice(-1); if (el.value && i < 3) document.getElementById("pin-" + (i + 1)).focus(); };
   Screens._pinPaste = (ev) => { const t = (ev.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 4); if (!t) return; ev.preventDefault(); t.split("").forEach((c, i) => { const el = document.getElementById("pin-" + i); if (el) el.value = c; }); };
   Screens._biometric = function (action) {
-    if (!Screens.bioReady()) {
-      UI.toast("Enregistrez votre empreinte pour payer ainsi.", "info");
+    if (!window.YCBiometric || !YCBiometric.enrolled()) {
       App.nav("biometricSetup", { next: "securityPin", action: action || "purchase" });
       return;
     }
-    UI.toast("Empreinte reconnue.", "success");
-    Screens._pinDone(action);
+    YCBiometric.confirm().then(function (res) {
+      if (!res || res.ok === false) {
+        UI.showError("pin-error", (res && res.message) || "Biométrie annulée. Utilisez le code PIN.");
+        return;
+      }
+      const sensor = YCBiometric.sensor();
+      UI.toast(sensor && sensor.kind === "face" ? "Face ID confirmé." : "Empreinte confirmée.", "success");
+      Screens._pinDone(action);
+    });
   };
   Screens._pinConfirm = function (action) {
     const wait = window.YCGuard && YCGuard.blocked("pin");
@@ -263,22 +275,33 @@
     if (pin.length < 4) return UI.showError("pin-error", "Saisissez les 4 chiffres du code.");
     hashPin(pin).then(function (hash) {
       const known = (ACState.prefs && ACState.prefs.pinHash) || "";
-      if (action === "changePin" || !known) {
-        ACState.prefs.pinHash = hash;
-        ACStore.emit();
-        if (accountLive() && window.YCBackend) YCBackend.saveProfile({ fullName: ACState.user.fullName, email: ACState.user.email, city: ACState.user.city, country: ACState.user.country, phone: ACState.user.phone, pinHash: hash });
-        if (window.YCGuard) YCGuard.ok("pin");
-        if (action === "changePin") { UI.toast("Code PIN enregistré.", "success"); App.resetTo("security"); return; }
-        Screens._pinDone(action);
-        return;
-      }
-      if (hash !== known) {
+      const setting = action === "changePin" || !known;
+      if (!setting && hash !== known) {
         const left = window.YCGuard ? YCGuard.fail("pin") : 0;
         UI.showError("pin-error", left ? YCGuard.waitMsg(left) : "Code PIN incorrect.");
         return;
       }
       if (window.YCGuard) YCGuard.ok("pin");
-      Screens._pinDone(action);
+      if (setting) {
+        ACState.prefs.pinHash = hash;
+        ACStore.emit();
+      }
+      const live = accountLive() && window.YCBackend;
+      const save = setting && live
+        ? YCBackend.saveProfile({ fullName: ACState.user.fullName, email: ACState.user.email, city: ACState.user.city, country: ACState.user.country, phone: ACState.user.phone, pinHash: hash })
+        : Promise.resolve({ ok: true });
+      save.then(function (saved) {
+        if (saved && saved.ok === false) return UI.showError("pin-error", saved.message || "Enregistrement impossible.");
+        if (action === "changePin") { UI.toast("Code PIN enregistré.", "success"); App.resetTo("security"); return; }
+        if (live && ACState.user.biometricEnrolled && window.YCBiometric) {
+          YCBiometric.grantPin(pin).then(function (res) {
+            if (!res || res.ok === false) return UI.showError("pin-error", (res && res.message) || "Confirmation impossible.");
+            Screens._pinDone(action);
+          });
+          return;
+        }
+        Screens._pinDone(action);
+      });
     });
   };
   Screens._pinDone = function (action) {
@@ -485,7 +508,7 @@
     App.resetTo("paymentSuccess", { amount: Math.abs(t.amount), title: "Opération confirmée", body: t.type === "credit" ? "Votre solde a été crédité." : "L'opération est confirmée.", next: "wallet" });
   };
   Screens.paymentFailed = function (container, params) {
-    const reasons = { insufficient_balance: ["Solde insuffisant", "Votre solde Youss Wallet ne couvre pas ce montant. Rechargez ou choisissez les espèces."], offline: ["Vous êtes hors ligne", "Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible."], unavailable: ["Moyen de paiement fermé", "La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces."], error: ["Paiement impossible", "Une erreur est survenue. Aucun montant n'a été débité."] };
+    const reasons = { insufficient_balance: ["Solde insuffisant", "Votre solde Youss Wallet ne couvre pas ce montant. Rechargez ou choisissez les espèces."], offline: ["Vous êtes hors ligne", "Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible."], unavailable: ["Moyen de paiement fermé", "La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces."], confirm: ["Confirmation requise", "Confirmez avec Face ID, l'empreinte ou le code PIN avant ce paiement. Aucun montant n'a été débité."], error: ["Paiement impossible", "Une erreur est survenue. Aucun montant n'a été débité."] };
     const r = reasons[params.reason] || reasons.error;
     const amount = parseInt(params.amount, 10) || 0;
     const retry = params.retry ? `App.resetTo('${esc(params.retry)}'${params.retryParams ? ",{id:'" + esc(params.retryParams) + "'}" : ""})` : "App.back()";

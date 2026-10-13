@@ -267,3 +267,324 @@ $$;
 revoke all on function public.save_records(jsonb) from public, anon, authenticated;
 grant execute on function public.save_records(jsonb) to authenticated;
 
+-- Pièces d'identité, assistance, console et clé d'appareil.
+-- Aucune image d'empreinte ou de visage n'est stockée : seulement la clé publique WebAuthn.
+
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
+
+create table if not exists public.staff (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  role text not null default 'admin' check (role in ('admin')),
+  created_at timestamptz not null default now()
+);
+alter table public.staff enable row level security;
+
+create table if not exists public.identity_documents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  doc_type text not null check (doc_type in ('cni', 'passeport', 'permis')),
+  storage_path text not null check (char_length(storage_path) between 3 and 200),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  note text not null default '' check (char_length(note) <= 300),
+  created_at timestamptz not null default now(),
+  reviewed_at timestamptz
+);
+alter table public.identity_documents enable row level security;
+create index if not exists identity_documents_status_idx on public.identity_documents (status, created_at desc);
+
+create table if not exists public.support_threads (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  subject text not null default 'Assistance' check (char_length(subject) between 1 and 80),
+  status text not null default 'open' check (status in ('open', 'closed')),
+  updated_at timestamptz not null default now()
+);
+alter table public.support_threads enable row level security;
+create unique index if not exists support_one_open on public.support_threads (user_id) where status = 'open';
+
+create table if not exists public.support_messages (
+  id uuid primary key default gen_random_uuid(),
+  thread_id uuid not null references public.support_threads (id) on delete cascade,
+  user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 2000),
+  from_staff boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.support_messages enable row level security;
+create index if not exists support_messages_thread_idx on public.support_messages (thread_id, created_at);
+
+create table if not exists public.device_keys (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  credential_id text not null unique check (char_length(credential_id) between 8 and 512),
+  public_key text not null check (char_length(public_key) between 16 and 4000),
+  counter bigint not null default 0,
+  kind text not null check (kind in ('face', 'fingerprint')),
+  created_at timestamptz not null default now()
+);
+alter table public.device_keys enable row level security;
+
+create table if not exists public.webauthn_challenges (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  challenge text not null,
+  purpose text not null check (purpose in ('register', 'confirm')),
+  expires_at timestamptz not null
+);
+alter table public.webauthn_challenges enable row level security;
+
+create table if not exists public.auth_confirmations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  expires_at timestamptz not null,
+  used boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.auth_confirmations enable row level security;
+create index if not exists auth_confirmations_user_idx on public.auth_confirmations (user_id, created_at desc);
+
+create table if not exists public.pin_attempts (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  failures integer not null default 0,
+  locked_until timestamptz
+);
+alter table public.pin_attempts enable row level security;
+
+create or replace function private.is_staff()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.staff where user_id = auth.uid());
+$$;
+
+create or replace function private.claim_console()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    return 'denied';
+  end if;
+  if exists (select 1 from public.staff where user_id = auth.uid()) then
+    return 'member';
+  end if;
+  perform pg_advisory_xact_lock(2041301);
+  if exists (select 1 from public.staff) then
+    return 'denied';
+  end if;
+  insert into public.staff (user_id, role) values (auth.uid(), 'admin');
+  return 'created';
+end;
+$$;
+
+create or replace function public.claim_console()
+returns text
+language sql
+security invoker
+set search_path = public
+as $$
+  select private.claim_console();
+$$;
+
+create or replace function private.touch_support_thread()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.support_threads set updated_at = now() where id = new.thread_id;
+  return new;
+end;
+$$;
+
+drop trigger if exists support_message_touch on public.support_messages;
+create trigger support_message_touch
+  after insert on public.support_messages
+  for each row execute function private.touch_support_thread();
+
+revoke all on function private.is_staff() from public, anon;
+revoke all on function private.claim_console() from public, anon;
+revoke all on function private.touch_support_thread() from public, anon, authenticated;
+revoke all on function public.claim_console() from public, anon, authenticated;
+grant execute on function private.is_staff() to authenticated;
+grant execute on function private.claim_console() to authenticated;
+grant execute on function public.claim_console() to authenticated;
+
+drop policy if exists "staff self" on public.staff;
+create policy "staff self" on public.staff for select to authenticated
+  using (user_id = (select auth.uid()) or private.is_staff());
+
+drop policy if exists "staff read profiles" on public.profiles;
+create policy "staff read profiles" on public.profiles for select to authenticated
+  using (private.is_staff());
+
+drop policy if exists "identity own read" on public.identity_documents;
+create policy "identity own read" on public.identity_documents for select to authenticated
+  using (user_id = (select auth.uid()) or private.is_staff());
+drop policy if exists "identity own insert" on public.identity_documents;
+create policy "identity own insert" on public.identity_documents for insert to authenticated
+  with check (
+    user_id = (select auth.uid())
+    and status = 'pending'
+    and reviewed_at is null
+    and storage_path like ((select auth.uid()::text) || '/%')
+  );
+drop policy if exists "identity staff update" on public.identity_documents;
+create policy "identity staff update" on public.identity_documents for update to authenticated
+  using (private.is_staff())
+  with check (private.is_staff());
+
+drop policy if exists "thread read" on public.support_threads;
+create policy "thread read" on public.support_threads for select to authenticated
+  using (user_id = (select auth.uid()) or private.is_staff());
+drop policy if exists "thread insert" on public.support_threads;
+create policy "thread insert" on public.support_threads for insert to authenticated
+  with check (user_id = (select auth.uid()) and status = 'open');
+drop policy if exists "thread staff update" on public.support_threads;
+create policy "thread staff update" on public.support_threads for update to authenticated
+  using (private.is_staff())
+  with check (private.is_staff());
+
+drop policy if exists "message read" on public.support_messages;
+create policy "message read" on public.support_messages for select to authenticated
+  using (
+    private.is_staff()
+    or exists (
+      select 1 from public.support_threads t
+      where t.id = thread_id and t.user_id = (select auth.uid())
+    )
+  );
+drop policy if exists "message member insert" on public.support_messages;
+create policy "message member insert" on public.support_messages for insert to authenticated
+  with check (
+    from_staff = false
+    and user_id = (select auth.uid())
+    and exists (
+      select 1 from public.support_threads t
+      where t.id = thread_id and t.user_id = (select auth.uid())
+    )
+  );
+drop policy if exists "message staff insert" on public.support_messages;
+create policy "message staff insert" on public.support_messages for insert to authenticated
+  with check (
+    private.is_staff()
+    and from_staff = true
+    and user_id = (select auth.uid())
+  );
+
+drop policy if exists "device key read" on public.device_keys;
+create policy "device key read" on public.device_keys for select to authenticated
+  using (user_id = (select auth.uid()));
+drop policy if exists "device key delete" on public.device_keys;
+create policy "device key delete" on public.device_keys for delete to authenticated
+  using (user_id = (select auth.uid()));
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('identity', 'identity', false, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "identity file insert" on storage.objects;
+create policy "identity file insert" on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'identity'
+    and (storage.foldername(name))[1] = (select auth.uid()::text)
+    and storage.extension(name) in ('jpg', 'jpeg', 'png', 'webp', 'pdf')
+  );
+drop policy if exists "identity file read" on storage.objects;
+create policy "identity file read" on storage.objects for select to authenticated
+  using (
+    bucket_id = 'identity'
+    and (
+      (storage.foldername(name))[1] = (select auth.uid()::text)
+      or private.is_staff()
+    )
+  );
+
+-- Un compte qui a enregistré Face ID ou l'empreinte doit confirmer avant un débit.
+create or replace function public.wallet_pay(
+  p_amount integer,
+  p_label text,
+  p_service text,
+  p_points integer default 0,
+  p_meta jsonb default '{}'::jsonb
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  bal integer;
+  pts integer;
+  earned integer;
+  km numeric;
+  cid uuid;
+begin
+  if uid is null then
+    return jsonb_build_object('ok', false, 'reason', 'unauthenticated');
+  end if;
+  if p_amount is null or p_amount <= 0 or p_amount > 2000000 then
+    return jsonb_build_object('ok', false, 'reason', 'invalid_amount');
+  end if;
+  earned := least(greatest(coalesce(p_points, 0), 0), p_amount / 100);
+
+  select balance, points into bal, pts
+  from public.wallets where user_id = uid for update;
+  if bal is null then
+    return jsonb_build_object('ok', false, 'reason', 'no_wallet');
+  end if;
+  if bal < p_amount then
+    return jsonb_build_object('ok', false, 'reason', 'insufficient_balance');
+  end if;
+
+  if exists (select 1 from public.device_keys where user_id = uid) then
+    select id into cid
+    from public.auth_confirmations
+    where user_id = uid and used = false and expires_at > now()
+    order by created_at desc
+    limit 1
+    for update;
+    if cid is null then
+      return jsonb_build_object('ok', false, 'reason', 'confirm');
+    end if;
+    update public.auth_confirmations set used = true where id = cid;
+  end if;
+
+  update public.wallets
+    set balance = balance - p_amount,
+        points = points + earned,
+        updated_at = now()
+    where user_id = uid
+    returning balance, points into bal, pts;
+
+  insert into public.wallet_transactions (user_id, label, amount, kind, service)
+  values (uid, left(coalesce(p_label, 'Paiement'), 160), -p_amount, 'debit', left(coalesce(p_service, 'wallet'), 40));
+
+  if p_service = 'transport' then
+    begin
+      km := nullif(p_meta->>'km', '')::numeric;
+    exception when others then
+      km := null;
+    end;
+    insert into public.rides (user_id, origin, destination, km, amount, status)
+    values (uid, p_meta->>'from', p_meta->>'to', km, p_amount, 'completed');
+  elsif p_service is not null and p_service <> 'wallet' then
+    insert into public.bookings (user_id, service, label, amount, status, meta)
+    values (uid, left(p_service, 40), left(coalesce(p_label, ''), 160), p_amount, 'confirmed', coalesce(p_meta, '{}'::jsonb));
+  end if;
+
+  return jsonb_build_object('ok', true, 'balance', bal, 'points', pts);
+end;
+$$;
+

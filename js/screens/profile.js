@@ -146,10 +146,10 @@
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">${ACState.session.remote ? "Compte ouvert" : "Élevé"}</p><p class="t-small opacity-80">${ACState.session.remote ? "E-mail, mot de passe et code PIN." : "Compte vérifié, PIN actif, biométrie " + (ACState.prefs.biometric === false || ACState.user.biometricEnrolled === false ? "désactivée" : "activée")}</p></div></div>
       <div class="space-y-2.5">
-        ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: "E-mail du compte. Pièce d'identité pas encore ouverte.", right: UI.badge(ACState.session.remote ? "E-mail" : "À faire", ACState.session.remote ? "success" : "warn") })}
+        ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: identitySub(), right: UI.badge(identityBadge()[0], identityBadge()[1]) })}
         ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: ACState.prefs.pinHash ? "Modifier le code à 4 chiffres" : "Choisir le code à 4 chiffres" })}
         ${menuRow("key", "Mot de passe", "App.nav('accountPassword')", { sub: "Changer le mot de passe du compte" })}
-        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: ACState.session.remote ? "Pas encore reliée. Les paiements utilisent le code PIN." : (ACState.user.biometricEnrolled === false ? "Non enregistrée" : "Empreinte pour confirmer les paiements"), right: UI.toggle(!ACState.session.remote && ACState.prefs.biometric !== false && ACState.user.biometricEnrolled !== false, "Screens._toggleBio()", "Biométrie") })}
+        ${menuRow(bioIcon(), "Biométrie", "Screens._toggleBio()", { sub: bioSub(), right: UI.toggle(!!(ACState.user.biometricEnrolled && ACState.prefs.biometric !== false), "Screens._toggleBio()", "Biométrie") })}
         ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "Cet appareil" })}
         ${menuRow("history", "Historique des connexions", "App.nav('loginHistory')", { sub: "Session en cours" })}
         ${menuRow("report", "Signalement", "App.nav('report')", { sub: "Signaler un chauffeur, un vendeur, un incident" })}
@@ -158,22 +158,73 @@
       </div></div>`;
     Shell.render(container, { title: I18N.t("security"), subtitle: "PIN, biométrie, appareils", back: true, body, nav: false, showNav: true });
   };
+  function identitySub() {
+    const st = ACState.user.identityStatus;
+    if (st === "pending") return "Document envoyé, en attente de relecture.";
+    if (st === "approved") return "Pièce d'identité acceptée.";
+    if (st === "rejected") return "Document refusé. Vous pouvez en envoyer un autre.";
+    return "Envoyez une carte, un passeport ou un permis.";
+  }
+  function identityBadge() {
+    const st = ACState.user.identityStatus;
+    if (st === "approved") return ["Acceptée", "success"];
+    if (st === "pending") return ["En revue", "gold"];
+    if (st === "rejected") return ["Refusée", "warn"];
+    return ["À envoyer", "warn"];
+  }
+  function bioIcon() {
+    return ACState.prefs.sensorKind === "face" ? "face" : "fingerprint";
+  }
+  function bioSub() {
+    if (ACState.user.biometricEnrolled && ACState.prefs.biometric !== false) {
+      return ACState.prefs.sensorKind === "face" ? "Face ID confirme les paiements. Le code PIN reste en secours." : "L'empreinte confirme les paiements. Le code PIN reste en secours.";
+    }
+    return "iPhone : Face ID. Android : empreinte. Le code PIN reste disponible.";
+  }
   Screens._toggleBio = function () {
-    if (ACState.session.remote) { UI.toast("L'empreinte de l'appareil n'est pas encore reliée. Les paiements utilisent le code PIN.", "info"); return; }
-    if (ACState.user.biometricEnrolled === false || ACState.prefs.biometric === false) {
-      App.nav("biometricSetup", { next: "security" });
+    if (!ACState.session.remote) { UI.toast("Connectez-vous pour enregistrer Face ID ou l'empreinte.", "info"); return; }
+    if (ACState.user.biometricEnrolled && ACState.prefs.biometric !== false) {
+      if (!window.YCBackend) return;
+      YCBackend.removeBiometric().then(function (res) {
+        if (!res || res.ok === false) { UI.toast((res && res.message) || "Retrait impossible.", "error"); return; }
+        UI.toast("Biométrie retirée. Les paiements demanderont le code PIN.", "info");
+        App.replace("security");
+      });
       return;
     }
-    ACState.prefs.biometric = false;
-    ACStore.emit();
-    UI.toast("Biométrie désactivée. Les paiements demanderont le code PIN.", "info");
+    App.nav("biometricSetup", { next: "security" });
   };
   Screens.verifyAccount = function (container) {
     const steps = [{ label: "E-mail du compte", icon: "mail" }, { label: "Numéro de téléphone", icon: "call" }, { label: "Pièce d'identité", icon: "badge" }];
-    const done = ACState.session.remote ? 1 : 0;
+    const st = ACState.user.identityStatus;
+    const done = st === "approved" ? 3 : st ? 2 : ACState.session.remote ? 1 : 0;
+    const note = st === "pending" ? "Document reçu. La console KYA le relit. Le compte n'est pas encore marqué vérifié." : st === "approved" ? "Pièce acceptée." : st === "rejected" ? "Le dernier document a été refusé. Vous pouvez en envoyer un autre." : "Photo ou PDF, 5 Mo maximum. Le document reste privé jusqu'à la relecture.";
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5">${UI.timeline(steps, done)}</div>
-      <div class="card p-5 text-center"><span class="w-16 h-16 rounded-2xl bg-surface-low flex items-center justify-center mx-auto text-gold">${icon("badge", "text-[32px]")}</span><p class="t-title mt-3">Pièce d'identité</p><p class="t-small text-ink-2 mt-1">La vérification d'identité n'est pas encore ouverte. Aucun document n'est demandé ni enregistré.</p></div></div>`;
+      <form class="card p-5 space-y-3" onsubmit="event.preventDefault();Screens._sendIdentity()">
+        <p class="t-title">Pièce d'identité</p>
+        <p class="t-small text-ink-2">${note}</p>
+        <label class="block"><span class="t-small font-semibold">Type</span><select id="id-type" class="input mt-1">${[["cni", "Carte d'identité"], ["passeport", "Passeport"], ["permis", "Permis de conduire"]].map((o) => `<option value="${o[0]}">${o[1]}</option>`).join("")}</select></label>
+        <label class="block"><span class="t-small font-semibold">Document</span><input id="id-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="input mt-1"/></label>
+        ${UI.error("id-error")}
+        <button id="id-send" type="submit" class="btn btn-lg btn-primary btn-block">Envoyer le document</button>
+      </form></div>`;
     Shell.render(container, { title: "Vérification du compte", back: true, body, nav: false, showNav: true });
+  };
+  Screens._sendIdentity = function () {
+    const input = document.getElementById("id-file");
+    const type = (document.getElementById("id-type") || {}).value || "cni";
+    const file = input && input.files && input.files[0];
+    if (!ACState.session.remote || !window.YCBackend) return UI.showError("id-error", "Connectez-vous pour envoyer le document.");
+    if (!file) return UI.showError("id-error", "Choisissez une photo ou un PDF.");
+    if (file.size > 5 * 1024 * 1024) return UI.showError("id-error", "Le document doit faire moins de 5 Mo.");
+    const btn = document.getElementById("id-send");
+    if (btn) btn.disabled = true;
+    YCBackend.uploadIdentity(file, type).then(function (res) {
+      if (btn) btn.disabled = false;
+      if (!res || res.ok === false) return UI.showError("id-error", (res && res.message) || "Envoi impossible.");
+      UI.toast("Document envoyé. La console KYA va le relire.", "success");
+      App.replace("verifyAccount");
+    });
   };
   Screens.accountPassword = function (container) {
     const body = `<form class="max-w-narrow mx-auto w-full space-y-4" onsubmit="event.preventDefault();Screens._savePassword()">
@@ -234,12 +285,58 @@
   // Aide
   Screens.help = function (container) {
     const faq = [["Comment payer une course ?", "Youss Wallet ou espèces, au moment de confirmer. Le prix vient de l'itinéraire. La carte et le paiement mobile ne sont pas encore encaissés."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Un paiement par Youss Wallet ajoute des points, dans la limite du montant."], ["Le wallet est-il réel ?", "Le solde est celui du compte. La recharge n'est pas encore ouverte : elle attend un prestataire de paiement."], ["Vendre sur l'app ?", "La vente n'est pas proposée dans le compte personnel. Cette version montre l'achat, le transport et le portefeuille."]];
-    const actions = [["chat", "Chat avec l'assistance", "Pas encore ouvert", "UI.toast('Le chat d\\'assistance n\\'est pas encore ouvert.','info')"], ["call", "Appeler", "Pas encore ouvert", "UI.toast('L\\'appel d\\'assistance n\\'est pas encore ouvert.','info')"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]];
+    const actions = [["chat", "Chat avec l'assistance", "Écrire à KYA", "App.nav('helpChat')"], ["call", "Appeler", "Pas encore ouvert", "UI.toast('L\\'appel d\\'assistance n\\'est pas encore ouvert.','info')"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="grid grid-cols-2 gap-3">${actions.map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
       <section><p class="t-caption text-ink-3 mb-2">Questions fréquentes</p><div class="card divide-y divide-line">${faq.map((q, i) => `<details class="group"><summary class="flex items-center justify-between gap-3 p-4 cursor-pointer list-none t-title">${q[0]}${icon("expand_more", "text-ink-3 transition-transform group-open:rotate-180")}</summary><p class="px-4 pb-4 t-body text-ink-2">${q[1]}</p></details>`).join("")}</div></section>
       <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT</p><p class="t-small text-ink-2 mt-1">KYA CORPORATION. Les prix, chauffeurs et événements affichés sont des exemples. Aucun partenaire officiel.</p><div class="flex flex-wrap gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "App.nav('terms')", { variant: "outline", block: false, size: "sm" })}${UI.button("Confidentialité", "App.nav('privacy')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
     Shell.render(container, { title: I18N.t("help"), subtitle: "FAQ et contact", back: true, body, nav: false, showNav: true });
+  };
+  let helpPoll = null;
+  function paintHelp(threadId) {
+    if (!window.YCBackend) return;
+    YCBackend.loadMessages(threadId).then(function (rows) {
+      const box = document.getElementById("help-chat");
+      if (!box) return;
+      box.innerHTML = rows.length ? rows.map(function (m) {
+        return `<div class="max-w-[85%] ${m.from_staff ? "" : "ml-auto"}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-surface-low" : "bg-ink text-white"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "" : "text-right"}">${m.from_staff ? "Assistance" : "Vous"}</p></div>`;
+      }).join("") : `<p class="t-small text-ink-2">Écrivez votre message. La console KYA répond ici.</p>`;
+      box.scrollTop = box.scrollHeight;
+    });
+  }
+  Screens.helpChat = function (container) {
+    const body = `<div class="max-w-narrow mx-auto w-full flex flex-col gap-3" style="min-height:60dvh"><div id="help-chat" class="card p-4 flex-1 space-y-3 overflow-y-auto max-h-[60dvh]"><p class="t-small text-ink-2">Ouverture de la conversation…</p></div><form class="flex gap-2" onsubmit="event.preventDefault();Screens._helpSend()"><input id="help-text" class="input flex-1" maxlength="2000" placeholder="Votre message" autocomplete="off"/><button type="submit" class="btn btn-primary">Envoyer</button></form></div>`;
+    Shell.render(container, { title: "Assistance", subtitle: "Message à KYA CORPORATION", back: true, body, nav: false, showNav: true });
+    if (!window.YCBackend || !YCBackend.isLive()) {
+      const box = document.getElementById("help-chat");
+      if (box) box.innerHTML = `<p class="t-small text-ink-2">Connectez-vous pour écrire à l'assistance.</p>`;
+      return;
+    }
+    YCBackend.openSupport().then(function (threadId) {
+      if (!threadId) {
+        const box = document.getElementById("help-chat");
+        if (box) box.innerHTML = `<p class="t-small text-ink-2">La conversation n'a pas pu s'ouvrir.</p>`;
+        return;
+      }
+      Screens._helpThread = threadId;
+      paintHelp(threadId);
+      if (helpPoll) clearInterval(helpPoll);
+      helpPoll = setInterval(function () {
+        if (!App.current || App.current.id !== "helpChat") { clearInterval(helpPoll); helpPoll = null; return; }
+        paintHelp(threadId);
+      }, 4000);
+    });
+  };
+  Screens._helpSend = function () {
+    const input = document.getElementById("help-text");
+    const text = input ? input.value.trim() : "";
+    const threadId = Screens._helpThread;
+    if (!text || !threadId || !window.YCBackend) return;
+    YCBackend.sendSupport(threadId, text, false).then(function (res) {
+      if (!res || res.ok === false) { UI.toast((res && res.message) || "Envoi impossible.", "error"); return; }
+      if (input) input.value = "";
+      paintHelp(threadId);
+    });
   };
 
   // Paramètres

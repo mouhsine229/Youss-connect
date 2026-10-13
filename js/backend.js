@@ -45,7 +45,7 @@
   function dropSeed(list, prefix) {
     return (list || []).filter(function (row) { return !row || String(row.id || "").indexOf(prefix) !== 0; });
   }
-  function applyAccount(profile, wallet, txRows, records) {
+  function applyAccount(profile, wallet, txRows, records, keys, identity) {
     var user = ACState.user;
     if (profile) {
       if (profile.full_name) { user.fullName = profile.full_name; user.name = profile.full_name.split(" ")[0] || user.name; }
@@ -56,8 +56,16 @@
       if (profile.pin_hash) ACState.prefs.pinHash = profile.pin_hash;
     }
     user.verified = true;
-    user.biometricEnrolled = false;
-    ACState.prefs.biometric = false;
+    if (keys) {
+      user.biometricEnrolled = keys.length > 0;
+      ACState.prefs.biometric = user.biometricEnrolled;
+      ACState.prefs.sensorKind = keys[0] ? keys[0].kind : "";
+    }
+    if (identity) {
+      var doc = identity[0];
+      user.identityStatus = doc ? doc.status : "";
+      user.identityType = doc ? doc.doc_type : "";
+    }
     if (wallet) {
       ACState.wallet.balance = wallet.balance;
       ACState.wallet.currency = wallet.currency || "FCFA";
@@ -93,17 +101,21 @@
       client.from("profiles").select("*").eq("id", uid).maybeSingle(),
       client.from("wallets").select("*").eq("user_id", uid).maybeSingle(),
       client.from("wallet_transactions").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(40),
-      client.from("user_records").select("kind,payload").order("created_at", { ascending: false }).limit(200)
+      client.from("user_records").select("kind,payload").order("created_at", { ascending: false }).limit(200),
+      client.from("device_keys").select("id,kind").limit(5),
+      client.from("identity_documents").select("status,doc_type").order("created_at", { ascending: false }).limit(1)
     ]).then(function (rows) {
       var failed = rows.slice(0, 3).filter(function (r) { return r.error; })[0];
       if (failed) throw failed.error;
       var profile = rows[0].data, wallet = rows[1].data;
       var records = rows[3] && !rows[3].error ? rows[3].data : [];
+      var keys = rows[4] && !rows[4].error ? (rows[4].data || []) : null;
+      var identity = rows[5] && !rows[5].error ? (rows[5].data || []) : null;
       if (!profile) {
         return client.from("profiles").insert({ id: uid, phone: session.user.phone || "", full_name: (session.user.user_metadata && session.user.user_metadata.full_name) || "" }).select("*").single()
-          .then(function (ins) { applyAccount(ins.data, wallet, rows[2].data, records); });
+          .then(function (ins) { applyAccount(ins.data, wallet, rows[2].data, records, keys, identity); });
       }
-      applyAccount(profile, wallet, rows[2].data, records);
+      applyAccount(profile, wallet, rows[2].data, records, keys, identity);
     });
   }
 
@@ -243,5 +255,104 @@
     });
   }
 
-  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, explain: explain };
+  function deviceAuth(body) {
+    if (!client) return Promise.resolve({ ok: false, message: "Compte indisponible." });
+    return client.auth.getSession().then(function (res) {
+      var token = res.data.session && res.data.session.access_token;
+      if (!token) return { ok: false, message: "Connectez-vous." };
+      var root = (cfg.supabaseUrl || "").replace(/\/$/, "");
+      return fetch(root + "/functions/v1/device-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: cfg.supabaseAnonKey, Authorization: "Bearer " + token },
+        body: JSON.stringify(body || {})
+      }).then(function (r) {
+        return r.json().catch(function () { return { ok: false, message: "Réponse invalide." }; });
+      }).catch(function () { return { ok: false, message: "Vérification impossible. Vérifiez la connexion." }; });
+    });
+  }
+  function claimConsole() {
+    if (!client) return Promise.resolve({ ok: false, status: "denied" });
+    return client.rpc("claim_console").then(function (res) {
+      if (res.error) return { ok: false, status: "denied", message: explain(res.error) };
+      var status = res.data;
+      return { ok: status === "created" || status === "member", status: status };
+    });
+  }
+  function uploadIdentity(file, docType) {
+    if (!client) return Promise.resolve({ ok: false, message: "Connectez-vous." });
+    var types = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf" };
+    var allowed = { cni: 1, passeport: 1, permis: 1 };
+    if (!allowed[docType]) return Promise.resolve({ ok: false, message: "Choisissez le type de document." });
+    return client.auth.getSession().then(function (res) {
+      var uid = res.data.session && res.data.session.user && res.data.session.user.id;
+      if (!uid) return { ok: false, message: "Connectez-vous." };
+      var ext = String((file && file.name || "").split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!types[ext]) return { ok: false, message: "Format accepté : photo JPG, PNG, WebP ou PDF." };
+      var path = uid + "/" + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "." + ext;
+      return client.storage.from("identity").upload(path, file, { contentType: file.type || types[ext], upsert: false }).then(function (up) {
+        if (up.error) return { ok: false, message: explain(up.error) };
+        return client.from("identity_documents").insert({ doc_type: docType, storage_path: path }).then(function (ins) {
+          if (ins.error) return { ok: false, message: explain(ins.error) };
+          if (window.ACState) {
+            ACState.user.identityStatus = "pending";
+            ACState.user.identityType = docType;
+            ACStore.emit();
+          }
+          return { ok: true };
+        });
+      });
+    });
+  }
+  function removeBiometric() {
+    if (!client) return Promise.resolve({ ok: false });
+    return client.auth.getSession().then(function (res) {
+      var uid = res.data.session && res.data.session.user && res.data.session.user.id;
+      if (!uid) return { ok: false };
+      return client.from("device_keys").delete().eq("user_id", uid).then(function (del) {
+        if (!del.error && window.ACState) {
+          ACState.user.biometricEnrolled = false;
+          ACState.prefs.biometric = false;
+          ACState.prefs.sensorKind = "";
+          ACStore.emit();
+        }
+        return { ok: !del.error, message: del.error ? explain(del.error) : "" };
+      });
+    });
+  }
+  function openSupport() {
+    if (!client) return Promise.resolve("");
+    return client.auth.getSession().then(function (res) {
+      var uid = res.data.session && res.data.session.user && res.data.session.user.id;
+      if (!uid) return "";
+      return client.from("support_threads").select("id").eq("user_id", uid).eq("status", "open").maybeSingle().then(function (found) {
+        if (found.data) return found.data.id;
+        return client.from("support_threads").insert({ user_id: uid, subject: "Assistance" }).select("id").single().then(function (ins) {
+          if (ins.data) return ins.data.id;
+          return client.from("support_threads").select("id").eq("user_id", uid).eq("status", "open").maybeSingle().then(function (again) {
+            return again.data ? again.data.id : "";
+          });
+        });
+      });
+    });
+  }
+  function loadMessages(threadId) {
+    if (!client || !threadId) return Promise.resolve([]);
+    return client.from("support_messages").select("id,body,from_staff,created_at").eq("thread_id", threadId).order("created_at", { ascending: true }).limit(100).then(function (res) {
+      return res.data || [];
+    });
+  }
+  function sendSupport(threadId, text, fromStaff) {
+    if (!client) return Promise.resolve({ ok: false, message: "Connectez-vous." });
+    var body = String(text || "").trim().slice(0, 2000);
+    if (!threadId || !body) return Promise.resolve({ ok: false, message: "Écrivez un message." });
+    return client.auth.getSession().then(function (res) {
+      var uid = res.data.session && res.data.session.user && res.data.session.user.id;
+      if (!uid) return { ok: false, message: "Connectez-vous." };
+      return client.from("support_messages").insert({ thread_id: threadId, user_id: uid, body: body, from_staff: !!fromStaff }).then(function (ins) {
+        return { ok: !ins.error, message: ins.error ? explain(ins.error) : "" };
+      });
+    });
+  }
+
+  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, explain: explain, api: function () { return isLive() ? client : null; }, deviceAuth: deviceAuth, claimConsole: claimConsole, uploadIdentity: uploadIdentity, removeBiometric: removeBiometric, openSupport: openSupport, loadMessages: loadMessages, sendSupport: sendSupport };
 })();

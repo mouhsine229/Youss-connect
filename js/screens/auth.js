@@ -224,16 +224,17 @@
       ${UI.primaryButton("Aller à la connexion", "App.resetTo('login')", { size: "lg", iconRight: "arrow_forward" })}`;
     container.innerHTML = authFrame(form, { back: "App.back()" });
   };
-  function finishAuth(next) {
+  function finishAuth(next, mode) {
     ACState.session.authenticated = true; ACState.session.onboardingSeen = true;
     ACStore.emit();
     UI.toast("Bienvenue " + ACState.user.name + " !", "success");
     const after = sessionStorage.getItem("yc-after-login");
-    if (after) {
+    if (after && mode !== "signup") {
       sessionStorage.removeItem("yc-after-login");
       const safe = window.YCGuard ? YCGuard.returnHash(after) : "";
       if (safe) { location.hash = safe; return; }
     }
+    if (mode === "signup") { App.resetTo("biometricSetup", { next: next || "home" }); return; }
     App.resetTo(next || "home");
   }
 
@@ -299,20 +300,26 @@
       [L("Responsable", "Controller"), L("KYA CORPORATION est responsable du traitement décrit ici. Cette politique concerne YOUSS CONNECT.", "KYA CORPORATION is responsible for the processing described here. This policy covers YOUSS CONNECT.")],
       [L("Données", "Data"), L("Le profil (nom, téléphone, e-mail, ville, pays) et le solde du portefeuille sont enregistrés sur le compte YOUSS CONNECT. Les préférences d'affichage restent sur cet appareil.", "The profile (name, phone, email, city, country) and the wallet balance are stored on the YOUSS CONNECT account. Display preferences stay on this device.")],
       [L("Carte bancaire", "Bank card"), L("Si vous enregistrez une carte, seuls la marque, le titulaire, la date d'expiration et les 4 derniers chiffres sont conservés. Le numéro complet et le cryptogramme sont effacés dès la validation. L'encaissement par carte n'est pas encore ouvert.", "If you save a card, only the brand, holder, expiry and last 4 digits are kept. The full number and security code are cleared as soon as you confirm. Card collection is not open yet.")],
-      [L("Biométrie", "Biometrics"), L("La confirmation des paiements se fait avec le code PIN que vous choisissez. Aucune image d'empreinte n'est capturée, envoyée ou stockée.", "Payments are confirmed with the PIN you choose. No fingerprint image is captured, sent or stored.")],
+      [L("Biométrie", "Biometrics"), L("Sur iPhone, Face ID peut confirmer un paiement. Sur Android, c'est l'empreinte. YOUSS CONNECT enregistre seulement la clé de l'appareil, jamais une image du visage ou du doigt. Le code PIN reste le secours.", "On iPhone, Face ID can confirm a payment. On Android, the fingerprint does. YOUSS CONNECT stores only the device key, never an image of the face or finger. The PIN stays as backup.")],
+      [L("Pièce d'identité", "Identity document"), L("Si vous envoyez une pièce, elle est conservée de façon privée le temps de la relecture dans la console KYA. Le compte n'est pas marqué vérifié tant qu'elle n'est pas acceptée.", "If you send an identity document, it is kept privately until the KYA console reviews it. The account is not marked verified until it is accepted.")],
       [L("Partage", "Sharing"), L("Les données du compte ne sont pas vendues. Elles sont conservées pour faire fonctionner YOUSS CONNECT.", "Account data is not sold. It is kept to operate YOUSS CONNECT.")],
       [L("Vos choix", "Your choices"), L("Vous pouvez retirer une carte, changer de ville, changer votre mot de passe et effacer les données locales de l'application depuis les paramètres. Effacer l'appareil ne supprime pas le compte.", "You can remove a card, change city, change your password and erase the app's local data from settings. Clearing the device does not delete the account.")],
       [L("Contact", "Contact"), L("Pour une question sur ces informations, écrivez à KYA CORPORATION depuis le centre d'aide de l'application.", "For a question about this notice, write to KYA CORPORATION from the app's help center.")]
     ]);
   };
 
-  Screens.biometricSetup = function (container, params) {
-    params = params || {};
+  Screens.biometricSetup = function (container) {
+    const sensor = window.YCBiometric ? YCBiometric.sensor() : null;
+    const title = sensor ? sensor.enroll : L("Code PIN", "PIN");
+    const lead = sensor
+      ? (sensor.kind === "face"
+        ? L("Cet iPhone utilisera Face ID. YOUSS CONNECT garde la clé de l'appareil, pas une image de votre visage. Le code PIN reste le secours.", "This iPhone will use Face ID. YOUSS CONNECT keeps the device key, not an image of your face. The PIN stays as backup.")
+        : L("Cet Android utilisera l'empreinte. YOUSS CONNECT garde la clé de l'appareil, pas une image de votre doigt. Le code PIN reste le secours.", "This Android will use the fingerprint. YOUSS CONNECT keeps the device key, not an image of your finger. The PIN stays as backup."))
+      : L("Cet appareil n'a pas Face ID ni d'empreinte. Les paiements demanderont le code PIN. Vous pourrez enregistrer le téléphone plus tard, depuis Sécurité.", "This device has neither Face ID nor a fingerprint. Payments will ask for the PIN. You can enroll the phone later, from Security.");
     const body = `<div class="max-w-narrow mx-auto w-full flex flex-col items-center text-center py-6 space-y-5" data-i18n-skip="1">
-      <button type="button" id="bio-pad" onclick="Screens._bioCapture()" class="w-28 h-28 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center" aria-label="${L("Enregistrer l'empreinte", "Enroll fingerprint")}">${icon("fingerprint", "text-[56px]")}</button>
-      <div><h2 class="t-h2">${L("Enregistrer votre empreinte", "Enroll your fingerprint")}</h2><p id="bio-status" class="t-body text-ink-2 mt-2">${L("Posez le doigt sur le capteur. Cette empreinte confirmera ensuite vos paiements, avec le code PIN en secours.", "Place your finger on the sensor. This fingerprint will then confirm your payments, with the PIN as backup.")}</p></div>
-      <p class="t-small text-ink-3 max-w-[360px]">${L("Simulation locale : aucune empreinte n'est envoyée ni conservée. L'appareil note seulement que la biométrie est activée.", "Local simulation: no fingerprint is sent or kept. The device only notes that biometrics are on.")}</p>
-      ${UI.primaryButton(L("Enregistrer l'empreinte", "Enroll fingerprint"), "Screens._bioCapture()", { size: "lg", icon: "fingerprint" })}
+      <div class="w-28 h-28 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon(sensor ? sensor.icon : "lock", "text-[56px]")}</div>
+      <div><h2 class="t-h2">${title}</h2><p id="bio-status" class="t-body text-ink-2 mt-2">${lead}</p></div>
+      ${sensor ? UI.primaryButton(sensor.enroll, "Screens._bioCapture()", { size: "lg", icon: sensor.icon }) : ""}
       <button type="button" onclick="Screens._bioSkip()" class="t-small text-ink-2 underline">${L("Continuer avec le code PIN uniquement", "Continue with PIN only")}</button>
     </div>`;
     Shell.render(container, { title: L("Biométrie", "Biometrics"), back: true, body, nav: false, hideSearch: true });
@@ -324,30 +331,24 @@
     if (window.YCGuard && next && !YCGuard.screenOk(next)) { App.resetTo("home"); return; }
     App.resetTo(next);
   }
-  let bioTimer = null;
   Screens._bioCapture = function () {
     const el = document.getElementById("bio-status");
-    const pad = document.getElementById("bio-pad");
-    if (el) el.textContent = L("Lecture de l'empreinte…", "Reading fingerprint…");
-    if (pad) pad.classList.add("animate-pulse");
-    clearTimeout(bioTimer);
-    bioTimer = setTimeout(function () {
-      ACStore.quietly(function () {
-        ACState.user.biometricEnrolled = true;
-        ACState.prefs.biometric = true;
-        ACStore.emit();
-      });
-      UI.toast(L("Empreinte enregistrée pour vos paiements.", "Fingerprint saved for your payments."), "success");
+    const sensor = window.YCBiometric ? YCBiometric.sensor() : null;
+    if (!window.YCBiometric || !window.YCBackend || !YCBackend.isLive()) {
+      if (el) el.textContent = L("Connectez-vous pour enregistrer cet appareil.", "Sign in to enroll this device.");
+      return;
+    }
+    if (el) el.textContent = sensor && sensor.kind === "face" ? L("Regardez l'iPhone…", "Look at the iPhone…") : L("Posez le doigt sur le capteur…", "Place your finger on the sensor…");
+    YCBiometric.enroll().then(function (res) {
+      if (!res || res.ok === false) {
+        if (el) el.textContent = (res && res.message) || L("Enregistrement impossible.", "Enrollment failed.");
+        return;
+      }
+      UI.toast(sensor && sensor.kind === "face" ? L("Face ID enregistré pour vos confirmations.", "Face ID saved for your confirmations.") : L("Empreinte enregistrée pour vos confirmations.", "Fingerprint saved for your confirmations."), "success");
       bioNext();
-    }, 900);
+    });
   };
   Screens._bioSkip = function () {
-    clearTimeout(bioTimer);
-    ACStore.quietly(function () {
-      ACState.user.biometricEnrolled = false;
-      ACState.prefs.biometric = false;
-      ACStore.emit();
-    });
     UI.toast(L("Les paiements demanderont le code PIN.", "Payments will ask for the PIN."), "info");
     bioNext();
   };
