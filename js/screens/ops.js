@@ -75,7 +75,7 @@
       <div class="w-full max-w-[400px]">
         <p class="t-caption text-gold">Accès réservé</p>
         <h1 class="t-h1 mt-2">Console KYA</h1>
-        <p class="t-small text-white/55 mt-2">Connectez-vous avec le compte YOUSS CONNECT qui doit tenir la console. Le premier compte qui entre devient l'accès.</p>
+        <p class="t-small text-white/55 mt-2">Connectez-vous avec le compte de KYA CORPORATION. La console n'ouvre pas un nouveau compte.</p>
         <form class="card p-5 mt-8 space-y-3 text-ink" onsubmit="event.preventDefault();Screens._opsLogin()">
           ${UI.field("ops-mail", "E-mail du compte", { type: "email", autocomplete: "username" })}
           ${UI.field("ops-pass", "Mot de passe", { type: "password", placeholder: "••••••••", autocomplete: "current-password" })}
@@ -94,7 +94,7 @@
     YCBackend.signIn(mail, pass).then(function (res) {
       if (res && res.error) { UI.showError("ops-err", YCBackend.explain(res.error)); return; }
       return YCBackend.claimConsole().then(afterClaim);
-    });
+    }).catch(function () { UI.showError("ops-err", "Connexion impossible. Réessayez."); });
   };
   Screens._opsOut = function () {
     if (opsPoll) { clearInterval(opsPoll); opsPoll = null; }

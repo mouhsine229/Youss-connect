@@ -428,6 +428,7 @@
     "Écrivez votre message. La console KYA répond ici.": "Write your message. The KYA console replies here.",
     "Votre message": "Your message",
     "Message à KYA CORPORATION": "Message to KYA CORPORATION",
+    "Connectez-vous avec le compte de KYA CORPORATION. La console n'ouvre pas un nouveau compte.": "Sign in with the KYA CORPORATION account. The console does not open a new account.",
     "Connexion cuisine": "Kitchen sign-in",
     "Identifiant": "Login ID",
     "Mot de passe": "Password",
