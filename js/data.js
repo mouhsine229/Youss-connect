@@ -6,10 +6,10 @@
   const IMG = "./assets/img/";
 
   const COUNTRIES = [
-    { code: "BJ", name: "Bénin", dial: "+229", flag: "🇧🇯", currency: "FCFA", cities: ["Cotonou", "Porto-Novo", "Ouidah", "Abomey", "Parakou"] },
-    { code: "SN", name: "Sénégal", dial: "+221", flag: "🇸🇳", currency: "FCFA", cities: ["Dakar", "Saint-Louis", "Thiès", "Mbour"] },
-    { code: "TG", name: "Togo", dial: "+228", flag: "🇹🇬", currency: "FCFA", cities: ["Lomé", "Kara", "Sokodé", "Kpalimé"] },
-    { code: "GH", name: "Ghana", dial: "+233", flag: "🇬🇭", currency: "GHS", cities: ["Accra", "Kumasi", "Takoradi", "Cape Coast"] }
+    { code: "BJ", name: "Bénin", dial: "+229", flag: "🇧🇯", currency: "FCFA", cities: ["Cotonou", "Porto-Novo", "Ouidah", "Abomey", "Parakou", "Bohicon"], bbox: [0.75, 6.15, 3.90, 12.50] },
+    { code: "SN", name: "Sénégal", dial: "+221", flag: "🇸🇳", currency: "FCFA", cities: ["Dakar", "Saint-Louis", "Thiès", "Mbour"], bbox: [-17.60, 12.20, -11.30, 16.75] },
+    { code: "TG", name: "Togo", dial: "+228", flag: "🇹🇬", currency: "FCFA", cities: ["Lomé", "Kara", "Sokodé", "Kpalimé"], bbox: [-0.20, 6.00, 1.85, 11.20] },
+    { code: "GH", name: "Ghana", dial: "+233", flag: "🇬🇭", currency: "GHS", cities: ["Accra", "Kumasi", "Takoradi", "Cape Coast"], bbox: [-3.30, 4.65, 1.25, 11.25] }
   ];
 
   /* Villes de démonstration (destinations + bases Transport/Livraison) */
@@ -253,7 +253,7 @@
       organizer: "ACCRA [dot] ALT", body: "Fresques géantes, performances de rue, défilés et musique dans les rues historiques de Jamestown.", program: ["11:00 Parade d'ouverture", "14:00 Live painting", "20:00 Scène principale"],
       tickets: [{ id: "t12", label: "Accès libre (don)", price: 1000, left: 9999 }, { id: "t13", label: "Pass expériences", price: 7000, left: 120 }] },
     { id: "ev7", name: "Africa Tech Summit Cotonou", cat: "Conférences", city: "Cotonou", country: "Bénin", place: "Palais des Congrès de Cotonou", date: "2026-11-12", time: "08:30", img: IMG + "events/ev-conf-tech.jpg", lat: 6.3560, lng: 2.4150,
-      organizer: "KYA CORPORATION & partenaires", body: "Deux jours de conférences sur la fintech, la mobilité et les super applications africaines. Pitchs de startups et networking.", program: ["08:30 Accueil", "09:30 Keynote d'ouverture", "14:00 Pitchs startups"],
+      organizer: "KYA CORPORATION & partenaires", body: "Deux jours de conférences sur la fintech, la mobilité et les apps africaines. Pitchs de startups et rencontres.", program: ["08:30 Accueil", "09:30 Keynote d'ouverture", "14:00 Pitchs startups"],
       tickets: [{ id: "t14", label: "Pass visiteur", price: 10000, left: 300 }, { id: "t15", label: "Pass pro (2 jours)", price: 35000, left: 60 }] },
     { id: "ev8", name: "Derby de Dakar : Jaraaf vs Casa Sports", cat: "Événements sportifs", city: "Dakar", country: "Sénégal", place: "Stade Léopold Sédar Senghor", date: "2026-10-30", time: "17:00", img: IMG + "events/ev-football.jpg", lat: 14.7420, lng: -17.4530,
       organizer: "Ligue sénégalaise de football professionnel", body: "Affiche du championnat : ambiance garantie dans les tribunes du stade LSS.", program: ["15:00 Ouverture des portes", "17:00 Coup d'envoi"],
@@ -345,7 +345,7 @@
       history: "Longtemps arrivée mythique du rallye Paris-Dakar, le lac est exploité par des récolteurs de sel qui travaillent le corps enduit de beurre de karité.",
       importance: "Curiosité naturelle et économie du sel traditionnelle.",
       visit: { hours: "Toute l'année (rose plus intense en saison sèche)", price: "Pirogue 5 000 FCFA", duration: "Demi-journée", tips: "Combiner avec les dunes en quad ou à cheval." } },
-    { id: "d5", name: "Musée des Civilisations noires", city: "Dakar", country: "Sénégal", type: "musee", place: "Corniche Ouest, Dakar", lat: 14.6650, lng: -17.4346, img: IMG + "places/site-civilisations.jpg", epoch: "2018",
+    { id: "d5", name: "Musée des Civilisations noires", city: "Dakar", country: "Sénégal", type: "musee", place: "Autoroute Prolongée, Dakar", lat: 14.6744, lng: -17.4365, img: IMG + "places/site-civilisations.jpg", epoch: "2018",
       body: "Musée de 14 000 m² consacré à l'apport des civilisations noires au patrimoine de l'humanité.",
       history: "Projet rêvé par Léopold Sédar Senghor dès 1966, le musée a ouvert en décembre 2018. Son architecture circulaire s'inspire des cases à impluvium de Casamance.",
       importance: "Institution de référence sur le continent, lieu d'accueil des œuvres restituées.",
@@ -409,52 +409,7 @@
       body: "La plage la plus populaire d'Accra : balades à cheval, musique live et street food le week-end.",
       history: "Appelée aussi La Pleasure Beach, elle est depuis les années 1980 le lieu de sortie des Accréens, avec concerts et festivals de reggae en soirée.",
       importance: "Lieu de loisirs emblématique de la capitale ghanéenne.",
-      visit: { hours: "08h00 - 22h00", price: "Entrée ~ 1 500 FCFA (équivalent)", duration: "2h - demi-journée", tips: "Le dimanche après-midi pour l'ambiance." } },
-    { id: "c11", name: "Place de l'Étoile Rouge", city: "Cotonou", country: "Bénin", type: "monument", place: "Carrefour de l'Étoile Rouge, Cotonou", lat: 6.3699, lng: 2.3914, img: IMG + "places/city-cotonou.jpg", epoch: "1975",
-      body: "Le grand carrefour du centre de Cotonou, marqué par son étoile rouge, point de repère de toute la ville.",
-      history: "Aménagé dans les années 1970 au croisement des grands axes du centre, l'Étoile Rouge est devenue le carrefour le plus connu de Cotonou, entre administrations, commerces et circulation vers la lagune.",
-      importance: "Cœur de la circulation cotonoise et repère que tout le monde utilise pour se donner rendez-vous.",
-      visit: { hours: "Accès libre", price: "Gratuit", duration: "15 min", tips: "À voir de jour pour le mouvement de la ville, le soir pour les lumières." } },
-    { id: "c12", name: "Cathédrale Notre-Dame de Miséricorde", city: "Cotonou", country: "Bénin", type: "monument", place: "Boulevard Saint-Michel, Cotonou", lat: 6.3658, lng: 2.4348, img: IMG + "places/city-cotonou.jpg", epoch: "XXe siècle",
-      body: "La cathédrale catholique de Cotonou, face à la lagune, à deux pas du marché Dantokpa.",
-      history: "Édifiée au XXe siècle, Notre-Dame de Miséricorde est le siège de l'archidiocèse de Cotonou. Ses messes du dimanche rassemblent les fidèles du centre-ville.",
-      importance: "Lieu de culte majeur et repère architectural du vieux Cotonou, entre la lagune et Dantokpa.",
-      visit: { hours: "Extérieur libre ; messes le dimanche", price: "Gratuit", duration: "20 min", tips: "Tenue correcte pour entrer. Enchaîner avec le marché Dantokpa." } },
-    { id: "c13", name: "Stade de l'Amitié", city: "Cotonou", country: "Bénin", type: "activite", place: "Kouhounou, Cotonou", lat: 6.3815, lng: 2.4083, img: IMG + "places/city-cotonou.jpg", epoch: "1982",
-      body: "Le grand stade de Cotonou, qui accueille les matchs de l'équipe nationale et les concerts.",
-      history: "Inauguré en 1982, le Stade de l'Amitié Général Mathieu Kérékou est l'enceinte principale du football béninois, au nord du centre-ville.",
-      importance: "Scène sportive et festive de la capitale économique.",
-      visit: { hours: "Selon les matchs et concerts", price: "Selon l'événement", duration: "Une soirée", tips: "Vérifier le calendrier des Écureuils avant de se déplacer." } },
-    { id: "d7", name: "Marché Kermel", city: "Dakar", country: "Sénégal", type: "tradition", place: "Place Kermel, Plateau, Dakar", lat: 14.6743, lng: -17.4298, img: IMG + "places/city-dakar.jpg", epoch: "1860 / 1997",
-      body: "Marché couvert du Plateau, fleurs, artisanat et produits frais sous une halle métallique.",
-      history: "La première halle date du XIXe siècle. Reconstruite après l'incendie de 1993 et rouverte en 1997, Kermel reste le marché élégant du centre-ville.",
-      importance: "Vitrine de l'artisanat sénégalais au cœur du Plateau, à quelques minutes de la Place de l'Indépendance.",
-      visit: { hours: "08h00 - 19h00", price: "Gratuit", duration: "45 min", tips: "Les fleurs et les bijoux sont au centre de la halle." } },
-    { id: "d8", name: "Place de l'Indépendance", city: "Dakar", country: "Sénégal", type: "monument", place: "Plateau, Dakar", lat: 14.6696, lng: -17.4282, img: IMG + "places/city-dakar.jpg", epoch: "1960",
-      body: "La grande place du Plateau, entre ministères, la chambre de commerce et la gare de Dakar.",
-      history: "Aménagée pour l'indépendance de 1960, elle est le centre civique de la capitale : défilés, rassemblements et point de départ vers l'embarcadère de Gorée.",
-      importance: "Cœur institutionnel et symbolique de Dakar.",
-      visit: { hours: "Accès libre", price: "Gratuit", duration: "20 min", tips: "Descendre ensuite vers le port pour la chaloupe de Gorée." } },
-    { id: "l6", name: "Cathédrale du Sacré-Cœur", city: "Lomé", country: "Togo", type: "monument", place: "Avenue de la Cathédrale, Lomé", lat: 6.1286, lng: 1.2224, img: IMG + "places/city-lome.jpg", epoch: "1902",
-      body: "Cathédrale aux deux flèches blanches, au milieu du Grand Marché de Lomé.",
-      history: "Construite au début du XXe siècle sous l'administration allemande, le Sacré-Cœur est devenue le point de repère du centre commercial de Lomé.",
-      importance: "Monument religieux et urbain, entouré des étals des Nana Benz.",
-      visit: { hours: "Extérieur libre", price: "Gratuit", duration: "20 min", tips: "La visiter en même temps que le Grand Marché qui l'entoure." } },
-    { id: "l7", name: "Hôtel du 2 Février", city: "Lomé", country: "Togo", type: "monument", place: "Place de l'Indépendance, Lomé", lat: 6.1295, lng: 1.2155, img: IMG + "places/city-lome.jpg", epoch: "1980",
-      body: "La tour blanche de 36 étages qui domine le golfe, sur la place de l'Indépendance.",
-      history: "Ouvert en 1980, l'hôtel-tour est le bâtiment le plus haut du Togo et un repère visible de toute la corniche.",
-      importance: "Silhouette de Lomé et belvédère sur l'océan et le monument de l'Indépendance.",
-      visit: { hours: "Hall ouvert aux visiteurs", price: "Gratuit pour la place", duration: "20 min", tips: "La place se parcourt à pied avec le monument juste à côté." } },
-    { id: "a7", name: "Château d'Osu", city: "Accra", country: "Ghana", type: "histoire", place: "Osu, Accra", lat: 5.5467, lng: -0.1828, img: IMG + "places/city-accra.jpg", epoch: "1660",
-      body: "Ancien fort danois Christiansborg, siège de la présidence du Ghana, face à l'océan.",
-      history: "Établi en 1660 par les Danois, le château a été le siège du gouvernement colonial puis de la présidence ghanéenne. Il domine la côte d'Osu.",
-      importance: "Témoin de la traite et du pouvoir politique, au bout d'Oxford Street.",
-      visit: { hours: "Extérieur depuis la corniche", price: "Gratuit (extérieur)", duration: "20 min", tips: "Le château se regarde depuis la route côtière ; l'intérieur est une enceinte présidentielle." } },
-    { id: "a8", name: "Centre national des arts", city: "Accra", country: "Ghana", type: "activite", place: "28th February Road, Accra", lat: 5.5470, lng: -0.1960, img: IMG + "places/city-accra.jpg", epoch: "1990",
-      body: "L'Arts Centre d'Accra : kente, perles, tambours et ateliers d'artisans en plein air.",
-      history: "Le Centre for National Culture rassemble depuis les années 1990 les artisans du Grand Accra, entre le Black Star Square et le mausolée Nkrumah.",
-      importance: "Le meilleur endroit de la ville pour voir le travail du bois, du tissu et des perles krobo.",
-      visit: { hours: "09h00 - 17h00", price: "Gratuit", duration: "45 min", tips: "Négocier calmement. À combiner avec Black Star Square à pied." } }
+      visit: { hours: "08h00 - 22h00", price: "Entrée ~ 1 500 FCFA (équivalent)", duration: "2h - demi-journée", tips: "Le dimanche après-midi pour l'ambiance." } }
   ];
 
   // Chauffeurs & livreurs
@@ -514,8 +469,35 @@
   };
   const fmtDateShort = (iso) => fmtDate(iso, { day: "numeric", month: "short" });
   const minPrice = (ev) => Math.min.apply(null, ev.tickets.map((t) => t.price));
-  const cityOf = (name) => CITIES[name] || CITIES["Cotonou"];
   const countryOf = (code) => COUNTRIES.find((c) => c.code === code) || COUNTRIES[0];
+  const countryCodeOfCity = (name) => {
+    if (CITIES[name]) return CITIES[name].code;
+    const found = COUNTRIES.find((c) => c.cities.indexOf(name) >= 0);
+    return found ? found.code : "";
+  };
+  const cityOf = (name) => {
+    if (CITIES[name]) return CITIES[name];
+    const code = countryCodeOfCity(name);
+    const hub = code && countryOf(code).cities.find((n) => CITIES[n]);
+    return (hub && CITIES[hub]) || CITIES.Cotonou;
+  };
+  const inCountry = (lat, lng, code) => {
+    const b = (countryOf(code).bbox) || null;
+    if (!b || lat == null || lng == null) return false;
+    return lng >= b[0] && lat >= b[1] && lng <= b[2] && lat <= b[3];
+  };
+  const countryCodeAt = (lat, lng) => {
+    const hits = COUNTRIES.filter((c) => inCountry(lat, lng, c.code));
+    if (!hits.length) return "";
+    if (hits.length === 1) return hits[0].code;
+    let best = hits[0], bestD = Infinity;
+    hits.forEach((c) => {
+      const hub = cityOf(c.cities[0]);
+      const d = distanceKm(lat, lng, hub.lat, hub.lng);
+      if (d < bestD) { bestD = d; best = c; }
+    });
+    return best.code;
+  };
   const siteType = (id) => SITE_TYPES.find((t) => t.id === id) || SITE_TYPES[0];
 
   /* Index de recherche global : construit depuis les données réelles */
@@ -525,12 +507,8 @@
       out.push({ kind: "restaurant", title: r.name, sub: r.cat + " · " + r.area + ", " + r.city, icon: "restaurant", img: r.img, route: "restaurantDetail", params: { id: r.id }, keys: [r.name, r.cat, r.area, r.city, r.tags.join(" ")].join(" "), rating: r.rating, price: r.avg, city: r.city, lat: r.lat, lng: r.lng, open: r.open });
       r.menu.forEach((d) => out.push({ kind: "plat", title: d.name, sub: r.name + " · " + r.city, icon: "lunch_dining", img: d.img, route: "restaurantDetail", params: { id: r.id, dish: d.id }, keys: [d.name, d.desc, r.name].join(" "), rating: r.rating, price: d.price, city: r.city, lat: r.lat, lng: r.lng }));
     });
-    PRODUCTS.forEach((p) => {
-      const s = SELLERS[p.seller] || {};
-      const sc = CITIES[s.city];
-      out.push({ kind: "produit", title: p.name, sub: (s.name || "") + " · " + p.cat, icon: "shopping_bag", img: p.img, route: "productDetail", params: { id: p.id }, keys: [p.name, p.cat, s.name, p.desc].join(" "), rating: p.rating, price: p.price, city: s.city, lat: sc && sc.lat, lng: sc && sc.lng, available: p.stock > 0 });
-    });
-    allEvents().forEach((e) => out.push({ kind: "evenement", title: e.name, sub: e.cat + " · " + e.city + " · " + fmtDateShort(e.date), icon: "confirmation_number", img: e.img, route: "eventDetail", params: { id: e.id }, keys: [e.name, e.cat, e.city, e.place, e.organizer].join(" "), rating: 4.8, price: minPrice(e), city: e.city, country: e.country, lat: e.lat, lng: e.lng }));
+    PRODUCTS.forEach((p) => out.push({ kind: "produit", title: p.name, sub: SELLERS[p.seller].name + " · " + p.cat, icon: "shopping_bag", img: p.img, route: "productDetail", params: { id: p.id }, keys: [p.name, p.cat, SELLERS[p.seller].name, p.desc].join(" "), rating: p.rating, price: p.price, city: SELLERS[p.seller].city, available: p.stock > 0 }));
+    allEvents().forEach((e) => out.push({ kind: "evenement", title: e.name, sub: e.cat + " · " + e.city + " · " + fmtDateShort(e.date), icon: "confirmation_number", img: e.img, route: "eventDetail", params: { id: e.id }, keys: [e.name, e.cat, e.city, e.place, e.organizer].join(" "), rating: 4.8, price: minPrice(e), city: e.city, lat: e.lat, lng: e.lng }));
     SITES.forEach((s) => out.push({ kind: "lieu", title: s.name, sub: siteType(s.type).label + " · " + s.place, icon: siteType(s.type).icon, img: s.img, route: "cultureDetail", params: { id: s.id }, keys: [s.name, s.place, s.type, siteType(s.type).label, s.city, s.near || ""].join(" "), rating: 4.7, price: 0, city: s.city, lat: s.lat, lng: s.lng }));
     DESTINATIONS.forEach((c) => out.push({ kind: "destination", title: c, sub: CITIES[c].country + " · Destination", icon: "travel_explore", img: CITIES[c].hero, route: "destination", params: { city: c }, keys: [c, CITIES[c].country, "destination tourisme ville"].join(" "), rating: 4.9, price: 0, city: c }));
     [
@@ -545,18 +523,20 @@
   }
   let _index = null;
   function search(q, filters) {
-    _index = searchIndex();
+    if (!_index) _index = searchIndex();
     const words = norm(q).trim().split(/\s+/).filter(Boolean);
     const f = filters || {};
-    return _index.filter((item) => {
+    const extra = (window.YCKitchen && YCKitchen.cards) ? YCKitchen.cards().map((r) => ({ kind: "restaurant", title: r.name, sub: r.cat + " · " + r.area + ", " + r.city, icon: "restaurant", img: r.img, route: "restaurantDetail", params: { id: r.id }, keys: [r.name, r.area, r.city, (r.tags || []).join(" "), (r.menu || []).map((m) => m.name).join(" ")].join(" "), rating: 0, price: r.avg, city: r.city, lat: r.lat, lng: r.lng, open: r.open })) : [];
+    return _index.concat(extra).filter((item) => {
       if (words.length) {
         const hay = norm(item.title + " " + item.sub + " " + (item.keys || ""));
         if (!words.every((w) => hay.includes(w))) return false;
       }
       if (f.kind && f.kind !== "all" && item.kind !== f.kind) return false;
-      if (f.city && item.city && item.city !== f.city) {
-        const dest = CITIES[f.city];
-        if (!(item.kind === "evenement" && item.country && dest && item.country === dest.country)) return false;
+      if (f.city && item.city && item.city !== f.city) return false;
+      if (!f.city && f.countryCode && item.kind !== "service") {
+        const code = countryCodeOfCity(item.city || item.title);
+        if (code && code !== f.countryCode) return false;
       }
       if (f.rating && (item.rating || 0) < f.rating) return false;
       if (f.maxPrice && item.price && item.price > f.maxPrice) return false;
@@ -572,11 +552,14 @@
   window.YCData = {
     IMG, COUNTRIES, CITIES, DESTINATIONS, RESTAURANTS, RESTAURANT_CATS, SELLERS, PRODUCTS, PRODUCT_CATS,
     EVENTS, EVENT_CATS, SITE_TYPES, SITES, DRIVERS, COURIERS, REWARDS, TIERS,
-    distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, siteType, search,
-    restaurant: (id) => { const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r; }, product: (id) => byId(PRODUCTS, id), event: (id) => byId(allEvents(), id), site: (id) => byId(SITES, id), allEvents, extraDishes,
+    distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, countryCodeOfCity, countryCodeAt, inCountry, siteType, search,
+    restaurant: (id) => {
+      if (window.YCKitchen && YCKitchen.card) { const live = YCKitchen.card(id); if (live) return live; }
+      const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r;
+    }, product: (id) => byId(PRODUCTS, id), event: (id) => byId(allEvents(), id), site: (id) => byId(SITES, id), allEvents, extraDishes,
     seller: (id) => SELLERS[id], driverFor: (city, vehicle) => DRIVERS.find((d) => d.city === city && d.vehicle === vehicle) || DRIVERS.find((d) => d.city === city) || DRIVERS[0],
     courierFor: (city) => COURIERS.find((c) => c.city === city) || COURIERS[0],
-    restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => allEvents().filter((e) => e.city === city || (CITIES[city] && e.country === CITIES[city].country)),
+    restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => { const code = countryCodeOfCity(city); const country = code ? countryOf(code).name : ""; return allEvents().filter((e) => e.city === city || (country && e.country === country)); },
     /* Un lieu n'est une destination de la ville que s'il est vraiment dedans (10 km du centre). */
     sitesIn: (city) => { const c = CITIES[city]; if (!c) return []; return SITES.filter((s) => distanceKm(s.lat, s.lng, c.lat, c.lng) <= 10); }, productsBy: (sellerId) => PRODUCTS.filter((p) => p.seller === sellerId),
     tierFor: (points) => { let t = TIERS[0]; TIERS.forEach((x) => { if (points >= x.min) t = x; }); return t; },

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>YOUSS CONNECT · Une seule application pour vivre l'Afrique au quotidien</title>
-<meta name="description" content="YOUSS CONNECT, la super application africaine portée par KYA CORPORATION : transport, livraison, restaurants, événements, Youss Market, culture et tourisme, Youss Wallet, Youss Bonus et Youss Business."/>
+<title>YOUSS CONNECT · Transport, livraison, restos, sorties, achats</title>
+<meta name="description" content="YOUSS CONNECT, portée par KYA CORPORATION : transport, livraison, restaurants, événements, Youss Market, culture, Youss Wallet, Youss Bonus et Youss Business. Cotonou, Dakar, Lomé, Accra."/>
 <link rel="manifest" href="./manifest.webmanifest"/>
 <link rel="icon" href="./icons/favicon.ico" sizes="any"/>
 <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png"/>
@@ -12,12 +12,14 @@
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/>
 <meta name="theme-color" content="#FAFAFA"/>
 <meta name="color-scheme" content="light dark"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://router.project-osrm.org https://photon.komoot.io https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr https://*.supabase.co https://cdn.jsdelivr.net; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="YOUSS CONNECT"/>
 <meta property="og:title" content="YOUSS CONNECT"/>
-<meta property="og:description" content="Une seule application pour vivre l'Afrique au quotidien. Portée par KYA CORPORATION."/>
+<meta property="og:description" content="Transport, livraison, restos, sorties et achats. Portée par KYA CORPORATION."/>
 <meta property="og:image" content="./assets/img/brand/og-cover.jpg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -31,6 +33,7 @@
     try {
       var s = JSON.parse(localStorage.getItem("youss-state-v2") || "null");
       if (s && s.prefs && s.prefs.theme === "dark") document.documentElement.classList.add("dark");
+      if (localStorage.getItem("yc-lang") === "en") document.documentElement.lang = "en";
     } catch (e) {}
   })();
 </script>
@@ -42,14 +45,17 @@
 <script src="./vendor/leaflet/leaflet.js" defer></script>
 <script src="./js/config.js"></script>
 <script src="./js/i18n.js"></script>
-<script src="./js/en-extra-0.js"></script>
-<script src="./js/en-extra-1.js"></script>
-<script src="./js/en-extra-2.js"></script>
-<script src="./js/en.js"></script>
+<script src="./js/i18n-en.js"></script>
 <script src="./js/data.js"></script>
+<script src="./js/guard.js"></script>
 <script src="./js/state.js"></script>
 <script src="./js/backend.js"></script>
+<script src="./js/kitchen.js"></script>
+<script src="./js/sheet.js"></script>
+<script src="./js/providers.js"></script>
+<script src="./js/biometric.js"></script>
 <script src="./js/ui.js"></script>
+<script src="./js/receipt.js"></script>
 <script src="./js/scanner.js"></script>
 <script src="./js/map.js"></script>
 <script src="./js/demo.js"></script>

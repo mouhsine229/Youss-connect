@@ -35,7 +35,13 @@
   Screens._openNotif = function (id) {
     const n = ACState.notifications.find((x) => x.id === id); if (!n) return;
     n.read = true; ACStore.emit();
-    if (n.route) { const [screen, q] = n.route.split("?"); const params = {}; new URLSearchParams(q || "").forEach((v, k) => { params[k] = v; }); if (Screens[screen]) { App.nav(screen, params); return; } }
+    if (n.route) {
+      const [screen, q] = String(n.route).split("?");
+      if (window.YCGuard && !YCGuard.screenOk(screen)) { App.nav(ROUTE[n.service] || "home"); return; }
+      const params = {};
+      new URLSearchParams(q || "").forEach((v, k) => { if (YCGuard.idOk(k) && String(v).length < 80) params[k] = v; });
+      if (Screens[screen]) { App.nav(screen, params); return; }
+    }
     App.nav(ROUTE[n.service] || "home");
   };
 
@@ -43,8 +49,12 @@
     const p = ACState.prefs.notif;
     const items = [["transport", "directions_car", "Courses", "Chauffeur trouvé, arrivée, fin de course"], ["orders", "restaurant", "Commandes", "Restaurants et Youss Market"], ["delivery", "local_shipping", "Livraisons", "Livreur, récupération, remise"], ["events", "confirmation_number", "Événements", "Billets et rappels la veille"], ["wallet", "account_balance_wallet", "Youss Wallet", "Paiements, recharges, retraits"], ["rewards", "workspace_premium", "Youss Bonus", "Points gagnés, nouveaux niveaux"], ["promos", "sell", "Offres et promotions", "Bons plans des commerçants"]];
     const body = `<div class="card divide-y divide-line">${items.map((it) => `<div class="flex items-center gap-3 p-4"><span class="menu-icon">${icon(it[1])}</span><div class="flex-1 min-w-0"><p class="t-title">${it[2]}</p><p class="t-small text-ink-2">${it[3]}</p></div>${UI.toggle(p[it[0]] !== false, `Screens._togglePref('${it[0]}')`, it[2])}</div>`).join("")}</div>
-      <div class="card p-4 flex items-center gap-3 mt-4"><span class="menu-icon">${icon("do_not_disturb_on")}</span><div class="flex-1"><p class="t-title">Ne pas déranger</p><p class="t-small text-ink-2">22h00 - 07h00 · les alertes de sécurité restent actives</p></div>${UI.toggle(false, "this.classList.toggle('on');UI.toast('Préférence enregistrée.','success')", "Ne pas déranger")}</div>`;
+      <div class="card p-4 flex items-center gap-3 mt-4"><span class="menu-icon">${icon("do_not_disturb_on")}</span><div class="flex-1"><p class="t-title">Ne pas déranger</p><p class="t-small text-ink-2">22h00 - 07h00 · les alertes de sécurité restent actives</p></div>${UI.toggle(!!p.dnd, "Screens._togglePref('dnd')", "Ne pas déranger")}</div>`;
     Shell.render(container, { title: "Préférences de notifications", back: true, body, nav: false, showNav: true, narrow: true });
   };
-  Screens._togglePref = (k) => { ACState.prefs.notif[k] = ACState.prefs.notif[k] === false; ACStore.emit(); };
+  Screens._togglePref = (k) => {
+    const on = (k === "dnd" || k === "promos") ? !!ACState.prefs.notif[k] : ACState.prefs.notif[k] !== false;
+    ACState.prefs.notif[k] = !on;
+    ACStore.emit();
+  };
 })();

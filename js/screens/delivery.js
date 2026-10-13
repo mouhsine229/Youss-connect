@@ -42,18 +42,18 @@
     const cat = CATS.find((c) => c.id === parcel.cat);
     if (cat.vehicles.indexOf(parcel.vehicle) < 0) parcel.vehicle = cat.vehicles[0];
     const body = `
-      <div class="grid lg:grid-cols-[1fr_380px] gap-6">
-        <div class="space-y-5">
+      <div class="grid lg:grid-cols-[1fr_380px] gap-6 min-w-0">
+        <div class="space-y-5 min-w-0">
           <section><p class="t-caption mb-2">Type d'envoi</p>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">${CATS.map((c) => `<button type="button" onclick="Screens._dlCat('${c.id}')" class="rounded-2xl border p-3.5 text-left transition-colors ${parcel.cat === c.id ? "border-gold bg-gold/10" : "border-line bg-card hover:bg-surface-low"}" aria-pressed="${parcel.cat === c.id}">
-              <span class="w-10 h-10 rounded-xl ${parcel.cat === c.id ? "bg-gold text-[#0A0A0A]" : "bg-surface-low"} flex items-center justify-center mb-2">${icon(c.icon, "text-[22px]")}</span><span class="block t-title">${c.label}</span><span class="block t-small text-ink-2">${c.hint}</span></button>`).join("")}</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">${CATS.map((c) => `<button type="button" onclick="Screens._dlCat('${c.id}')" class="min-w-0 rounded-2xl border p-3.5 text-left transition-colors ${parcel.cat === c.id ? "border-gold bg-gold/10" : "border-line bg-card hover:bg-surface-low"}" aria-pressed="${parcel.cat === c.id}">
+              <span class="w-10 h-10 rounded-xl ${parcel.cat === c.id ? "bg-gold text-[#0A0A0A]" : "bg-surface-low"} flex items-center justify-center mb-2">${icon(c.icon, "text-[22px]")}</span><span class="block t-title">${c.label}</span><span class="block t-small text-ink-2 break-words">${c.hint}</span></button>`).join("")}</div>
           </section>
           <section class="card p-4 space-y-3 relative">
             <p class="t-caption text-ink-3">Adresses</p>
             ${addrField("from", "Adresse de récupération", parcel.from.name, "radio_button_checked", "text-gold")}
             ${addrField("to", "Adresse de livraison", parcel.to.name, "location_on", "text-ink")}
             <div id="dl-suggest" class="hidden absolute left-4 right-4 card z-20 max-h-[240px] overflow-y-auto"></div>
-            <div class="flex gap-2 overflow-x-auto no-scrollbar">${ACState.addresses.map((a) => `<button type="button" onclick="Screens._dlUseAddress('${a.id}')" class="chip">${icon(a.icon || "place", "text-[15px]")}Livrer à ${esc(a.label)}</button>`).join("")}<button type="button" onclick="Screens._dlSwap()" class="chip">${icon("swap_vert", "text-[15px]")}Inverser</button></div>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar min-w-0 max-w-full">${ACState.addresses.map((a) => `<button type="button" onclick="Screens._dlUseAddress('${a.id}')" class="chip">${icon(a.icon || "place", "text-[15px]")}Livrer à ${esc(a.label)}</button>`).join("")}<button type="button" onclick="Screens._dlSwap()" class="chip">${icon("swap_vert", "text-[15px]")}Inverser</button></div>
           </section>
           <section class="card p-4 space-y-3">
             <p class="t-caption text-ink-3">Destinataire</p>
@@ -82,7 +82,7 @@
           <p class="t-small text-ink-3 text-center">Suivi en direct, preuve de remise et assurance jusqu'à 100 000 FCFA (démo).</p>
         </aside>
       </div>`;
-    Shell.render(container, { title: "Livraison", subtitle: "Que souhaitez-vous faire livrer ?", back: "App.nav('home')", body, nav: false, onMount: () => {
+    Shell.render(container, { title: "Livraison", subtitle: "Colis et repas", back: "App.nav('home')", body, nav: false, onMount: () => {
       map = M().create("dl-map", { interactive: false, zoomControl: false });
       drawMiniMap();
     } });
@@ -107,21 +107,16 @@
   Screens._dlFragile = () => { parcel.fragile = !parcel.fragile; rerender(); };
   Screens._dlVehicle = (id) => { parcel.vehicle = id; rerender(); };
   Screens._dlSwap = () => { const f = parcel.from; parcel.from = parcel.to; parcel.to = f; rerender(); };
-  Screens._dlUseAddress = (id) => {
-    const a = ACState.addresses.find((x) => x.id === id); if (!a) return;
-    const fromDetail = Object.keys(YCData.CITIES).find((c) => (a.detail || "").indexOf(c) >= 0);
-    const c = YCData.cityOf(fromDetail || ACState.user.city);
-    parcel.to = { name: a.label + " · " + a.detail, lat: a.lat || c.lat, lng: a.lng || c.lng, city: c.name };
-    rerender();
-  };
+  Screens._dlUseAddress = (id) => { const a = ACState.addresses.find((x) => x.id === id); if (!a) return; const c = YCData.cityOf(ACState.user.city); parcel.to = { name: a.label + " · " + a.detail, lat: a.lat || c.lat, lng: a.lng || c.lng, city: c.name }; rerender(); };
   let lastList = [];
   function showSuggest(list) {
     const box = document.getElementById("dl-suggest"); if (!box) return;
     lastList = list;
-    // le champ est dans un span.relative, donc on mesure par rapport à la section
     const field = document.getElementById("dl-" + activeField);
     if (field) { const sec = box.offsetParent || box.parentElement; const fr = field.getBoundingClientRect(), sr = sec.getBoundingClientRect(); box.style.top = (fr.bottom - sr.top + 6) + "px"; }
-    box.innerHTML = list.length ? list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlPick(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0"><span class="menu-icon !w-9 !h-9">${icon(s.icon || "place", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span></button>`).join("") : `<p class="px-4 py-3 t-small text-ink-2">Aucun lieu connu. Validez avec Entrée pour garder l'adresse telle quelle.</p>`;
+    const here = `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlUseHere()" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line"><span class="menu-icon !w-9 !h-9 !bg-gold-soft !text-gold-deep">${icon("my_location", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">Utiliser ma position actuelle</span><span class="block t-small text-ink-3 truncate">Demande l'accès à votre position · ${esc(ACState.user.country)}</span></span></button>`;
+    const rows = list.length ? list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._dlPick(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0"><span class="menu-icon !w-9 !h-9">${icon(s.icon || "place", "text-[18px]")}</span><span class="min-w-0"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span></button>`).join("") : `<p class="px-4 py-3 t-small text-ink-2">Aucun lieu dans ${esc(ACState.user.country)}. Validez avec Entrée pour garder une adresse de ce pays.</p>`;
+    box.innerHTML = here + rows;
     box.classList.remove("hidden");
   }
   const hideSuggest = () => { const b = document.getElementById("dl-suggest"); if (b) b.classList.add("hidden"); };
@@ -150,9 +145,10 @@
     M().resolveTyped(t, ACState.user.city).then((p) => {
       if (!p || !App.current || App.current.id !== "delivery") return;
       if ((parcel[role] ? parcel[role].name : null) !== before) return; // choisi ailleurs entre-temps
+      if (p.outside) { UI.toast("Ce lieu est en dehors du pays choisi.", "info"); const f = document.getElementById("dl-" + role); if (f) f.value = before || ""; return; }
       parcel[role] = { name: p.name, lat: p.lat, lng: p.lng, city: ACState.user.city, approx: !!p.approx };
       parcel.route = null;
-      if (p.approx) UI.toast("Adresse enregistrée. Le livreur confirmera la position exacte avec vous.", "info");
+      if (p.approx) UI.toast("Adresse enregistrée dans " + ACState.user.country + ". Le livreur confirmera la position exacte avec vous.", "info");
       // si l'utilisateur est déjà en train de taper dans l'autre champ, on ne casse pas sa saisie
       if (otherFocused()) { pendingRerender = true; const f = document.getElementById("dl-" + role); if (f) f.value = p.name; estimate(); drawMiniMap(); return; }
       pendingRerender = false; rerenderKeepFocus();
@@ -169,7 +165,27 @@
   }
   let picking = false;
   Screens._dlBlur = (role) => { clearTimeout(suggestTimer); if (picking) return; setTimeout(() => { hideSuggest(); const f = document.getElementById("dl-" + role); if (f) commitTyped(role, f.value); }, 160); };
-  Screens._dlPick = (i) => { const s = lastList[i]; if (!s) return; hideSuggest(); picking = true; parcel[activeField] = { name: s.name, lat: s.lat, lng: s.lng, city: ACState.user.city }; parcel.route = null; rerender(); picking = false; };
+  Screens._dlPick = (i) => {
+    const s = lastList[i]; if (!s) return;
+    if (YCData.countryCodeAt(s.lat, s.lng) !== ACState.user.countryCode) { UI.toast("Ce lieu est en dehors du pays choisi.", "info"); return; }
+    hideSuggest(); picking = true; parcel[activeField] = { name: s.name, lat: s.lat, lng: s.lng, city: ACState.user.city }; parcel.route = null; rerender(); picking = false;
+  };
+  Screens._dlUseHere = function () {
+    const role = activeField || "from";
+    UI.toast("Demande d'accès à votre position…", "info");
+    M().locate((pos) => {
+      if (!pos.ok) {
+        if (pos.denied) UI.toast("Accès refusé. Autorisez la position dans votre navigateur, puis réessayez.", "error");
+        else if (pos.outside) UI.toast("Votre position est en dehors du pays choisi. Les destinations restent dans ce pays.", "info");
+        else UI.toast("Position indisponible. Réessayez.", "error");
+        return;
+      }
+      hideSuggest(); picking = true;
+      parcel[role] = { name: "Position actuelle", lat: pos.lat, lng: pos.lng, city: ACState.user.city };
+      parcel.route = null; rerender(); picking = false;
+      UI.toast(role === "from" ? "Départ placé sur votre position." : "Destination placée sur votre position.", "success");
+    });
+  };
 
   Screens._deliveryContinue = function () {
     saveFields();
@@ -192,18 +208,42 @@
           <div class="flex gap-3"><span class="w-2.5 h-2.5 rounded-sm bg-ink mt-1.5 flex-shrink-0"></span><div><p class="t-caption text-ink-3">Livraison</p><p class="t-title">${esc(parcel.to.name)}</p><p class="t-small text-ink-2">${esc(parcel.recipient)} · ${esc(parcel.recipientPhone)}</p></div></div>
           ${parcel.note ? `<p class="t-small text-ink-2 bg-surface-low rounded-xl p-3">${icon("sticky_note_2", "text-[15px]")} ${esc(parcel.note)}</p>` : ""}
         </div>
-        <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Moyen de paiement</p><div class="space-y-2">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._dlMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${parcel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${parcel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div></div>
+        <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Moyen de paiement</p><div class="space-y-2">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._dlMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${parcel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${parcel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}${Screens.cardAddButton()}</div></div>
       </div>
       <aside class="space-y-4 lg:sticky lg:top-24 self-start">
         <div class="card-dark p-5"><p class="t-caption text-gold">Total</p>${UI.row("Livraison " + v.label, ACStore.fmtFCFA(parcel.price))}${UI.row("Assurance", "Incluse")}<div class="divider border-white/15 my-2"></div><div class="flex items-center justify-between"><span class="t-title">À payer</span><span class="t-h2">${ACStore.fmtFCFA(parcel.price)}</span></div></div>
-        ${UI.primaryButton("Payer et trouver un livreur", "Screens._payDelivery()", { size: "lg", icon: "account_balance_wallet" })}
+        ${(window.YCBackend && YCBackend.isLive()) ? `<p class="t-small text-ink-2">Gozem, inDrive et WeDrive ne sont pas encore branchés. La demande est enregistrée et aucun montant n'est débité.</p>` : ""}
+        ${UI.primaryButton((window.YCBackend && YCBackend.isLive()) ? "Enregistrer la demande" : "Payer et trouver un livreur", "Screens._payDelivery()", { size: "lg", icon: "lock", id: "yc-pay-delivery" })}
       </aside></div>`;
     Shell.render(container, { title: "Récapitulatif", subtitle: "Livraison", back: true, body, nav: false });
   };
-  Screens._dlMethod = (t) => { parcel.method = t; App.replace("deliveryConfirm"); };
+  Screens._dlMethod = (t) => { parcel.method = t; App.replace("deliveryConfirm", {}, { keepScroll: true }); };
   Screens._payDelivery = function () {
-    ACStore.whenPaid(ACStore.pay({ amount: parcel.price, label: "Livraison " + CATS.find((c) => c.id === parcel.cat).label.toLowerCase() + " vers " + parcel.to.name.split("·")[0].trim(), service: "livraison", pointsEarned: 15, method: parcel.method, activity: { status: "En cours", detail: { from: parcel.from.name, to: parcel.to.name, recipient: parcel.recipient, km: parcel.km } } }),
-      function (res) { parcel.status = "searching"; parcel.code = String(Math.floor(1000 + Math.random() * 8999)); parcel.activityId = res && res.activityId; App.resetTo("deliverySearching"); },
+    if (!parcel.from || !parcel.to || !parcel.price) { UI.toast("Complétez la livraison avant de payer.", "error"); return; }
+    if (window.YCBackend && YCBackend.isLive() && window.YCProviders && !YCProviders.ride.connected) {
+      parcel.status = "searching";
+      parcel.holdId = "";
+      App.resetTo("deliverySearching");
+      return;
+    }
+    if (Screens._preferCard) { parcel.method = "card"; Screens._preferCard = false; }
+    if (Screens.needCard(parcel.method)) return;
+    Screens.requirePay("Livraison · " + ACStore.fmtFCFA(parcel.price), function () { Screens._payDeliveryNow(); });
+  };
+  Screens._deliveryReceipt = function () {
+    const r = window.YCReceipt && YCReceipt.current();
+    if (!r) { UI.toast("Aucun reçu disponible.", "info"); return; }
+    YCReceipt.download(r);
+    UI.toast("Reçu téléchargé.", "success");
+  };
+  Screens._payDeliveryNow = function () {
+    const cat = CATS.find((c) => c.id === parcel.cat);
+    ACStore.whenPaid(ACStore.pay({ amount: parcel.price, label: "Livraison " + (cat ? cat.label.toLowerCase() : "colis") + " vers " + parcel.to.name.split("·")[0].trim(), service: "livraison", pointsEarned: 15, method: parcel.method, activity: { status: "En cours", detail: { from: parcel.from.name, to: parcel.to.name, recipient: parcel.recipient, km: parcel.km } } }),
+      function (res) {
+        parcel.status = "searching"; parcel.code = String(Math.floor(1000 + Math.random() * 8999));
+        if (window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu livraison" });
+        App.resetTo("deliverySearching");
+      },
       function (res) { App.nav("paymentFailed", { retry: "deliveryConfirm", amount: parcel.price, reason: res.reason }); });
   };
 
@@ -214,6 +254,24 @@
       <h2 class="t-h1 mt-8">Recherche d'un livreur…</h2><p class="t-body text-ink-2 mt-2">Demande créée · de ${esc(parcel.from.name.split("·")[0])} vers ${esc(parcel.to.name.split("·")[0])}</p>
       <div class="mt-8 w-full max-w-[360px] text-left">${UI.timeline([{ label: "Demande créée", icon: "check" }, { label: "Recherche d'un livreur", icon: "search" }, { label: "Livreur trouvé", icon: "person" }, { label: "Colis récupéré", icon: "inventory_2" }, { label: "Livraison en cours", icon: "near_me" }, { label: "Livraison terminée", icon: "home" }], 1)}</div>
     </div>`;
+    const liveHold = window.YCBackend && YCBackend.isLive() && window.YCProviders && !YCProviders.ride.connected;
+    if (liveHold) {
+      const held = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto px-4">
+        <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center">${icon("local_shipping", "text-gold text-[52px]")}</div>
+        <h2 class="t-h1 mt-8">Demande enregistrée</h2>
+        <p class="t-body text-ink-2 mt-2 max-w-[360px]">De ${esc(parcel.from.name.split("·")[0])} vers ${esc(parcel.to.name.split("·")[0])}. Aucun livreur n'est encore branché. Aucun montant n'est débité.</p>
+        <button type="button" onclick="App.resetTo('delivery')" class="btn btn-outline mt-10">Retour</button>
+      </div>`;
+      Shell.render(container, { title: "Recherche d'un livreur", back: "App.nav('home')", body: held, nav: false, hideSearch: true });
+      if (!parcel.holdSaved) {
+        parcel.holdSaved = true;
+        YCProviders.saveRequest("delivery", { from: parcel.from, to: parcel.to, vehicle: parcel.vehicle, price: parcel.price, method: parcel.method }).then(function (res) {
+          parcel.holdId = res && res.id ? res.id : "";
+          if (!res || !res.ok) UI.toast((res && res.message) || "La demande n'a pas pu être enregistrée.", "error");
+        });
+      }
+      return;
+    }
     Shell.render(container, { title: "Recherche d'un livreur", back: "App.nav('home')", body, nav: false, hideSearch: true });
     setTimeout(() => { if (App.current && App.current.id === "deliverySearching") { parcel.courier = YCData.courierFor(ACState.user.city); parcel.status = "found"; ACStore.addNotification("Livreur trouvé", parcel.courier.name + " arrive au point de récupération.", "livraison", "deliveryTracking"); ACStore.emit(); App.replace("deliveryCourierFound"); } }, 2400);
   };
@@ -226,7 +284,7 @@
       <div class="card p-5 flex flex-col items-center text-center">${UI.avatar(c, "w-24 h-24")}<h3 class="t-h2 mt-3">${esc(c.name)}</h3><p class="t-small text-ink-2">${UI.rating(c.rating, c.deliveries + " livraisons")} · ${c.vehicle}</p>
         <div class="grid grid-cols-2 gap-2 w-full mt-5"><div class="rounded-xl bg-surface-low p-3"><p class="t-caption text-ink-3">Code de remise</p><p class="t-h3 tracking-[0.3em] mt-0.5">${parcel.code}</p></div><div class="rounded-xl bg-gold-soft p-3"><p class="t-caption text-gold-deep">Arrivée estimée</p><p class="t-h3 text-gold-deep mt-0.5">${parcel.eta} min</p></div></div>
         <p class="t-small text-ink-3 mt-3">Communiquez le code au destinataire : il sera demandé par le livreur à la remise.</p>
-        <div class="flex gap-2 w-full mt-4"><a href="tel:${esc(c.phone)}" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}Appeler</a><button type="button" onclick="UI.toast('Message envoyé au livreur.','success')" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}Message</button></div>
+        <div class="flex gap-2 w-full mt-4"><button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}Appeler</button><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}Message</button></div>
       </div>
       ${UI.primaryButton("Suivre la livraison", "App.replace('deliveryTracking')", { size: "lg", icon: "near_me" })}
     </div>`;
@@ -242,7 +300,7 @@
       <div class="flex items-end justify-between gap-3"><div><p class="t-small text-ink-2" id="dl-label">${esc(c.name.split(" ")[0])} se dirige vers le point de récupération</p><p class="t-h1 text-gold-deep dark:text-gold leading-none" id="dl-eta">…</p></div><div class="text-right"><p class="t-small text-ink-2" id="dl-meta"></p><p class="t-small font-semibold" id="dl-arrival"></p></div></div>
       <div class="h-1.5 rounded-full bg-card-high overflow-hidden"><div id="dl-progress" class="h-full bg-gold transition-[width] duration-200" style="width:0%"></div></div>
       <div id="dl-steps">${UI.timeline(STEPS, 2)}</div>
-      <div class="flex items-center gap-3">${UI.avatar(c, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(c.name)} · ★ ${c.rating}</p><p class="t-small text-ink-2">${c.vehicle} · code de remise <b class="tracking-widest">${parcel.code}</b></p></div><a href="tel:${esc(c.phone)}" class="icon-btn" aria-label="Appeler">${icon("call")}</a><button type="button" onclick="UI.toast('Message envoyé.','success')" class="icon-btn" aria-label="Message">${icon("chat")}</button></div>
+      <div class="flex items-center gap-3">${UI.avatar(c, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(c.name)} · ★ ${c.rating}</p><p class="t-small text-ink-2">${c.vehicle} · code de remise <b class="tracking-widest">${parcel.code}</b></p></div><button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Message">${icon("chat")}</button></div>
       <button type="button" id="dl-confirm" onclick="App.nav('deliveryDone')" class="btn btn-lg btn-dark btn-block opacity-50" disabled>Confirmer la réception</button>
     </div>`;
     const body = `<div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
@@ -292,8 +350,7 @@
 
   Screens.deliveryDone = function (container) {
     const c = parcel.courier || {};
-    const act = (parcel.activityId && ACState.activities.find((a) => a.id === parcel.activityId))
-      || ACState.activities.find((a) => a.service === "livraison" && a.status === "En cours" && a.detail && a.detail.to === (parcel.to && parcel.to.name));
+    const act = ACState.activities.find((a) => a.service === "livraison" && a.status === "En cours");
     if (act) { act.status = "Livré"; ACStore.emit(); }
     const city = ACState.user.city;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -301,11 +358,11 @@
       <div class="card p-5 space-y-3">
         <div class="flex items-center gap-3">${UI.avatar(c, "w-12 h-12")}<div class="flex-1"><p class="t-title">${esc(c.name || "Livreur")}</p><p class="t-small text-ink-2">Preuve de remise · code ${parcel.code} vérifié · ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p></div>${UI.badge("Vérifié", "success")}</div>
         <div class="rounded-xl bg-surface-low p-3 flex items-center gap-3"><span class="w-14 h-14 rounded-lg bg-card-high flex items-center justify-center">${icon("photo_camera", "text-ink-3")}</span><div><p class="t-small font-semibold">Photo de remise</p><p class="t-small text-ink-2">Prise par le livreur à la livraison (démo)</p></div></div>
-        <div class="text-center pt-1"><p class="t-small text-ink-2 mb-2">Notez votre livreur</p><div class="flex justify-center gap-1">${[1, 2, 3, 4, 5].map((i) => `<button type="button" onclick="this.parentElement.querySelectorAll('span').forEach((s,j)=>s.classList.toggle('text-gold',j<${i}));UI.toast('Merci pour votre note !','success')" class="p-1">${icon("star", "text-[32px] text-gold", true)}</button>`).join("")}</div></div>
+        <div class="text-center pt-1"><p class="t-small text-ink-2 mb-2">Notez votre livreur</p><div class="flex justify-center gap-1">${[1, 2, 3, 4, 5].map(() => `<button type="button" onclick="UI.toast('La note n\\'est pas encore enregistrée.','info')" class="p-1">${icon("star", "text-[32px] text-ink-3")}</button>`).join("")}</div></div>
       </div>
       ${UI.nextSteps([
         { icon: "workspace_premium", label: "+15 points Youss Bonus", sub: "Voir mes récompenses", onclick: "App.nav('rewards')" },
-        { icon: "receipt_long", label: "Voir le reçu", sub: "Dans mes activités", onclick: "App.nav('activities',{f:'livraison'})" },
+        { icon: "receipt_long", label: "Télécharger le reçu", sub: "Fichier sur cet appareil", onclick: "Screens._deliveryReceipt()" },
         { icon: "storefront", label: "Commander sur Youss Market", sub: "Livraison incluse", onclick: "App.nav('market')" }
       ])}
       ${UI.secondaryButton(I18N.t("home_btn"), "App.resetTo('home')")}

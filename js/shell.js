@@ -64,10 +64,10 @@
       <p class="t-caption text-ink-3 px-3 mt-6 mb-2">${t("nav_more")}</p>
       <nav class="space-y-1">${MORE.map((s) => item(s)).join("")}</nav>
       <div class="mt-auto pt-6 space-y-3">
-        <button type="button" onclick="Shell.openDemoMenu()" class="w-full card-dark p-3.5 text-left flex items-center gap-3 hover:opacity-95">
+        ${window.ACState && ACState.session && ACState.session.remote ? "" : `<button type="button" onclick="Shell.openDemoMenu()" class="w-full card-dark p-3.5 text-left flex items-center gap-3 hover:opacity-95">
           <span class="w-9 h-9 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("play_arrow", "text-[22px]", true)}</span>
           <span class="min-w-0"><span class="block t-title">${t("demo_tour")}</span><span class="block t-small text-white/70 truncate">5 parcours</span></span>
-        </button>
+        </button>`}
         <button type="button" onclick="App.nav('profile')" class="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-surface-low text-left">
           ${UI.avatar(user, "w-10 h-10")}
           <span class="min-w-0"><span class="block t-title truncate">${UI.esc(user.fullName)}</span><span class="block t-small text-ink-2 truncate">${UI.esc(user.city)}, ${UI.esc(user.country)}</span></span>
@@ -80,8 +80,8 @@
   function header(o, screenId) {
     const unread = ACStore.unread();
     const user = ACState.user;
-    const en = I18N.lang === "en";
-    const langBtn = `<button type="button" onclick="UI.setLang('${en ? "fr" : "en"}')" class="h-10 min-w-10 px-2.5 rounded-full border border-line bg-card inline-flex items-center justify-center gap-1 text-[12px] font-extrabold tracking-wide hover:bg-surface-low flex-shrink-0" aria-label="${en ? "Language: English. Switch to French" : "Langue : français. Passer en anglais"}" title="${en ? "English" : "Français"}"><span class="ms text-[18px]" aria-hidden="true">language</span>${en ? "EN" : "FR"}</button>`;
+    const nextLang = I18N.lang === "en" ? "fr" : "en";
+    const langBtn = `<button type="button" onclick="UI.setLang('${nextLang}')" class="icon-btn t-small font-extrabold tracking-wide" aria-label="${I18N.lang === "en" ? "Language: English. Switch to French" : "Langue : français. Passer en anglais"}">${I18N.lang === "en" ? "FR" : "EN"}</button>`;
     const bell = `<button type="button" onclick="App.nav('notifications')" class="icon-btn relative" aria-label="${t("notifications")}">${icon("notifications")}${unread ? `<span class="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-[#0A0A0A] text-[10px] font-extrabold flex items-center justify-center">${unread}</span>` : ""}</button>`;
     const cityBtn = `<button type="button" onclick="Shell.openCityPicker()" class="hidden sm:inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full border border-line bg-card t-small font-semibold hover:bg-surface-low">${icon("location_on", "text-gold text-[18px]", true)}${UI.esc(user.city)}${icon("expand_more", "text-[18px] text-ink-3")}</button>`;
     const searchBtn = `<button type="button" onclick="App.nav('explorer', {focus:1})" class="hidden lg:flex items-center gap-2 h-10 w-[300px] xl:w-[360px] px-4 rounded-full border border-line bg-surface-low text-ink-3 t-body hover:border-ink-3 text-left"><span class="ms text-[20px]">search</span><span class="truncate">${t("search")}</span><kbd class="ml-auto t-caption px-1.5 py-0.5 rounded border border-line bg-card">/</kbd></button>`;
@@ -89,11 +89,11 @@
     if (o.homeHeader) {
       return `<header class="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-line/70">
         <div class="max-w-content mx-auto px-5 lg:px-10 h-[68px] lg:h-[76px] flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3 min-w-0">
+          <div class="flex items-center gap-3 min-w-0 flex-1">
             <button type="button" onclick="App.nav('profile')" class="lg:hidden flex-shrink-0">${UI.avatar(user, "w-11 h-11")}</button>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <h1 class="t-h3 lg:t-h2 truncate">${t("hello")}, ${UI.esc(user.name)}</h1>
-              <button type="button" onclick="Shell.openCityPicker()" class="t-small text-ink-2 flex items-center gap-1 truncate">${icon("location_on", "text-[15px] text-gold", true)}${UI.esc(user.city)}, ${UI.esc(user.country)}${icon("expand_more", "text-[16px]")}</button>
+              <button type="button" onclick="Shell.openCityPicker()" class="flex w-full min-w-0 items-center gap-1 text-left">${icon("location_on", "text-[15px] text-gold", true)}<span class="min-w-0 truncate t-small text-ink-2">${UI.esc(user.city)}, ${UI.esc(user.country)}</span>${icon("expand_more", "text-[16px] text-ink-3")}</button>
             </div>
           </div>
           <div class="flex items-center gap-2">${searchBtn}${cityBtn}${langBtn}${bell}</div>
@@ -105,14 +105,14 @@
         <div class="flex items-center gap-2.5 min-w-0">
           ${showBack ? `<button type="button" onclick="${o.back === true ? "App.back()" : o.back}" class="icon-btn flex-shrink-0" aria-label="${t("back")}">${icon("arrow_back")}</button>` : ""}
           <div class="min-w-0">
-            <h1 class="t-h3 lg:t-h2 truncate">${o.title || ""}</h1>
-            ${o.subtitle ? `<p class="t-small text-ink-2 truncate">${o.subtitle}</p>` : ""}
+            <h1 class="t-h3 lg:t-h2 truncate">${UI.esc(o.title || "")}</h1>
+            ${o.subtitle ? `<p class="t-small text-ink-2 truncate">${UI.esc(o.subtitle)}</p>` : ""}
           </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           ${o.right || ""}
-          <span class="hidden lg:contents">${o.hideSearch ? "" : searchBtn}${cityBtn}</span>
-          ${langBtn}${bell}
+          <span class="hidden lg:contents">${o.hideSearch ? "" : searchBtn}${cityBtn}${langBtn}${bell}</span>
+          <span class="lg:hidden contents">${langBtn}${bell}</span>
         </div>
       </div></header>`;
   }
@@ -135,7 +135,7 @@
     const screenId = App.current ? App.current.id : "";
     const active = activeFor(o.nav, screenId);
     if (o.full) {
-      container.innerHTML = `<div class="min-h-dvh flex flex-col screen-enter">${o.body}</div>${Demo.bar()}`;
+      container.innerHTML = `<div class="min-h-dvh flex flex-col screen-enter">${demoBar()}${o.body}</div>${Demo.bar()}`;
     } else {
       const wrap = o.fill
         ? `<main id="main" class="flex-1 min-h-0 flex flex-col relative screen-enter">${o.body}</main>`
@@ -143,6 +143,7 @@
       container.innerHTML = `<div class="lg:flex min-h-dvh">
         ${sidebar(active)}
         <div class="flex-1 min-w-0 flex flex-col h-dvh">
+          ${demoBar()}
           ${header(o, screenId)}
           ${wrap}
           ${o.nav === false && !o.showNav ? "" : bottomNav(active)}
@@ -154,7 +155,7 @@
 
   // Sélecteur de ville (change la base de tous les services)
   function openCityPicker() {
-    UI.openSheet(`<h3 class="t-h3 mb-1">${t("your_city")}</h3><p class="t-small text-ink-2 mb-4">Change la ville des restos, des courses et de la carte.</p>
+    UI.openSheet(`<h3 class="t-h3 mb-1">${t("your_city")}</h3><p class="t-small text-ink-2 mb-4">Change le pays affiché : restaurants, événements, marché, culture, courses et carte.</p>
       <div class="grid grid-cols-2 gap-3">${YCData.DESTINATIONS.map((c) => {
         const city = YCData.CITIES[c]; const on = ACState.user.city === c;
         return `<button type="button" onclick="Shell.pickCity('${c}')" class="relative h-28 rounded-2xl overflow-hidden text-left ${on ? "ring-2 ring-gold" : ""}">
@@ -171,7 +172,12 @@
     UI.toast("Vous êtes maintenant à " + name + ".", "success");
   }
 
+  function demoBar() {
+    if (window.ACState && ACState.session && ACState.session.remote) return "";
+    return `<div class="bg-gold text-[#0A0A0A] px-3 py-1.5 text-center text-[12.5px] leading-[18px] font-semibold">Démo locale · aucun paiement réel · données gardées sur cet appareil</div>`;
+  }
+
   function openDemoMenu() { Demo.openMenu(); }
 
-  window.Shell = { render, openCityPicker, pickCity, openDemoMenu, TABS, SERVICES };
+  window.Shell = { render, openCityPicker, pickCity, openDemoMenu, demoBar, TABS, SERVICES };
 })();

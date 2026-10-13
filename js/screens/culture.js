@@ -4,38 +4,61 @@
   window.Screens = window.Screens || {};
   const { icon, esc, go } = UI;
 
-  const f = { type: "all", city: "all" };
+  const f = { type: "all", city: "pays" };
+  let seenCountry = "";
+  const TYPE_INTRO = {
+    monument: "Statues, places et édifices publics.",
+    palais: "Anciennes cours royales et palais.",
+    musee: "Musées et collections.",
+    histoire: "Lieux de mémoire et sites historiques.",
+    tradition: "Marchés, temples et pratiques locales.",
+    nature: "Plages, lacs et parcs.",
+    activite: "Spectacles et activités culturelles."
+  };
+  function cultureQuery() {
+    return { type: f.type === "all" ? "" : f.type, city: f.city === "all" ? "" : f.city };
+  }
 
   // Hub
   Screens.culture = function (container, params) {
-    if (params && params.city) f.city = params.city;
+    if (seenCountry !== ACState.user.country) { seenCountry = ACState.user.country; if (!(params && params.city)) f.city = "pays"; }
+    if (f.city === "all") f.city = "pays";
+    const placeCities = [];
+    YCData.SITES.forEach((s) => { if (s.country === ACState.user.country && placeCities.indexOf(s.city) < 0) placeCities.push(s.city); });
+    if (params && params.city && (params.city === "pays" || placeCities.indexOf(params.city) >= 0)) f.city = params.city;
+    if (f.city !== "pays" && placeCities.indexOf(f.city) < 0) f.city = "pays";
     if (params && params.type) f.type = params.type;
-    const pool = f.city === "all" ? YCData.SITES : YCData.sitesIn(f.city);
-    const sites = pool.filter((s) => f.type === "all" || s.type === f.type);
+    const sites = YCData.SITES.filter((s) => s.country === ACState.user.country && (f.type === "all" || s.type === f.type) && (f.city === "pays" || s.city === f.city));
     const city = ACState.user.city;
-    const near = YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES, 3);
+    const typeMeta = f.type !== "all" ? YCData.SITE_TYPES.find((t) => t.id === f.type) : null;
+    const filtered = !!typeMeta;
+    const near = filtered ? [] : YCData.nearby(YCData.cityOf(city).lat, YCData.cityOf(city).lng, YCData.SITES.filter((s) => s.country === ACState.user.country), 3);
+    const catalogTitle = typeMeta ? typeMeta.label : "Monuments, musées et traditions";
+    const placeLabel = f.city === "pays" ? ACState.user.country : f.city === "all" ? "" : f.city;
+    const catalogSub = sites.length + (sites.length > 1 ? " lieux" : " lieu") + (placeLabel ? " · " + placeLabel : "");
+    const chips = `<div class="flex flex-col lg:flex-row gap-3 mb-4">
+          <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
+          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Lieu"><option value="pays" ${f.city === "pays" ? "selected" : ""}>${esc(ACState.user.country)}</option>${placeCities.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+        </div>
+        ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuType('all');" })}`;
     const body = `
-      <section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[200px] lg:min-h-[280px] flex items-end">
-        ${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}<div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent"></div>
-        <div class="relative p-5 lg:p-8 w-full flex flex-col lg:flex-row lg:items-end gap-4">
-          <div class="flex-1"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body text-white/80 mt-1 max-w-[560px]">Monuments, musées et sites à Cotonou, Dakar, Lomé et Accra.</p></div>
-          <button type="button" onclick="App.nav('culturalScanner')" class="rounded-2xl bg-black/40 hover:bg-black/45 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px] text-white"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
+      ${filtered ? "" : `<section class="relative rounded-3xl overflow-hidden bg-[#0A0A0A] text-white min-h-[220px] lg:min-h-[280px]">
+        <div class="absolute inset-0">${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}</div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/50 to-[#0A0A0A]/20"></div>
+        <div class="relative z-10 p-5 lg:p-8 min-h-[220px] lg:min-h-[280px] flex flex-col justify-end lg:flex-row lg:items-end gap-4">
+          <div class="flex-1 min-w-0"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body mt-1 max-w-[560px] opacity-80">Monuments, musées et sites · ${esc(ACState.user.country)}.</p></div>
+          <button type="button" onclick="App.nav('culturalScanner')" class="card-dark !bg-white/10 hover:!bg-white/15 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px]"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center flex-shrink-0 animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span class="min-w-0"><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
         </div>
       </section>
-      <section>${UI.sectionTitle("Villes")}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div></section>
-      <section>${UI.sectionTitle("Près de " + esc(city), "Carte", go("exploreAround", {}))}<div class="grid sm:grid-cols-3 gap-3">${near.map((s) => UI.siteCard(s)).join("")}</div></section>
-      <section>${UI.sectionTitle("Monuments, musées et traditions")}
-        <div class="flex flex-col lg:flex-row gap-3 mb-4">
-          <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
-          <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Ville"><option value="all" ${f.city === "all" ? "selected" : ""}>Toutes les villes</option>${YCData.DESTINATIONS.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
-        </div>
-        ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuReset()" })}
+      <section>${UI.sectionTitle("Villes", "", "", esc(ACState.user.country))}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.filter((c) => YCData.CITIES[c].code === ACState.user.countryCode).map((c) => UI.destinationCard(c, true)).join("")}</div></section>
+      <section>${UI.sectionTitle("Près de " + esc(city), "Carte", go("exploreAround", {}))}<div class="grid sm:grid-cols-3 gap-3">${near.map((s) => UI.siteCard(s)).join("")}</div></section>`}
+      <section id="cu-catalog">${UI.sectionTitle(catalogTitle, "", "", catalogSub)}${typeMeta && TYPE_INTRO[typeMeta.id] ? `<p class="t-body text-ink-2 mb-4">${TYPE_INTRO[typeMeta.id]}</p>` : ""}
+        ${chips}
       </section>`;
-    Shell.render(container, { title: "Culture & tourisme", subtitle: esc(city), back: "App.nav('home')", body, nav: false, showNav: true });
+    Shell.render(container, { title: "Culture & tourisme", subtitle: filtered ? typeMeta.label : city, back: filtered ? "Screens._cuType('all')" : "App.nav('home')", body, nav: false, showNav: true });
   };
-  Screens._cuType = (t) => { f.type = t; App.replace("culture"); };
-  Screens._cuCity = (c) => { f.city = c; App.replace("culture"); };
-  Screens._cuReset = () => { f.type = "all"; f.city = "all"; App.replace("culture"); };
+  Screens._cuType = (t) => { f.type = t; App.replace("culture", cultureQuery()); };
+  Screens._cuCity = (c) => { f.city = c; App.replace("culture", cultureQuery()); };
 
   // Page destination
   Screens.destination = function (container, params) {
@@ -43,54 +66,48 @@
     const sites = YCData.sitesIn(c.name), rests = YCData.restaurantsIn(c.name), events = YCData.eventsIn(c.name), activities = sites.filter((s) => s.type === "nature" || s.type === "tradition" || s.type === "activite");
     const isHome = ACState.user.city === c.name;
     const body = `
-      <section class="relative rounded-3xl overflow-hidden h-64 lg:h-[400px] bg-card-high">${UI.img(c.hero, c.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white"><p class="t-caption text-gold">${c.country} · Destination</p><h2 class="t-display">${c.name}</h2><p class="t-body text-white/85 mt-1 max-w-[600px]">${c.tagline}</p></div>
-        ${!isHome ? `<button type="button" onclick="Shell.pickCity('${c.name}')" class="absolute top-4 right-4 btn btn-sm bg-white/95 text-[#0A0A0A]">${icon("swap_horiz", "text-[18px] text-[#0A0A0A]")}Utiliser ${c.name} comme ville</button>` : `<span class="absolute top-4 right-4 badge badge-gold">Votre ville</span>`}
+      <section class="relative rounded-3xl overflow-hidden bg-card-high">
+        ${UI.img(c.hero, c.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
+        <div class="absolute inset-0 gradient-up"></div>
+        <div class="relative z-10 flex flex-col min-h-[18rem] p-5 text-white lg:min-h-[22rem] lg:p-8">
+          <div class="flex justify-end">${!isHome ? `<button type="button" onclick="Shell.pickCity('${esc(c.name)}')" class="btn btn-sm bg-white/95 text-ink max-w-full h-auto min-h-9 whitespace-normal text-left py-2">${icon("swap_horiz", "text-[18px]")}Utiliser ${esc(c.name)} comme ville</button>` : `<span class="badge badge-gold">Votre ville</span>`}</div>
+          <div class="mt-auto max-w-[640px]"><p class="t-caption text-gold">${esc(c.country)} · Destination</p><h2 class="t-display">${esc(c.name)}</h2><p class="t-body text-white/85 mt-1">${esc(c.tagline)}</p></div>
+        </div>
       </section>
       <div class="grid lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
         <div class="space-y-8 min-w-0">
           <p class="t-body lg:text-[16px] lg:leading-[26px] text-ink-2">${c.intro}</p>
-          <section>${UI.sectionTitle("Lieux à visiter", "Scanner un monument", "App.nav('culturalScanner')")}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div></section>
+          <section>${UI.sectionTitle("Lieux à visiter", "Scanner un monument", "App.nav('culturalScanner')")}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${sites.slice(0, 6).map((s) => UI.siteCard(s)).join("")}</div></section>
           ${rests.length ? `<section>${UI.sectionTitle("Restaurants", "Voir tout", `Screens._cityRestaurants('${c.name}')`)}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${rests.slice(0, 4).map((r) => UI.restaurantCard(r)).join("")}</div></section>` : ""}
           ${events.length ? `<section>${UI.sectionTitle("Événements", "Voir tout", `Screens._cityEvents('${c.name}')`)}<div class="grid sm:grid-cols-2 gap-3 lg:gap-4">${events.slice(0, 4).map((e) => UI.eventCard(e)).join("")}</div></section>` : ""}
           ${activities.length ? `<section>${UI.sectionTitle("Activités et traditions")}<div class="hscroll lg:grid lg:grid-cols-3">${activities.slice(0, 6).map((s) => UI.siteCard(s, true)).join("")}</div></section>` : ""}
         </div>
         <aside class="space-y-4 lg:sticky lg:top-24">
           <div class="card p-5"><p class="t-h3 mb-3">Infos pratiques</p>${Object.keys(c.practical).map((k) => `<div class="py-2 border-b border-line last:border-0"><p class="t-caption text-ink-3">${k.charAt(0).toUpperCase() + k.slice(1)}</p><p class="t-small font-semibold mt-0.5">${c.practical[k]}</p></div>`).join("")}</div>
-          <div class="card overflow-hidden"><div id="dest-map" class="h-72 lg:h-80 bg-surface-low"></div><div class="p-4 space-y-2"><p class="t-small text-ink-2">${sites.length} lieu${sites.length > 1 ? "x" : ""} dans ${esc(c.name)}</p>${UI.button("Se déplacer à " + c.name, `Shell.pickCity('${c.name}');App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Explorer autour", go("exploreAround", { city: c.name }), { variant: "outline", icon: "travel_explore" })}</div></div>
+          <div class="card overflow-hidden"><div id="dest-map" class="h-48 bg-surface-low"></div><div class="p-4 space-y-2">${UI.button("Se déplacer à " + c.name, `Shell.pickCity('${c.name}');App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Explorer autour", go("exploreAround", { city: c.name }), { variant: "outline", icon: "travel_explore" })}</div></div>
         </aside>
       </div>`;
-    Shell.render(container, { title: c.name, subtitle: c.country + " · Destination", back: true, body, nav: false, showNav: true, onMount: () => {
-      const m = YCMap.create("dest-map", { interactive: true, lat: c.lat, lng: c.lng, zoom: 13, city: c.name });
-      if (!m) return;
-      const pts = [];
-      sites.forEach((s) => { pts.push([s.lat, s.lng]); m.addPoi([s.lat, s.lng], YCData.siteType(s.type).icon, "<b>" + esc(s.name) + "</b><br>" + esc(s.place), () => App.nav("cultureDetail", { id: s.id })); });
-      if (pts.length > 1) m.fit(pts, { paddingTopLeft: [28, 28], paddingBottomRight: [28, 28], maxZoom: 14 });
-      else if (pts.length === 1) m.setView(pts[0][0], pts[0][1], 15);
-    } });
+    Shell.render(container, { title: c.name, subtitle: c.country + " · Destination", back: true, body, nav: false, showNav: true, onMount: () => { const m = YCMap.create("dest-map", { interactive: false, zoomControl: false, lat: c.lat, lng: c.lng, zoom: 11 }); if (m) sites.filter((s) => YCData.distanceKm(s.lat, s.lng, c.lat, c.lng) < 40).forEach((s) => m.addPoi([s.lat, s.lng], YCData.siteType(s.type).icon, "<b>" + esc(s.name) + "</b>", () => App.nav("cultureDetail", { id: s.id }))); } });
   };
   Screens._cityRestaurants = (c) => { Shell.pickCity(c); App.nav("restaurants"); };
-  Screens._cityEvents = (c) => { App.nav("events", { city: c }); };
+  Screens._cityEvents = (c) => { if (YCData.countryCodeOfCity(c) && YCData.countryCodeOfCity(c) !== ACState.user.countryCode) Shell.pickCity(c); App.nav("events", { city: c }); };
 
   // Fiche site (Aperçu / Histoire / Visite / Infos)
   const st = { tab: "overview" };
   const TABS = [["overview", "Aperçu"], ["history", "Histoire"], ["visit", "Visite"], ["info", "Infos"]];
   Screens.cultureDetail = function (container, params) {
     const s = YCData.site(params.id);
-    if (!s) {
-      Shell.render(container, { title: "Lieu", back: true, body: UI.emptyState({ icon: "museum", title: "Lieu introuvable", body: "Ce site n'est plus disponible.", actionLabel: "Voir les lieux", actionOnclick: "App.resetTo('culture')" }), nav: false, showNav: true });
-      return;
-    }
+    if (!s) { App.resetTo("culture"); return; }
     if (params.tab) st.tab = params.tab;
     const type = YCData.siteType(s.type);
     const scanned = !!params.scanned;
-    const near = YCData.nearby(s.lat, s.lng, YCData.SITES, 4, s.id);
-    const rests = YCData.nearby(s.lat, s.lng, YCData.RESTAURANTS, 2);
+    const near = YCData.nearby(s.lat, s.lng, YCData.SITES.filter((x) => x.country === s.country), 4, s.id);
+    const rests = YCData.nearby(s.lat, s.lng, YCData.RESTAURANTS.filter((x) => YCData.countryCodeOfCity(x.city) === YCData.countryCodeOfCity(s.city)), 2);
     const saved = ACState.saved.indexOf(s.id) >= 0;
     const gallery = [s.img].concat(near.slice(0, 2).map((n) => n.img));
     const tabContent = {
       overview: `<p class="t-body lg:text-[16px] lg:leading-[26px] text-ink-2">${s.body}</p>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">${[["history_edu", "Époque", s.epoch], ["location_on", "Lieu", s.place.split("·")[0]], ["schedule", "Horaires", s.visit.hours.split("(")[0]], ["payments", "Tarif", s.visit.price.split("(")[0]]].map((x) => `<div class="card p-3"><span class="text-gold">${icon(x[0], "text-[20px]")}</span><p class="t-caption text-ink-3 mt-1">${x[1]}</p><p class="t-small font-semibold">${x[2]}</p></div>`).join("")}</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">${[["history_edu", "Époque", s.epoch], ["location_on", "Lieu", s.place.split("·")[0]], ["schedule", "Horaires", s.visit.hours.split("(")[0]], ["payments", "Tarif", s.visit.price.split("(")[0]]].map((x) => `<div class="card p-3 min-w-0"><span class="text-gold">${icon(x[0], "text-[20px]")}</span><p class="t-caption text-ink-3 mt-1">${x[1]}</p><p class="t-small font-semibold break-words">${esc(x[2])}</p></div>`).join("")}</div>
         <div class="mt-5"><h3 class="t-h3 mb-2">Pourquoi c'est là</h3><p class="t-body text-ink-2">${s.importance}</p></div>`,
       history: `<div class="card-dark p-5"><p class="t-caption text-gold">${s.epoch}</p><p class="t-body lg:text-[16px] lg:leading-[27px] text-white/90 mt-2">${s.history}</p></div>
         <div class="mt-4 grid sm:grid-cols-2 gap-3">
@@ -98,16 +115,22 @@
           <button type="button" onclick="Screens._videoPreview('${s.id}')" class="card card-press p-4 flex items-center gap-3 text-left"><span class="w-12 h-12 rounded-full bg-inverse text-inverse-ink flex items-center justify-center">${icon("movie", "text-[24px]")}</span><span><span class="block t-title">Vidéo de présentation</span><span class="block t-small text-ink-2">Aperçu immersif · 45 s</span></span></button>
         </div>`,
       visit: `<div class="card divide-y divide-line">${[["schedule", "Horaires", s.visit.hours], ["payments", "Tarif", s.visit.price], ["timer", "Durée conseillée", s.visit.duration], ["tips_and_updates", "Conseil", s.visit.tips]].map((x) => `<div class="p-4 flex gap-3"><span class="menu-icon">${icon(x[0])}</span><div><p class="t-caption text-ink-3">${x[1]}</p><p class="t-body font-semibold">${x[2]}</p></div></div>`).join("")}</div>
-        <div class="mt-4 grid sm:grid-cols-2 gap-3">${UI.button("Y aller en transport", `Screens._transportPreset({toLatLng:{name:${UI.js(s.name)},lat:${s.lat},lng:${s.lng}}});App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Réserver une visite guidée", `Screens._bookVisit('${s.id}')`, { variant: "primary", icon: "tour" })}</div>`,
+        <div class="mt-4 grid sm:grid-cols-2 gap-3">${UI.button("Y aller en transport", `Screens._goRide(${UI.js(s.name)},${s.lat},${s.lng})`, { variant: "dark", icon: "directions_car" })}${UI.button("Réserver une visite guidée", `Screens._bookVisit('${s.id}')`, { variant: "primary", icon: "tour" })}</div>`,
       info: `<div class="card overflow-hidden"><div id="site-map" class="h-56 bg-surface-low"></div><div class="p-4">${UI.row("Adresse", s.place)}${UI.row("Coordonnées", s.lat.toFixed(4) + ", " + s.lng.toFixed(4))}${UI.row("Type", type.label)}${s.unesco ? UI.row("Patrimoine", "UNESCO") : ""}${UI.row("Langues du guide", "Français, English")}</div></div>
         <button type="button" onclick="Screens._showSiteQr('${s.id}')" class="mt-3 w-full card p-4 flex items-center gap-3 text-left"><span class="menu-icon">${icon("qr_code_2")}</span><span class="flex-1"><span class="block t-title">QR Code du site</span><span class="block t-small text-ink-2">À afficher sur place pour tester le scanner</span></span>${icon("chevron_right", "text-ink-3")}</button>`
     };
     const body = `
       ${scanned ? `<div class="card-dark p-4 flex items-center gap-3 animate-screen-in"><span class="w-11 h-11 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pop">${icon("center_focus_strong", "text-[24px]")}</span><div class="flex-1"><p class="t-caption text-gold">Résultat du scan</p><p class="t-title">Monument reconnu · correspondance ${params.score || 97} %</p></div><button type="button" onclick="App.nav('culturalScanner')" class="btn btn-sm bg-white/10 text-white">Rescanner</button></div>` : ""}
       <section class="grid lg:grid-cols-[1.4fr_1fr] gap-3">
-        <div class="relative rounded-3xl overflow-hidden h-64 lg:h-[420px] bg-card-high">${UI.img(gallery[0], s.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-          <div class="absolute bottom-5 left-5 right-5 text-white"><div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-[#0A0A0A]">${icon(type.icon, "text-[14px] text-[#0A0A0A]")}${type.label}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div><h2 class="t-h1 lg:t-display">${s.name}</h2><p class="t-body text-white/85 mt-1">${icon("location_on", "text-[16px]")} ${s.place}</p></div>
-          <button type="button" onclick="Screens._toggleSaveSite('${s.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Sauvegarder">${icon("bookmark", saved ? "text-gold" : "", saved)}</button>
+        <div class="relative rounded-3xl overflow-hidden bg-card-high">
+          ${UI.img(gallery[0], s.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
+          <div class="absolute inset-0 gradient-up"></div>
+          <div class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem]">
+            <div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${esc(type.label)}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div>
+            <h2 class="t-h1 lg:t-display">${esc(s.name)}</h2>
+            <p class="t-body text-white/85 mt-1">${icon("location_on", "text-[16px]")} ${esc(s.place)}</p>
+          </div>
+          <button type="button" onclick="Screens._toggleSaveSite('${s.id}')" class="absolute top-4 right-4 z-10 icon-btn" aria-label="Sauvegarder">${icon("bookmark", saved ? "text-gold" : "", saved)}</button>
         </div>
         <div class="hidden lg:grid grid-rows-2 gap-3 h-[420px]">${gallery.slice(1, 3).map((g, i) => `<div class="relative rounded-3xl overflow-hidden bg-card-high min-h-0"><img src="${g}" alt="" class="absolute inset-0 w-full h-full object-cover img-fade" loading="lazy"/>${i === 1 ? `<button type="button" onclick="Screens._videoPreview('${s.id}')" class="absolute inset-0 flex items-center justify-center bg-black/30 text-white"><span class="w-14 h-14 rounded-full bg-white/90 text-ink flex items-center justify-center">${icon("play_arrow", "text-[32px]", true)}</span></button>` : ""}</div>`).join("")}</div>
       </section>
@@ -120,27 +143,46 @@
         <aside class="space-y-4 lg:sticky lg:top-24">
           ${UI.nextSteps([
             { icon: "restaurant", label: "Restaurants autour", sub: rests[0] ? rests[0].name + " · " + YCMap.fmtKm(rests[0].dist) : "Voir les restaurants", onclick: rests[0] ? go("restaurantDetail", { id: rests[0].id }) : "App.nav('restaurants')" },
-            { icon: "directions_car", label: "Y aller en transport", sub: "Course vers " + esc(s.name.split(" ").slice(0, 3).join(" ")), onclick: `Screens._transportPreset({toLatLng:{name:${UI.js(s.name)},lat:${s.lat},lng:${s.lng}}});App.nav('transport')` },
+            { icon: "directions_car", label: "Y aller en transport", sub: "Course vers " + esc(s.name.split(" ").slice(0, 3).join(" ")), onclick: `Screens._goRide(${UI.js(s.name)},${s.lat},${s.lng})` },
             { icon: "confirmation_number", label: "Événements à " + esc(s.city), sub: "Concerts, festivals, spectacles", onclick: "App.nav('events')" },
             { icon: "travel_explore", label: "Destination " + esc(s.city), sub: "Page complète de la ville", onclick: go("destination", { city: s.city }) }
           ], "Autour de ce lieu")}
-          <div class="card overflow-hidden"><div id="site-loc-map" class="h-56 bg-surface-low"></div><div class="p-4"><p class="t-title">${esc(s.name)}</p><p class="t-small text-ink-2 mt-0.5">${icon("location_on", "text-[15px]")}${esc(s.place)}</p></div></div>
-          <div class="card p-4"><p class="t-caption text-ink-3 mb-2">${I18N.t("lang_title")}</p><div class="grid grid-cols-2 gap-2">${I18N.LANGS.map((l) => `<button type="button" onclick="UI.setLang('${l.id}')" class="chip justify-center ${I18N.lang === l.id ? "on" : ""}">${l.label}</button>`).join("")}</div></div>
+          <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Langue du contenu</p><div class="grid grid-cols-2 gap-2">${I18N.LANGS.map((l) => `<button type="button" onclick="UI.setLang('${l.id}')" class="chip justify-center ${I18N.lang === l.id ? "on" : ""}">${l.id.toUpperCase()}</button>`).join("")}</div></div>
         </aside>
       </div>`;
-    Shell.render(container, { title: s.name, subtitle: type.label + " · " + (s.near || s.city), back: true, body, nav: false, showNav: true, onMount: () => {
-      const pin = (id) => { const m = YCMap.create(id, { interactive: true, lat: s.lat, lng: s.lng, zoom: 15 }); if (m) m.addPoi([s.lat, s.lng], type.icon, "<b>" + esc(s.name) + "</b><br>" + esc(s.place)); };
-      pin("site-loc-map");
-      if (st.tab === "info") pin("site-map");
-    } });
+    Shell.render(container, { title: s.name, subtitle: type.label + " · " + s.city, back: true, body, nav: false, showNav: true, onMount: () => { if (st.tab === "info") { const m = YCMap.create("site-map", { interactive: false, zoomControl: false, lat: s.lat, lng: s.lng, zoom: 14 }); if (m) m.addPoi([s.lat, s.lng], type.icon, "<b>" + esc(s.name) + "</b>"); } } });
   };
   Screens._cuTab = (tab, id, scanned) => { st.tab = tab; App.replace(App.current.id, Object.assign({}, App.current.params, { tab })); };
   Screens._toggleSaveSite = (id) => { const i = ACState.saved.indexOf(id); if (i >= 0) ACState.saved.splice(i, 1); else ACState.saved.push(id); UI.toast(i >= 0 ? "Retiré de vos lieux sauvegardés" : "Lieu sauvegardé", "success"); ACStore.emit(); };
   Screens._bookVisit = (id) => {
     const s = YCData.site(id);
-    UI.openSheet(`<h3 class="t-h3 mb-1">Visite guidée</h3><p class="t-small text-ink-2 mb-4">${esc(s.name)} · ${s.visit.duration}</p><div class="grid grid-cols-2 gap-3">${UI.select("vg-day", "Jour", ["Demain", "Samedi", "Dimanche"], "Samedi")}${UI.select("vg-time", "Heure", ["09:00", "10:30", "14:00", "16:00"], "10:30")}</div><div class="mt-3">${UI.select("vg-lang", I18N.t("lang_title"), ["Français", "English"], I18N.lang === "en" ? "English" : "Français")}</div><div class="mt-5">${UI.primaryButton("Réserver (" + s.visit.price.split("(")[0].trim() + ")", `Screens._bookVisitConfirm('${id}')`, { icon: "tour" })}</div>`);
+    UI.openSheet(`<h3 class="t-h3 mb-1">Visite guidée</h3><p class="t-small text-ink-2 mb-4">${esc(s.name)} · ${s.visit.duration}</p><div class="grid grid-cols-2 gap-3">${UI.select("vg-day", "Jour", ["Demain", "Samedi", "Dimanche"], "Samedi")}${UI.select("vg-time", "Heure", ["09:00", "10:30", "14:00", "16:00"], "10:30")}</div><div class="mt-3">${UI.select("vg-lang", "Langue du guide", ["Français", "English"], "Français")}</div><div class="mt-5">${UI.primaryButton("Réserver (" + s.visit.price.split("(")[0].trim() + ")", `Screens._bookVisitConfirm('${id}')`, { icon: "tour" })}</div>`);
   };
-  Screens._bookVisitConfirm = (id) => { const s = YCData.site(id); const when = document.getElementById("vg-day").value + " " + document.getElementById("vg-time").value; UI.closeSheet(); ACStore.addActivity({ service: "reservation", title: "Visite guidée · " + s.name, amount: null, status: "À venir", icon: "tour", detail: { when, place: s.place } }); ACStore.addNotification("Visite réservée", s.name + " · " + when + ". Votre guide vous attendra à l'entrée.", "culture", "activities"); ACStore.emit(); UI.toast("Visite réservée · " + when, "success"); };
+  function visitAmount(price) {
+    if (!price || /gratuit/i.test(price)) return 0;
+    const digits = String(price).replace(/\s/g, "").match(/(\d+)/);
+    return digits ? parseInt(digits[1], 10) : 0;
+  }
+  Screens._bookVisitConfirm = function (id) {
+    const s = YCData.site(id); if (!s) return;
+    const when = document.getElementById("vg-day").value + " " + document.getElementById("vg-time").value;
+    const amount = visitAmount(s.visit && s.visit.price);
+    UI.closeSheet();
+    if (amount && Screens.needCard(ACState.prefs.paymentMethod || "wallet")) return;
+    Screens.requirePay(amount ? "Visite · " + ACStore.fmtFCFA(amount) : "Réservation de visite", function () { Screens._bookVisitPaid(id, when, amount); });
+  };
+  Screens._bookVisitPaid = function (id, when, amount) {
+    const s = YCData.site(id); if (!s) return;
+    const done = function (res) {
+      ACStore.addActivity({ service: "reservation", title: "Visite guidée · " + s.name, amount: amount || null, status: "À venir", icon: "tour", detail: { when, place: s.place } });
+      ACStore.addNotification("Visite réservée", s.name + " · " + when + ". Votre guide vous attendra à l'entrée.", "culture", "activities");
+      if (amount && window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu de visite", label: s.name, lines: [["Quand", when]] });
+      UI.toast("Visite réservée · " + when, "success");
+      App.back();
+    };
+    if (!amount) { done(); return; }
+    ACStore.whenPaid(ACStore.pay({ amount: amount, label: "Visite guidée · " + s.name, service: "culture", pointsEarned: Math.round(amount / 100), method: ACState.prefs.paymentMethod || "wallet", activity: false }), done, function (res) { App.nav("paymentFailed", { retry: "cultureDetail", retryParams: id, amount: amount, reason: res.reason }); });
+  };
 
   /* Audio-guide : synthèse vocale du navigateur (repli : message) */
   let speaking = false;
@@ -163,7 +205,7 @@
     const s = YCData.site(id);
     UI.openSheet(`<div class="relative rounded-2xl overflow-hidden bg-black aspect-video"><img src="${s.img}" alt="" class="w-full h-full object-cover animate-kenburns opacity-90"/><div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
       <div class="absolute bottom-4 left-4 right-4 text-white"><p class="t-caption text-gold">Aperçu vidéo · démonstration</p><p class="t-h3">${esc(s.name)}</p><div class="h-1 rounded-full bg-white/25 mt-2 overflow-hidden"><div class="h-full bg-gold" style="width:0%;transition:width 45s linear" id="vid-bar"></div></div></div></div>
-      <p class="t-small text-ink-2 mt-3">La version finale intégrera des vidéos produites avec les offices du tourisme et les acteurs culturels locaux.</p>`, { wide: true });
+      <p class="t-small text-ink-2 mt-3">Démo : aucune vidéo n'est lue. L'aperçu montre la photo du lieu.</p>`, { wide: true });
     requestAnimationFrame(() => { const b = document.getElementById("vid-bar"); if (b) b.style.width = "100%"; });
   };
   Screens._showSiteQr = function (id) {
@@ -285,19 +327,19 @@
     const origin = params.id ? YCData.site(params.id) : null;
     const c = YCData.cityOf(params.city || (origin ? origin.city : ACState.user.city));
     const center = origin ? { lat: origin.lat, lng: origin.lng, name: origin.name } : { lat: c.lat, lng: c.lng, name: c.name };
-    const sites = (origin ? YCData.nearby(center.lat, center.lng, YCData.SITES, 8, origin.id) : YCData.sitesIn(c.name).map((s) => Object.assign({ dist: YCData.distanceKm(center.lat, center.lng, s.lat, s.lng) }, s))).filter((s) => s.dist <= 10);
-    const rests = YCData.nearby(center.lat, center.lng, YCData.RESTAURANTS, 4).filter((r) => r.dist <= 10);
-    const events = YCData.nearby(center.lat, center.lng, YCData.EVENTS, 3).filter((e) => e.dist <= 10);
+    const sites = YCData.nearby(center.lat, center.lng, YCData.SITES, 8, origin ? origin.id : null).filter((s) => s.dist < 80);
+    const rests = YCData.nearby(center.lat, center.lng, YCData.RESTAURANTS, 4).filter((r) => r.dist < 80);
+    const events = YCData.nearby(center.lat, center.lng, YCData.EVENTS, 3).filter((e) => e.dist < 80);
     const rowItem = (x, kind) => `<button type="button" onclick="${kind === "site" ? go("cultureDetail", { id: x.id }) : kind === "rest" ? go("restaurantDetail", { id: x.id }) : go("eventDetail", { id: x.id })}" class="card card-press p-2.5 flex items-center gap-3 text-left w-full"><span class="w-14 h-14 rounded-xl overflow-hidden bg-card-high flex-shrink-0">${UI.img(x.img, x.name)}</span><span class="flex-1 min-w-0"><span class="block t-title truncate">${x.name}</span><span class="block t-small text-ink-2 truncate">${kind === "site" ? YCData.siteType(x.type).label : kind === "rest" ? x.cat + " · " + x.rating + " ★" : YCData.fmtDateShort(x.date) + " · " + x.cat}</span></span><span class="t-small font-bold whitespace-nowrap">${YCMap.fmtKm(x.dist)}</span></button>`;
     const body = `<div class="flex-1 min-h-0 lg:grid lg:grid-cols-[420px_1fr] flex flex-col">
       <aside class="order-2 lg:order-1 lg:h-full lg:overflow-y-auto border-t lg:border-t-0 lg:border-r border-line bg-surface p-4 lg:p-6 space-y-5 max-h-[55%] overflow-y-auto lg:max-h-none">
-        <div><p class="t-caption text-gold-deep dark:text-gold">Autour de</p><h2 class="t-h2">${esc(center.name)}</h2><p class="t-small text-ink-2">${sites.length + rests.length + events.length} lieux dans ${esc(c.name)}</p></div>
+        <div><p class="t-caption text-gold-deep dark:text-gold">Autour de</p><h2 class="t-h2">${esc(center.name)}</h2><p class="t-small text-ink-2">${sites.length + rests.length + events.length} lieux dans un rayon de 80 km</p></div>
         ${sites.length ? `<div><p class="t-caption text-ink-3 mb-2">Sites culturels</p><div class="space-y-2">${sites.map((s) => rowItem(s, "site")).join("")}</div></div>` : ""}
         ${rests.length ? `<div><p class="t-caption text-ink-3 mb-2">Restaurants</p><div class="space-y-2">${rests.map((r) => rowItem(r, "rest")).join("")}</div></div>` : ""}
         ${events.length ? `<div><p class="t-caption text-ink-3 mb-2">Événements</p><div class="space-y-2">${events.map((e) => rowItem(e, "event")).join("")}</div></div>` : ""}
       </aside>
       <div class="order-1 lg:order-2 relative flex-1 min-h-[45%] lg:min-h-0 lg:h-full"><div id="around-map" class="absolute inset-0"></div></div></div>`;
-    Shell.render(container, { title: "Explorer autour de moi", subtitle: esc(center.name), back: true, body, nav: false, fill: true, onMount: () => {
+    Shell.render(container, { title: "Explorer autour de moi", subtitle: center.name, back: true, body, nav: false, fill: true, onMount: () => {
       const m = YCMap.create("around-map", { interactive: true, lat: center.lat, lng: center.lng, zoom: 12 });
       if (!m) return;
       m.setUser([center.lat, center.lng]);

@@ -206,6 +206,7 @@
   function parse(text) {
     const raw = String(text || "").trim();
     if (!raw) return { type: "empty", raw };
+    if (/^(javascript|data|vbscript):/i.test(raw) || raw.length > 400) return { type: "unknown", raw: "" };
 
     let m = raw.match(/^youss:(?:\/\/)?site[:/]([a-z0-9_-]+)$/i);
     if (m) return { type: "site", id: m[1].toLowerCase(), raw };
@@ -217,11 +218,13 @@
     if (m) {
       const q = new URLSearchParams(m[1] || "");
       const amount = parseInt(q.get("amount"), 10);
+      const to = String(q.get("to") || "").slice(0, 40);
+      const name = String(q.get("name") || "").slice(0, 80);
       return {
         type: "pay",
-        to: q.get("to") || "",
-        name: q.get("name") || "",
-        amount: isFinite(amount) && amount > 0 ? amount : null,
+        to: to,
+        name: name,
+        amount: isFinite(amount) && amount > 0 && amount <= 2000000 ? amount : null,
         raw
       };
     }
@@ -234,9 +237,9 @@
         const to = u.searchParams.get("pay");
         if (to) {
           const amount = parseInt(u.searchParams.get("amount"), 10);
-          return { type: "pay", to, name: u.searchParams.get("name") || "", amount: isFinite(amount) && amount > 0 ? amount : null, raw };
+          return { type: "pay", to: String(to).slice(0, 40), name: String(u.searchParams.get("name") || "").slice(0, 80), amount: isFinite(amount) && amount > 0 && amount <= 2000000 ? amount : null, raw };
         }
-        return { type: "url", url: raw, raw };
+        return { type: "unknown", raw: "" };
       } catch (e) { /* texte brut */ }
     }
     return { type: "text", raw };

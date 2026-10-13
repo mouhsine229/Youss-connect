@@ -7,7 +7,7 @@
   let current = null;      // { id, params }
   let ignoreNextHash = false;
 
-  const AUTH_FREE = { splash: 1, onboarding: 1, login: 1, signup: 1, otp: 1, forgotPassword: 1, about: 1, opsLogin: 1, opsOtp: 1, proJoin: 1, proLogin: 1 };
+  const AUTH_FREE = { splash: 1, onboarding: 1, login: 1, signup: 1, otp: 1, forgotPassword: 1, about: 1, terms: 1, privacy: 1, opsLogin: 1, opsOtp: 1, proJoin: 1, proLogin: 1 };
   /* « profile » et « productDetail » commencent aussi par « pro » : seule la cuisine (pro + majuscule) est un écran partenaire. */
   function isOpsScreen(id) { return /^ops[A-Z]/.test(id || ""); }
   function isKitchenScreen(id) { return /^pro[A-Z]/.test(id || ""); }
@@ -38,24 +38,16 @@
     return { id: path, params };
   }
 
-  /* Même écran et mêmes paramètres : un clic sur la quantité ne doit pas remonter. */
-  function viewKey(id, params) {
-    const parts = [];
-    Object.keys(params || {}).sort().forEach((k) => {
-      const v = params[k];
-      if (v != null && v !== "") parts.push(k + "=" + v);
-    });
-    return (id || "") + "?" + parts.join("&");
-  }
-  function flag(key) {
-    try { return sessionStorage.getItem(key) === "1"; } catch (e) { return false; }
-  }
-  function show(id, params) {
+  function show(id, params, opts) {
     params = params || {};
-    const prevKey = current ? viewKey(current.id, current.params) : "";
+    opts = opts || {};
+    const prevMain = document.getElementById("main");
+    const kept = opts.keepScroll && prevMain ? prevMain.scrollTop : 0;
     const prevId = current && current.id;
-    const scroller = document.getElementById("main");
-    const savedTop = scroller ? scroller.scrollTop : 0;
+    let fn = window.Screens && window.Screens[id];
+    function flag(key) {
+      try { return sessionStorage.getItem(key) === "1"; } catch (e) { return false; }
+    }
     const requested = id;
     const opsScreen = isOpsScreen(id);
     const proScreen = isKitchenScreen(id);
@@ -71,40 +63,37 @@
       sessionStorage.setItem("yc-after-login", encode(requested, params));
       id = ACState.session.onboardingSeen ? "login" : "onboarding"; params = {};
     }
-    const fn = window.Screens && window.Screens[id];
+    fn = window.Screens && window.Screens[id];
     if (!fn) {
       console.error("Unknown screen:", requested);
       current = { id: "notFound", params: { id: requested } };
       container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(requested)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
+      if (window.I18N && I18N.apply) I18N.apply(document.body);
       return;
     }
-    if (id !== requested) setHash(encode(id, params), true);
     if (prevId && prevId !== id) {
       if (window.UI && UI.closeSheet) UI.closeSheet();
       if (window.YCScanner && YCScanner.stop && (prevId === "walletQrPay" || prevId === "culturalScanner")) YCScanner.stop();
+      if (prevId === "securityPin" && id !== "biometricSetup" && window.Screens && Screens._abandonPay) Screens._abandonPay();
     }
-    const sameView = prevKey === viewKey(id, params);
     current = { id, params: params || {} };
     document.dispatchEvent(new CustomEvent("yc:navigate", { detail: { id } }));
-    fn(container, current.params);
+    try { fn(container, current.params); }
+    catch (err) {
+      console.error(err);
+      container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Cet écran n'a pas pu s'afficher</p><p class="t-body text-ink-2 mb-4">Revenez en arrière et réessayez.</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
+    }
+    if (opts.keepScroll) container.querySelectorAll(".screen-enter").forEach((el) => { el.style.animation = "none"; });
     const main = document.getElementById("main");
-    if (sameView) {
-      const apply = () => { const el = document.getElementById("main"); if (el) el.scrollTop = savedTop; };
-      apply();
-      requestAnimationFrame(apply);
-    } else {
-      if (main) main.scrollTop = 0;
-      window.scrollTo(0, 0);
-    }
+    if (main) main.scrollTop = kept;
+    if (!opts.keepScroll) window.scrollTo(0, 0);
     document.title = (id === "splash" ? "" : (titleFor(id) + " · ")) + "YOUSS CONNECT";
-    if (window.I18N && I18N.apply) {
-      I18N.apply(container);
-      document.title = I18N.applyText(document.title);
-      requestAnimationFrame(function () { if (I18N.lang === "en") I18N.apply(container); });
-    }
+    if (window.I18N && I18N.rememberTitle) I18N.rememberTitle(document.title);
+    if (window.I18N && I18N.apply) I18N.apply(document.body);
+    if (window.I18N && I18N.applyTitle) I18N.applyTitle();
   }
   function titleFor(id) {
-    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", opsHome: "Console KYA", opsLogin: "Console KYA", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Invitation resto" };
+    const map = { home: "Accueil", explorer: "Explorer", activities: "Activités", wallet: "Youss Wallet", walletHistory: "Historique des transactions", addCard: "Carte bancaire", profile: "Profil", transport: "Transport", delivery: "Livraison", restaurants: "Restaurants", events: "Événements", market: "Youss Market", culture: "Culture & Tourisme", rewards: "Youss Bonus", business: "Youss Business", terms: "Conditions d'utilisation", privacy: "Politique de confidentialité", biometricSetup: "Biométrie", helpChat: "Assistance", verifyAccount: "Vérification du compte", opsHome: "Console KYA", opsLogin: "Console KYA", opsIdentity: "Pièces d'identité", opsSupport: "Assistance", opsRestaurants: "Restaurants", proHome: "Cuisine", proLogin: "Cuisine", proJoin: "Compte restaurant" };
     return map[id] || id.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
   }
 
@@ -118,16 +107,15 @@
 
   function nav(id, params) {
     const hash = encode(id, params);
-    if (current && encode(current.id, current.params) === hash) { show(id, params); return; }
-    if (current) stack.push(encode(current.id, current.params));
+    if (current && encode(current.id, current.params) !== hash) stack.push(encode(current.id, current.params));
     if (location.hash === hash) { show(id, params); return; }
     ignoreNextHash = true;
     location.hash = hash;
     show(id, params);
   }
-  function replace(id, params) {
+  function replace(id, params, opts) {
     setHash(encode(id, params), true);
-    show(id, params);
+    show(id, params, opts);
   }
   function back() {
     const prev = stack.pop();
@@ -171,9 +159,8 @@
   const NO_RERENDER = { splash: 1, transportInRide: 1, deliveryTracking: 1, culturalScanner: 1, scannerAnalyzing: 1, walletQrPay: 1, transport: 1 };
   ACStore.subscribe(function () {
     if (!current || NO_RERENDER[current.id]) return;
-    const active = document.activeElement;
-    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && active.type !== "file" && !ACState._forceShow) return;
-    ACState._forceShow = false;
+    const ae = document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.type !== "file") return;
     show(current.id, current.params);
   });
 
@@ -188,14 +175,22 @@
   document.addEventListener("DOMContentLoaded", function () {
     UI.applyTheme(ACState.prefs.theme);
     UI.initOfflineBanner();
-    const boot = (window.YCBackend && YCBackend.init) ? YCBackend.init() : Promise.resolve();
+    const boot = (window.YCBackend && YCBackend.init) ? YCBackend.init().then(function () {
+      const jobs = [];
+      if (window.YCKitchen) {
+        jobs.push(YCKitchen.restore());
+        jobs.push(YCKitchen.loadCatalog());
+      }
+      return Promise.all(jobs);
+    }) : Promise.resolve();
     const timeout = new Promise((resolve) => setTimeout(resolve, 2500));
     Promise.race([boot, timeout]).then(function () {
       const d = decode(location.hash);
       if (d && (isOpsScreen(d.id) || isKitchenScreen(d.id)) && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && ACState.session.authenticated && window.Screens[d.id]) { replace(d.id, d.params); return; }
       if (d && d.id !== "splash" && !ACState.session.authenticated && window.Screens[d.id] && !AUTH_FREE[d.id]) {
-        sessionStorage.setItem("yc-after-login", location.hash);
+        const backTo = window.YCGuard ? YCGuard.returnHash(location.hash) : "";
+        if (backTo) sessionStorage.setItem("yc-after-login", backTo);
       }
       replace("splash", {});
     });

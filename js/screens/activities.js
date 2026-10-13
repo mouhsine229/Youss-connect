@@ -32,7 +32,7 @@
       ${live.length && f === "all" ? `<section>${UI.sectionTitle("En cours", null, null, live.length + " activité" + (live.length > 1 ? "s" : "") + " en direct")}<div class="grid sm:grid-cols-2 gap-3">${live.map((a) => `<button type="button" onclick="${a.orderId ? go("orderTracking", { id: a.orderId }) : go("activityDetail", { id: a.id })}" class="card-dark p-4 flex items-center gap-3 text-left"><span class="w-11 h-11 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon(a.icon, "text-[22px]")}</span><span class="min-w-0 flex-1"><span class="block t-caption text-gold">${LABEL[a.service]} en cours</span><span class="block t-title truncate">${esc(a.title)}</span></span>${icon("chevron_right", "text-white/60")}</button>`).join("")}</div></section>` : ""}
       ${list.length ? order.filter((g) => groups[g]).map((g) => `<section>${UI.sectionTitle(g, null, null, groups[g].length + " élément" + (groups[g].length > 1 ? "s" : ""))}<div class="card divide-y divide-line">${groups[g].map(row).join("")}</div></section>`).join("")
         : UI.emptyState({ icon: "history", title: "Aucune activité", body: f === "all" ? "Toutes vos courses, commandes, livraisons, billets et paiements apparaîtront ici automatiquement." : "Aucune activité dans cette catégorie pour le moment.", actionLabel: "Explorer les services", actionOnclick: "App.nav('explorer')" })}`;
-    Shell.render(container, { title: "Mes activités", subtitle: "Historique unifié de tous vos services", body, nav: "activities" });
+    Shell.render(container, { title: "Mes activités", subtitle: "Courses, commandes, billets", body, nav: "activities" });
   };
 
   Screens.activityDetail = function (container, params) {
@@ -48,7 +48,7 @@
       market: [["replay", "Racheter", "App.nav('market')"], ["flag", "Signaler un problème", "App.nav('report')"]],
       livraison: [["replay", "Nouvelle livraison", "App.nav('delivery')"], ["flag", "Signaler un problème", "App.nav('report')"]],
       evenement: [["qr_code_2", "Voir mes billets", "App.nav('myTickets')"], ["directions_car", "Transport vers le lieu", "App.nav('transport')"]],
-      reservation: [["call", "Contacter l'établissement", "UI.toast('Appel (démo).','info')"], ["cancel", "Annuler la réservation", `Screens._cancelActivity('${a.id}')`]],
+      reservation: [["call", "Contacter l'établissement", "UI.toast('L\\'appel n\\'est pas encore ouvert.','info')"], ["cancel", "Annuler la réservation", "Screens._cancelActivity(" + JSON.stringify(a.id) + ")"]],
       wallet: [["account_balance_wallet", "Voir le Wallet", "App.nav('wallet')"], ["flag", "Signaler", "App.nav('report')"]]
     }[a.service] || [["home", "Accueil", "App.resetTo('home')"]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -57,8 +57,8 @@
       ${d.items ? `<div class="card p-4"><p class="t-caption text-ink-3 mb-2">Articles</p>${d.items.map((i) => `<p class="t-body py-1 border-b border-line last:border-0">${esc(i)}</p>`).join("")}</div>` : ""}
       <div class="card p-4">${details}${UI.row("Référence", esc(tx ? tx.ref : a.id.toUpperCase()))}${UI.row("Paiement", a.method === "cash" ? "Espèces" : a.method === "mobile" ? "Paiement mobile" : a.amount != null ? "Youss Wallet" : "Aucun")}</div>
       ${a.service === "transport" && d.from && d.to ? `<div class="card overflow-hidden"><div id="act-map" class="h-44 bg-surface-low"></div></div>` : ""}
-      <div class="grid grid-cols-2 gap-3">${actions.map((x) => UI.button(x[1], x[2], { variant: x[0] === "cancel" ? "outline" : x[0] === "replay" || x[0] === "qr_code_2" ? "primary" : "outline", icon: x[0] })).join("")}</div>
-      ${a.amount != null ? UI.secondaryButton("Télécharger le reçu", "UI.toast('Reçu envoyé par e-mail (démo).','success')", { icon: "receipt_long" }) : ""}</div>`;
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${actions.map((x) => UI.button(x[1], x[2], { variant: x[0] === "cancel" ? "outline" : x[0] === "replay" || x[0] === "qr_code_2" ? "primary" : "outline", icon: x[0] })).join("")}</div>
+      ${a.amount != null ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le reçu", "Screens._activityReceipt(" + JSON.stringify(a.id) + ",'down')", { icon: "download" })}${UI.secondaryButton("Partager", "Screens._activityReceipt(" + JSON.stringify(a.id) + ",'share')", { icon: "share" })}</div>` : ""}</div>`;
     Shell.render(container, { title: "Détail de l'activité", back: true, body, nav: false, showNav: true, onMount: () => {
       if (a.service === "transport" && d.from && d.to && document.getElementById("act-map")) {
         const c = YCData.cityOf(ACState.user.city);
@@ -69,5 +69,20 @@
       }
     } });
   };
-  Screens._cancelActivity = (id) => UI.confirm({ title: "Annuler la réservation ?", body: "L'établissement sera prévenu immédiatement.", okLabel: "Annuler la réservation", danger: true, icon: "event_busy", onOk: `(function(){var a=ACState.activities.find(function(x){return x.id==='${id}'});if(a){a.status='Annulé';ACStore.emit();UI.toast('Réservation annulée.','info');}})()` });
+  Screens._cancelActivity = (id) => UI.confirm({ title: "Annuler la réservation ?", body: "Elle sera marquée annulée sur cet appareil. L'établissement n'est pas prévenu.", okLabel: "Annuler la réservation", danger: true, icon: "event_busy", onOk: "Screens._markActivityCancelled(" + JSON.stringify(id) + ")" });
+  Screens._markActivityCancelled = function (id) {
+    const a = ACState.activities.find((x) => x.id === id);
+    if (!a) return;
+    a.status = "Annulé";
+    ACStore.emit();
+    UI.toast("Réservation marquée annulée sur cet appareil.", "info");
+  };
+  Screens._activityReceipt = function (id, mode) {
+    const a = ACState.activities.find((x) => x.id === id);
+    if (!a || !window.YCReceipt) return;
+    const tx = ACState.wallet.transactions.find((t) => t.label === a.title || (t.label && a.title && t.label.indexOf(a.title) >= 0));
+    const r = YCReceipt.fromTx(tx || { label: a.title, amount: -(a.amount || 0), ref: String(a.id).toUpperCase(), date: a.subtitle || "", status: "success", method: a.method }, { amount: a.amount, method: a.method === "cash" ? "Espèces" : a.method === "mobile" ? "Paiement mobile" : a.method === "card" ? "Carte bancaire" : "Youss Wallet" });
+    if (mode === "share") YCReceipt.share(r);
+    else { YCReceipt.download(r); UI.toast("Reçu téléchargé.", "success"); }
+  };
 })();

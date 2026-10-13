@@ -4,31 +4,46 @@
   window.Screens = window.Screens || {};
   const { icon, esc, go } = UI;
 
-  const f = { cat: "Tous", city: "Toutes", q: "" };
+  const f = { cat: "Tous", city: "", q: "" };
+  let seenCity = "";
   const sel = { ticket: null, qty: 1, holder: "", method: null };
   const CATS = ["Tous"].concat(YCData.EVENT_CATS);
 
+  function eventInCountry(e) {
+    if (e.country && e.country === ACState.user.country) return true;
+    return YCData.countryCodeOfCity(e.city) === ACState.user.countryCode;
+  }
+  function eventCities() {
+    const names = [];
+    YCData.allEvents().forEach((e) => { if (eventInCountry(e) && names.indexOf(e.city) < 0) names.push(e.city); });
+    return names;
+  }
   function list() {
     const q = YCData.norm(f.q);
-    return YCData.allEvents().filter((e) => (f.cat === "Tous" || e.cat === f.cat) && (f.city === "Toutes" || e.city === f.city || e.country === (YCData.CITIES[f.city] || {}).country) && (!q || YCData.norm(e.name + " " + e.place + " " + e.city + " " + e.cat).includes(q)))
+    return YCData.allEvents().filter((e) => eventInCountry(e) && (f.cat === "Tous" || e.cat === f.cat) && (!f.city || e.city === f.city) && (!q || YCData.norm(e.name + " " + e.place + " " + e.city + " " + e.cat).includes(q)))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
   Screens.events = function (container, params) {
+    if (seenCity !== ACState.user.city) {
+      seenCity = ACState.user.city;
+      f.city = eventCities().indexOf(ACState.user.city) >= 0 ? ACState.user.city : "";
+    }
     if (params && params.cat) f.cat = params.cat;
-    if (params && params.city) f.city = params.city;
+    if (params && params.city && eventCities().indexOf(params.city) >= 0) f.city = params.city;
+    if (f.city && eventCities().indexOf(f.city) < 0) f.city = "";
     const items = list();
     const featured = items[0];
     const body = `
-      ${featured && f.cat === "Tous" && !f.q ? `<button type="button" onclick="${go("eventDetail", { id: featured.id })}" class="relative w-full rounded-3xl overflow-hidden h-60 lg:h-[380px] text-left card-press group">${UI.img(featured.img, featured.name, "img-cover transition-transform duration-700 group-hover:scale-105", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white max-w-[640px]"><span class="badge badge-gold mb-2">À la une · ${featured.cat}</span><h2 class="t-h1 lg:t-display">${featured.name}</h2><p class="t-body text-white/80 mt-1.5 flex flex-wrap gap-x-3">${icon("calendar_today", "text-[16px]")} ${YCData.fmtDate(featured.date)} · ${featured.time}<span>${icon("location_on", "text-[16px]")} ${featured.place}</span></p><p class="t-title mt-2">dès ${ACStore.fmtFCFA(YCData.minPrice(featured))}</p></div></button>` : ""}
+      ${featured && f.cat === "Tous" && !f.q ? `<button type="button" onclick="${go("eventDetail", { id: featured.id })}" class="relative w-full rounded-3xl overflow-hidden text-left card-press group bg-card-high">${UI.img(featured.img, featured.name, "absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105", { eager: true })}<span class="absolute inset-0 gradient-up"></span>
+        <span class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem] lg:px-8 lg:pb-8 max-w-[720px]"><span class="badge badge-gold mb-2 w-max">À la une · ${esc(featured.cat)}</span><span class="block t-h1 lg:t-display">${esc(featured.name)}</span><span class="block t-body text-white/80 mt-1.5">${icon("calendar_today", "text-[16px]")} ${YCData.fmtDate(featured.date)} · ${featured.time}<span class="inline-flex items-center">${icon("location_on", "text-[16px]")} ${esc(featured.place)}</span></span><span class="block t-title mt-2">dès ${ACStore.fmtFCFA(YCData.minPrice(featured))}</span></span></button>` : ""}
       <div class="flex flex-col lg:flex-row gap-3">
-        <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="ev-q" type="search" value="${esc(f.q)}" placeholder="Rechercher un événement, un lieu…" oninput="Screens._evType(this.value)" class="input input-lg pl-12"/></label>
-        <select class="select lg:w-56" onchange="Screens._evCity(this.value)" aria-label="Ville">${["Toutes"].concat(YCData.DESTINATIONS).map((c) => `<option ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+        <label class="relative flex-1">${icon("search", "absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 text-[22px] pointer-events-none")}<input id="ev-q" type="search" value="${esc(f.q)}" placeholder="Événement ou lieu" oninput="Screens._evType(this.value)" class="input input-lg pl-12"/></label>
+        <select class="select lg:w-56" onchange="Screens._evCity(this.value)" aria-label="Ville"><option value="" ${f.city ? "" : "selected"}>${esc(ACState.user.country)}</option>${eventCities().map((c) => `<option value="${esc(c)}" ${f.city === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
       </div>
       <div class="hscroll">${CATS.map((c) => UI.chip(c, `Screens._evCat('${c}')`, f.cat === c)).join("")}</div>
       <div id="ev-list"></div>`;
-    Shell.render(container, { title: "Événements", subtitle: "Concerts, festivals, conférences, spectacles, sport", back: "App.nav('home')", body, nav: false, showNav: true, right: `<button type="button" onclick="App.nav('myTickets')" class="btn btn-sm btn-outline">${icon("qr_code_2", "text-[18px]")}<span class="hidden sm:inline">Mes billets</span>${ACState.tickets.length ? `<span class="badge badge-gold">${ACState.tickets.length}</span>` : ""}</button>` });
+    Shell.render(container, { title: "Événements", subtitle: "Concerts et festivals", back: "App.nav('home')", body, nav: false, showNav: true, right: `<button type="button" onclick="App.nav('myTickets')" class="btn btn-sm btn-outline">${icon("qr_code_2", "text-[18px]")}<span class="hidden sm:inline">Mes billets</span>${ACState.tickets.length ? `<span class="badge badge-gold">${ACState.tickets.length}</span>` : ""}</button>` });
     renderList();
   };
   function renderList() {
@@ -40,15 +55,12 @@
   Screens._evType = (v) => { f.q = v; renderList(); };
   Screens._evCat = (c) => { f.cat = c; App.replace("events"); };
   Screens._evCity = (c) => { f.city = c; App.replace("events"); };
-  Screens._evReset = () => { f.cat = "Tous"; f.city = "Toutes"; f.q = ""; App.replace("events"); };
+  Screens._evReset = () => { f.cat = "Tous"; f.city = ""; f.q = ""; App.replace("events"); };
 
   // Fiche
   Screens.eventDetail = function (container, params) {
     const e = YCData.event(params.id);
-    if (!e) {
-      Shell.render(container, { title: "Événement", back: true, body: UI.emptyState({ icon: "confirmation_number", title: "Événement introuvable", body: "Cet événement n'est plus disponible.", actionLabel: "Voir les événements", actionOnclick: "App.resetTo('events')" }), nav: false, showNav: true });
-      return;
-    }
+    if (!e) { App.resetTo("events"); return; }
     if (!sel.ticket || !e.tickets.find((t) => t.id === sel.ticket)) { sel.ticket = e.tickets[0].id; sel.qty = 1; }
     const t = e.tickets.find((x) => x.id === sel.ticket);
     const total = t.price * sel.qty;
@@ -59,13 +71,18 @@
         <div class="flex items-center justify-between"><span class="t-title">Quantité</span>${UI.qtyControl(sel.qty, `Screens._ticketQty(-1,'${e.id}')`, `Screens._ticketQty(1,'${e.id}')`)}</div>
         <div class="divider"></div>
         <div class="flex items-center justify-between"><span class="t-body text-ink-2">Total</span><span class="t-h2">${ACStore.fmtFCFA(total)}</span></div>
-        ${UI.primaryButton("Acheter un billet", go("eventCheckout", { id: e.id }), { size: "lg", iconRight: "arrow_forward" })}
+        ${UI.primaryButton("Acheter un billet", "Screens._buyTicket('" + e.id + "')", { size: "lg", iconRight: "arrow_forward", id: "yc-buy-ticket" })}
         <p class="t-small text-ink-3 text-center">Billet nominatif avec QR Code · remboursable jusqu'à 48 h avant.</p>
       </div>`;
     const body = `
-      <section class="relative rounded-3xl overflow-hidden h-64 lg:h-[420px] bg-card-high">${UI.img(e.img, e.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white"><span class="badge bg-white/95 text-[#0A0A0A] mb-2">${e.cat}</span><h2 class="t-h1 lg:t-display max-w-[760px]">${e.name}</h2></div>
-        <button type="button" onclick="Screens._shareEvent('${e.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Partager">${icon("share")}</button>
+      <section class="relative rounded-3xl overflow-hidden bg-card-high">
+        ${UI.img(e.img, e.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
+        <div class="absolute inset-0 gradient-up"></div>
+        <div class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem] lg:px-8 lg:pb-8">
+          <span class="badge bg-white/95 text-ink mb-2 w-max">${esc(e.cat)}</span>
+          <h2 class="t-h1 lg:t-display max-w-[760px]">${esc(e.name)}</h2>
+        </div>
+        <button type="button" onclick="Screens._shareEvent('${e.id}')" class="absolute top-4 right-4 z-10 icon-btn" aria-label="Partager">${icon("share")}</button>
       </section>
       <div class="grid lg:grid-cols-[1fr_400px] gap-6 items-start">
         <div class="space-y-5 min-w-0">
@@ -76,8 +93,8 @@
           </div>
           <div><h3 class="t-h3 mb-2">À propos</h3><p class="t-body text-ink-2 leading-relaxed">${e.body}</p></div>
           <div><h3 class="t-h3 mb-2">Programme</h3><div class="card divide-y divide-line">${e.program.map((p) => `<div class="p-3.5 flex gap-3 t-body"><span class="font-bold text-gold-deep dark:text-gold w-14 flex-shrink-0">${p.split(" ")[0]}</span><span>${p.split(" ").slice(1).join(" ")}</span></div>`).join("")}</div></div>
-          <div class="card p-4 flex items-center gap-3">${UI.avatar({ name: e.organizer }, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Organisateur</p><p class="t-title truncate">${e.organizer}</p></div><button type="button" onclick="UI.toast('Message envoyé à l\\'organisateur.','success')" class="btn btn-sm btn-outline">Contacter</button></div>
-          <div class="card overflow-hidden"><div id="ev-map" class="h-48 lg:h-56 bg-surface-low"></div><div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="flex-1"><p class="t-title">${e.place}</p><p class="t-small text-ink-2">Transport, restaurants et hébergements à proximité.</p></div>${UI.button("Y aller en transport", `Screens._transportPreset({toLatLng:{name:${UI.js(e.place)},lat:${e.lat},lng:${e.lng}}});App.nav('transport')`, { variant: "dark", block: false, icon: "directions_car" })}</div></div>
+          <div class="card p-4 flex items-center gap-3">${UI.avatar({ name: e.organizer }, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Organisateur</p><p class="t-title truncate">${esc(e.organizer)}</p></div><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="btn btn-sm btn-outline shrink-0">Contacter</button></div>
+          <div class="card overflow-hidden"><div id="ev-map" class="h-48 lg:h-56 bg-surface-low"></div><div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="flex-1"><p class="t-title">${e.place}</p><p class="t-small text-ink-2">Transport, restaurants et hébergements à proximité.</p></div>${UI.button("Y aller en transport", `Screens._goRide(${UI.js(e.place)},${e.lat},${e.lng})`, { variant: "dark", block: false, icon: "directions_car" })}</div></div>
           ${nearbyRest.length ? `<div>${UI.sectionTitle("Dîner avant ou après", "Voir tout", "App.nav('restaurants')")}<div class="grid sm:grid-cols-2 gap-3">${nearbyRest.map((r) => UI.restaurantCard(r)).join("")}</div></div>` : ""}
           <div class="lg:hidden">${ticketPanel}</div>
         </div>
@@ -85,21 +102,27 @@
       </div>`;
     Shell.render(container, { title: e.name, subtitle: YCData.fmtDate(e.date) + " · " + e.city, back: true, body, nav: false, showNav: true, onMount: () => { const m = YCMap.create("ev-map", { interactive: false, zoomControl: false, lat: e.lat, lng: e.lng, zoom: 14 }); if (m) m.addPoi([e.lat, e.lng], "confirmation_number", "<b>" + esc(e.place) + "</b>"); } });
   };
-  Screens._pickTicket = (id, eid) => { sel.ticket = id; App.replace("eventDetail", { id: eid }); };
+  Screens._pickTicket = (id, eid) => { sel.ticket = id; App.replace("eventDetail", { id: eid }, { keepScroll: true }); };
   Screens._ticketQty = (d, eid) => {
     const e = YCData.event(eid);
     const t = e && e.tickets.find((x) => x.id === sel.ticket);
-    const max = t ? Math.min(10, Math.max(1, t.left)) : 1;
+    const max = t ? Math.min(10, Math.max(1, t.left || 1)) : 10;
     sel.qty = Math.min(max, Math.max(1, sel.qty + d));
-    App.replace("eventDetail", { id: eid });
+    App.replace("eventDetail", { id: eid }, { keepScroll: true });
+  };
+  Screens._buyTicket = function (eid) {
+    const e = YCData.event(eid);
+    if (!e || !sel.ticket) { UI.toast("Choisissez un billet.", "error"); return; }
+    App.nav("eventCheckout", { id: eid });
   };
   Screens._ticketPreset = (eid, tid, qty) => { sel.ticket = tid; sel.qty = qty || 1; };
-  Screens._shareEvent = (id) => { const e = YCData.event(id); if (!e) return; const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + ". Vu sur YOUSS CONNECT."; if (navigator.share) navigator.share({ title: e.name, text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien copié.", "success")).catch(() => UI.toast(text, "info")); else UI.toast(text, "info"); };
+  Screens._shareEvent = (id) => { const e = YCData.event(id); if (!e) return; const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + ". Vu sur YOUSS CONNECT."; if (navigator.share) navigator.share({ title: e.name, text }).catch(function () {}); else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { UI.toast("Lien copié.", "success"); }).catch(function () { UI.toast("Partage indisponible sur cet appareil.", "info"); }); else UI.toast("Partage indisponible sur cet appareil.", "info"); };
 
   // Achat
   Screens.eventCheckout = function (container, params) {
     const e = YCData.event(params.id); const t = e && e.tickets.find((x) => x.id === sel.ticket);
     if (!e || !t) { App.resetTo("events"); return; }
+    if (Screens._preferCard) { sel.method = "card"; Screens._preferCard = false; }
     if (!sel.method) sel.method = ACState.prefs.paymentMethod || "wallet";
     if (!sel.holder) sel.holder = ACState.user.fullName;
     const total = t.price * sel.qty, fee = 0;
@@ -107,11 +130,11 @@
       <div class="space-y-4">
         <div class="card p-4 flex items-center gap-4"><span class="w-20 h-20 rounded-xl overflow-hidden bg-card-high flex-shrink-0">${UI.img(e.img, e.name)}</span><div class="min-w-0"><p class="t-title truncate">${e.name}</p><p class="t-small text-ink-2">${YCData.fmtDate(e.date)} · ${e.time} · ${e.place}</p><p class="t-small font-semibold mt-1">${t.label} × ${sel.qty}</p></div></div>
         <div class="card p-4 space-y-3"><p class="t-caption text-ink-3">Participant</p>${UI.field("tk-holder", "Nom sur le billet", { value: sel.holder, icon: "person" })}${UI.field("tk-email", "E-mail de réception", { value: ACState.user.email, type: "email", icon: "mail" })}</div>
-        <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.filter((m) => m.type !== "cash").map((m) => `<button type="button" onclick="Screens._tkMethod('${m.type}','${e.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${sel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${sel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>
+        <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.filter((m) => m.type !== "cash").map((m) => `<button type="button" onclick="Screens._tkMethod('${m.type}','${e.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${sel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${sel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}<div class="pt-1">${Screens.cardAddButton()}</div></div>
       </div>
-      <aside class="space-y-4 lg:sticky lg:top-24 self-start"><div class="card-dark p-5"><p class="t-caption text-gold">Récapitulatif</p>${UI.row(t.label + " × " + sel.qty, ACStore.fmtFCFA(total))}${UI.row("Frais de service", "Offerts")}<div class="divider border-white/15 my-2"></div><div class="flex items-center justify-between"><span class="t-title">Total</span><span class="t-h2">${ACStore.fmtFCFA(total + fee)}</span></div><p class="t-small text-white/60 mt-2">+${Math.round(total / 100)} points Youss Bonus</p></div>
-        ${UI.primaryButton("Payer " + ACStore.fmtFCFA(total), `Screens._payEvent('${e.id}', ${total})`, { size: "lg", icon: "lock" })}</aside></div>`;
-    Shell.render(container, { title: "Récapitulatif", subtitle: "Billetterie", back: true, body, nav: false });
+      <aside class="lg:sticky lg:top-24 self-start"><div class="card-dark p-5"><p class="t-caption text-gold">Récapitulatif</p>${UI.row(t.label + " × " + sel.qty, ACStore.fmtFCFA(total))}${UI.row("Frais de service", "Offerts")}<div class="divider my-2 opacity-30"></div><div class="flex items-center justify-between"><span class="t-title">Total</span><span class="t-h2">${ACStore.fmtFCFA(total + fee)}</span></div><p class="t-small mt-2 opacity-80">+${Math.round(total / 100)} points Youss Bonus</p></div></aside></div>
+      <div class="sticky bottom-0 z-30 -mx-4 sm:-mx-5 lg:-mx-10 px-4 sm:px-5 lg:px-10 py-3 bg-surface/95 backdrop-blur border-t border-line">${UI.primaryButton("Payer " + ACStore.fmtFCFA(total), "Screens._payEvent('" + e.id + "')", { size: "lg", icon: "lock", id: "yc-pay-event" })}</div>`;
+    Shell.render(container, { title: "Récapitulatif", subtitle: "Billetterie", back: true, body, nav: false, showNav: true });
   };
   Screens._tkMethod = (m, eid) => { sel.method = m; sel.holder = (document.getElementById("tk-holder") || {}).value || sel.holder; App.replace("eventCheckout", { id: eid }); };
   function makeTicket(e, t, qty, holder) {
@@ -119,16 +142,26 @@
     ACState.tickets.unshift(tk);
     return tk;
   }
-  Screens._payEvent = function (eid, total) {
+  Screens._payEvent = function (eid) {
+    const e = YCData.event(eid);
+    const t = e && e.tickets.find((x) => x.id === sel.ticket);
+    if (!e || !t) { UI.toast("Ce billet n'est plus disponible.", "error"); return; }
+    if (sel.qty > (t.left || 0)) { UI.toast("Plus assez de places pour cette quantité.", "error"); return; }
+    sel.holder = (document.getElementById("tk-holder") || {}).value || sel.holder || ACState.user.fullName;
+    const total = t.price * sel.qty;
+    if (Screens.needCard(sel.method)) return;
+    Screens.requirePay("Billet · " + e.name, function () { Screens._payEventNow(eid, total); });
+  };
+  Screens._payEventNow = function (eid, total) {
     const e = YCData.event(eid), t = e && e.tickets.find((x) => x.id === sel.ticket);
-    if (!e || !t) { UI.toast("Billet introuvable.", "error"); return; }
-    if (sel.qty > t.left) { UI.toast("Plus assez de places disponibles.", "error"); return; }
-    const holder = (document.getElementById("tk-holder") || {}).value || ACState.user.fullName;
-    ACStore.whenPaid(ACStore.pay({ amount: total, label: "Billet · " + e.name, service: "evenement", pointsEarned: Math.round(total / 100), method: sel.method, activity: { detail: { ticket: t.label + " × " + sel.qty, place: e.place, date: e.date } } }), function () {
+    if (!e || !t) { UI.toast("Ce billet n'est plus disponible.", "error"); return; }
+    const holder = sel.holder || ACState.user.fullName;
+    ACStore.whenPaid(ACStore.pay({ amount: total, label: "Billet · " + e.name, service: "evenement", pointsEarned: Math.round(total / 100), method: sel.method, activity: { detail: { ticket: t.label + " × " + sel.qty, place: e.place, date: e.date } } }), function (res) {
       const tk = makeTicket(e, t, sel.qty, holder);
       t.left = Math.max(0, t.left - sel.qty);
       ACStore.addNotification("Billet confirmé", e.name + " · " + t.label + " × " + sel.qty + ". Retrouvez votre QR Code dans Mes billets.", "evenement", "ticketDetail?id=" + tk.id);
-      ACStore.emit(); sel.qty = 1; sel.lastTicket = tk.id;
+      sel.qty = 1; sel.lastTicket = tk.id;
+      if (window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu billet", label: e.name, lines: [["Participant", holder], ["Catégorie", t.label], ["N° de billet", tk.number]] });
       App.resetTo("ticketConfirmed", { id: tk.id });
     }, function (res) { App.nav("paymentFailed", { retry: "eventCheckout", retryParams: eid, amount: total, reason: res.reason }); });
   };
@@ -139,22 +172,28 @@
 
   // Confirmation
   Screens.ticketConfirmed = function (container, params) {
-    const tk = ACState.tickets.find((x) => x.id === params.id);
+    const tk = ACState.tickets.find((x) => x.id === params.id) || ACState.tickets[0];
     if (!tk) { App.resetTo("events"); return; }
     const e = YCData.event(tk.eventId) || {};
     const city = tk.city === "Ouidah" ? "Cotonou" : tk.city;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      ${UI.successHero({ icon: "confirmation_number", title: "Billet confirmé", body: "Votre billet numérique est prêt. Il a aussi été envoyé par e-mail (démo)." })}
+      ${UI.successHero({ icon: "confirmation_number", title: "Billet confirmé", body: "Votre billet numérique est prêt. Le reçu a été téléchargé sur cet appareil." })}
       ${ticketCard(tk, true)}
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Télécharger le reçu", "Screens._ticketReceipt('down')", { icon: "download" })}${UI.secondaryButton("Partager le reçu", "Screens._ticketReceipt('share')", { icon: "share" })}</div>
       ${UI.primaryButton("Voir mon billet et le QR Code", go("ticketDetail", { id: tk.id }), { size: "lg", icon: "qr_code_2" })}
       ${UI.nextSteps([
-        { icon: "directions_car", label: "Réserver un transport", sub: "Vers " + esc(tk.place), onclick: `Screens._transportPreset({toLatLng:{name:${UI.js(tk.place)},lat:${tk.lat || e.lat || 0},lng:${tk.lng || e.lng || 0}}});App.nav('transport')` },
+        { icon: "directions_car", label: "Réserver un transport", sub: "Vers " + esc(tk.place), onclick: `Screens._goRide(${UI.js(tk.place)},${tk.lat || e.lat || "NaN"},${tk.lng || e.lng || "NaN"})` },
         { icon: "restaurant", label: "Restaurants à proximité", sub: "Dîner avant le spectacle", onclick: go("restaurants", {}) },
         { icon: "calendar_add_on", label: "Ajouter au calendrier", sub: YCData.fmtDate(tk.date) + " · " + tk.time, onclick: `Screens._addCalendar('${tk.id}')` }
       ])}
       ${UI.secondaryButton("Mes billets", "App.nav('myTickets')")}
     </div>`;
     Shell.render(container, { title: "Billet confirmé", back: "App.nav('events')", body, nav: false, hideSearch: true });
+  };
+  Screens._ticketReceipt = function (mode) {
+    const r = window.YCReceipt && YCReceipt.current();
+    if (!r) { UI.toast("Aucun reçu à télécharger.", "info"); return; }
+    if (mode === "share") YCReceipt.share(r); else { YCReceipt.download(r); UI.toast("Reçu téléchargé.", "success"); }
   };
   Screens._addCalendar = (id) => {
     const tk = ACState.tickets.find((x) => x.id === id); if (!tk) return;
@@ -175,8 +214,7 @@
 
   // Mes billets
   Screens.myTickets = function (container, params) {
-    const d = new Date();
-    const today = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    const today = new Date().toISOString().slice(0, 10);
     const up = ACState.tickets.filter((t) => t.date >= today).sort((a, b) => a.date.localeCompare(b.date)), past = ACState.tickets.filter((t) => t.date < today);
     const row = (t) => `<button type="button" onclick="${go("ticketDetail", { id: t.id })}" class="card card-press overflow-hidden text-left flex">
       <span class="w-28 flex-shrink-0 bg-card-high relative">${UI.img(t.img, t.event)}</span>
@@ -191,7 +229,7 @@
   };
 
   Screens.ticketDetail = function (container, params) {
-    const tk = ACState.tickets.find((x) => x.id === params.id);
+    const tk = ACState.tickets.find((x) => x.id === params.id) || ACState.tickets[0];
     if (!tk) { App.resetTo("myTickets"); return; }
     const payload = "youss:ticket:" + tk.number;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -210,11 +248,11 @@
       </div>
       <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Partager", `Screens._shareTicket('${tk.id}')`, { icon: "share" })}${UI.secondaryButton("Calendrier", `Screens._addCalendar('${tk.id}')`, { icon: "calendar_add_on" })}</div>
       ${UI.nextSteps([
-        { icon: "directions_car", label: "Y aller en transport", sub: esc(tk.place), onclick: `Screens._transportPreset({toLatLng:{name:${UI.js(tk.place)},lat:${tk.lat || 6.37},lng:${tk.lng || 2.39}}});App.nav('transport')` },
+        { icon: "directions_car", label: "Y aller en transport", sub: esc(tk.place), onclick: `Screens._goRide(${UI.js(tk.place)},${tk.lat || "NaN"},${tk.lng || "NaN"})` },
         { icon: "restaurant", label: "Restaurants autour", sub: "Avant ou après", onclick: "App.nav('restaurants')" }
       ])}
     </div>`;
     Shell.render(container, { title: "Billet numérique", back: true, body, nav: false, hideSearch: true, onMount: () => YCScanner.render("tk-qr", payload, { size: 204, cell: 6 }) });
   };
-  Screens._shareTicket = (id) => { const tk = ACState.tickets.find((x) => x.id === id); if (!tk) return; const text = "Mon billet YOUSS CONNECT · " + tk.event + " · " + tk.number; if (navigator.share) navigator.share({ title: "Billet", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Billet copié.", "success")).catch(() => UI.toast(text, "info")); else UI.toast(text, "info"); };
+  Screens._shareTicket = (id) => { const tk = ACState.tickets.find((x) => x.id === id); const text = "Mon billet YOUSS CONNECT · " + tk.event + " · " + tk.number; if (navigator.share) navigator.share({ title: "Billet", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Billet copié.", "success")); };
 })();

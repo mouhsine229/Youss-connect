@@ -53,37 +53,72 @@
       .finally(() => { if (timer) clearTimeout(timer); });
   }
 
-  /* Géocodage : lieux locaux de la ville + Photon (OpenStreetMap) limité aux 4 pays */
+  /* Géocodage : lieux du pays courant + Photon limité à ce pays */
   const norm = YCData.norm;
+  function activeCode(city) {
+    const c = YCData.cityOf(city);
+    return (window.ACState && ACState.user && ACState.user.countryCode) || c.code;
+  }
+  function sameCountry(lat, lng, code) {
+    if (lat == null || lng == null) return true;
+    return YCData.countryCodeAt(lat, lng) === code;
+  }
   function localPlaces(q, city) {
     const c = YCData.cityOf(city);
+    const code = activeCode(city);
+    const country = YCData.countryOf(code);
     const n = norm(q).trim();
-    const all = c.poi.map((p) => ({ name: p.name, detail: kindLabel(p.kind) + " · " + c.name, lat: p.lat, lng: p.lng, icon: kindIcon(p.kind) }))
-      .concat(ACState.addresses.map((a) => ({ name: a.label, detail: a.detail, lat: a.lat || c.lat, lng: a.lng || c.lng, icon: a.icon || "place" })))
-      .concat(YCData.restaurantsIn(c.name).map((r) => ({ name: r.name, detail: "Restaurant · " + r.area, lat: r.lat, lng: r.lng, icon: "restaurant" })))
-      .concat(YCData.sitesIn(c.name).filter((s) => haversineKm(s.lat, s.lng, c.lat, c.lng) < 60).map((s) => ({ name: s.name, detail: "Lieu culturel · " + s.place, lat: s.lat, lng: s.lng, icon: "account_balance" })));
-    if (!n) return all.slice(0, 7);
-    return all.filter((p) => norm(p.name + " " + p.detail).includes(n)).slice(0, 5);
+    const seen = {};
+    const all = [];
+    function add(p) {
+      if (!p || !p.name || !sameCountry(p.lat, p.lng, code)) return;
+      const k = norm(p.name);
+      if (seen[k]) return;
+      seen[k] = true;
+      all.push(p);
+    }
+    (c.poi || []).forEach((p) => add({ name: p.name, detail: kindLabel(p.kind) + " · " + c.name, lat: p.lat, lng: p.lng, icon: kindIcon(p.kind) }));
+    (ACState.addresses || []).forEach((a) => add({ name: a.label, detail: a.detail, lat: a.lat || c.lat, lng: a.lng || c.lng, icon: a.icon || "place" }));
+    YCData.RESTAURANTS.forEach((r) => {
+      if (YCData.countryCodeOfCity(r.city) !== code) return;
+      add({ name: r.name, detail: "Restaurant · " + r.area + ", " + r.city, lat: r.lat, lng: r.lng, icon: "restaurant" });
+    });
+    YCData.SITES.forEach((s) => {
+      if (s.country !== country.name) return;
+      add({ name: s.name, detail: "Lieu · " + (s.place || s.city), lat: s.lat, lng: s.lng, icon: "account_balance" });
+    });
+    YCData.allEvents().forEach((e) => {
+      if (e.country !== country.name) return;
+      add({ name: e.place || e.name, detail: "Événement · " + e.city, lat: e.lat, lng: e.lng, icon: "event" });
+    });
+    if (!n) return all.slice(0, 6);
+    return all.filter((p) => norm(p.name + " " + p.detail).includes(n)).slice(0, 6);
   }
   function kindLabel(k) { return { quartier: "Quartier", aeroport: "Aéroport", marche: "Marché", monument: "Monument", plage: "Plage", stade: "Stade", universite: "Université", lieu: "Lieu" }[k] || "Lieu"; }
   function kindIcon(k) { return { quartier: "location_city", aeroport: "flight", marche: "storefront", monument: "account_balance", plage: "beach_access", stade: "stadium", universite: "school", lieu: "place" }[k] || "place"; }
   function geocode(q, city) {
     const c = YCData.cityOf(city);
-    const key = c.name + "|" + norm(q).trim();
+    const code = activeCode(city);
+    const country = YCData.countryOf(code);
+    const key = code + "|" + c.name + "|" + norm(q).trim();
     if (geocodeCache[key]) return Promise.resolve(geocodeCache[key]);
     if (!navigator.onLine) return Promise.resolve([]);
-    const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) + "&lat=" + c.lat + "&lon=" + c.lng + "&limit=8&lang=fr";
+    const box = (country.bbox || []).join(",");
+    const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) + "&lat=" + c.lat + "&lon=" + c.lng + (box ? "&bbox=" + box : "") + "&limit=8&lang=fr";
     return fetch(url).then((r) => r.json()).then((j) => {
       const seen = {}, out = [];
       (j.features || []).forEach((f) => {
         const p = f.properties || {};
-        if (p.countrycode && ["BJ", "SN", "TG", "GH"].indexOf(p.countrycode) < 0) return;
+        const lat = f.geometry.coordinates[1], lng = f.geometry.coordinates[0];
+        const cc = String(p.countrycode || "").toUpperCase();
+        if (cc && cc !== code) return;
+        if (!sameCountry(lat, lng, code)) return;
         const name = p.name || [p.housenumber, p.street].filter(Boolean).join(" ") || p.city || p.county;
         if (!name) return;
-        const detail = [p.street && p.street !== name ? p.street : null, p.district, p.city && p.city !== name ? p.city : null, p.country].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+        const detail = [p.street && p.street !== name ? p.street : null, p.district, p.city && p.city !== name ? p.city : null, country.name].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
         const k = norm(name + "|" + detail);
         if (seen[k]) return; seen[k] = true;
-        out.push({ name, detail, lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], icon: /city|town|village/.test(p.osm_value || "") ? "location_city" : "place" });
+        out.push({ name, detail, lat, lng, icon: /city|town|village/.test(p.osm_value || "") ? "location_city" : "place" });
       });
       geocodeCache[key] = out.slice(0, 6);
       return geocodeCache[key];
@@ -92,14 +127,25 @@
   // Une adresse tapée à la main doit toujours donner un point utilisable :
   // d'abord un lieu connu de la ville, sinon le géocodage, sinon un point
   // approximatif dans la ville avec le texte saisi tel quel.
+  function mentionsOtherCountry(text, code) {
+    const n = norm(text);
+    if (n.length < 3) return false;
+    return YCData.COUNTRIES.some((c) => {
+      if (c.code === code) return false;
+      if (norm(c.name).length > 3 && n.indexOf(norm(c.name)) >= 0) return true;
+      return c.cities.some((city) => norm(city).length > 3 && n.indexOf(norm(city)) >= 0);
+    });
+  }
   function resolveTyped(q, city) {
     const c = YCData.cityOf(city);
+    const code = activeCode(city);
     const text = String(q || "").trim();
     if (!text) return Promise.resolve(null);
     const local = localPlaces(text, c.name);
     if (local.length) { const s = local[0]; return Promise.resolve({ name: s.name, lat: s.lat, lng: s.lng }); }
     return geocode(text, c.name).then((remote) => {
       if (remote.length) { const s = remote[0]; return { name: s.name + (s.detail ? " · " + s.detail.split(",")[0] : ""), lat: s.lat, lng: s.lng }; }
+      if (mentionsOtherCountry(text, code)) return { outside: true, name: text };
       return { name: text, lat: c.lat + (Math.random() - 0.5) * 0.01, lng: c.lng + (Math.random() - 0.5) * 0.01, approx: true };
     });
   }
@@ -239,18 +285,21 @@
   }
   function destroyAll() { instances.slice().forEach((i) => i.destroy()); }
 
-  /* Géolocalisation : repli sur le centre de la ville courante */
+  /* Demande l'accès à la position. Un point hors du pays choisi n'est pas utilisé. */
   function locate(cb) {
     const c = YCData.cityOf(ACState.user.city);
-    const fallback = { lat: c.lat + 0.004, lng: c.lng + 0.003, ok: false };
-    if (!navigator.geolocation) { cb(fallback); return; }
+    const code = activeCode(c.name);
+    const country = YCData.countryOf(code);
+    const fallback = { lat: c.lat, lng: c.lng, ok: false, denied: false, outside: false, country: country.name };
+    if (!navigator.geolocation) { cb(Object.assign({}, fallback, { denied: true })); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        /* Si l'utilisateur est loin de la ville démo (desktop en Europe…), on reste sur la ville */
-        const far = haversineKm(pos.coords.latitude, pos.coords.longitude, c.lat, c.lng) > 150;
-        cb(far ? fallback : { lat: pos.coords.latitude, lng: pos.coords.longitude, ok: true });
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        if (!sameCountry(lat, lng, code)) { cb(Object.assign({}, fallback, { outside: true })); return; }
+        cb({ lat: lat, lng: lng, ok: true, denied: false, outside: false, country: country.name });
       },
-      () => cb(fallback), { enableHighAccuracy: true, maximumAge: 8000, timeout: 6000 }
+      (err) => cb(Object.assign({}, fallback, { denied: !err || err.code === 1 })),
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 8000 }
     );
   }
 

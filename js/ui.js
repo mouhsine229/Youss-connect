@@ -18,19 +18,22 @@
   }
 
   // Boutons
+  function attrJs(code) {
+    return String(code == null ? "" : code).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  }
   function button(label, onclick, opts) {
     opts = opts || {};
     const variant = opts.variant || "primary";
     const size = opts.size === "sm" ? "btn-sm" : opts.size === "lg" ? "btn-lg" : "";
     const cls = `btn btn-${variant} ${size} ${opts.block === false ? "" : "btn-block"} ${opts.cls || ""}`;
     const ic = opts.icon ? icon(opts.icon, "text-[20px]") : "";
-    return `<button type="button" onclick="${onclick}" class="${cls}" ${opts.disabled ? "disabled" : ""} ${opts.id ? `id="${opts.id}"` : ""}>${opts.iconRight ? "" : ic}<span>${label}</span>${opts.iconRight ? icon(opts.iconRight, "text-[20px]") : ""}</button>`;
+    return `<button type="button" onclick="${attrJs(onclick)}" class="${cls}" ${opts.disabled ? "disabled" : ""} ${opts.id ? `id="${opts.id}"` : ""}>${opts.iconRight ? "" : ic}<span>${label}</span>${opts.iconRight ? icon(opts.iconRight, "text-[20px]") : ""}</button>`;
   }
   const primaryButton = (label, onclick, opts) => button(label, onclick, Object.assign({ variant: "primary" }, opts));
   const secondaryButton = (label, onclick, opts) => button(label, onclick, Object.assign({ variant: "outline" }, opts));
   const darkButton = (label, onclick, opts) => button(label, onclick, Object.assign({ variant: "dark" }, opts));
   function iconButton(name, onclick, label, cls) {
-    return `<button type="button" onclick="${onclick}" class="icon-btn ${cls || ""}" aria-label="${escAttr(label || name)}" title="${escAttr(label || "")}">${icon(name)}</button>`;
+    return `<button type="button" onclick="${attrJs(onclick)}" class="icon-btn ${cls || ""}" aria-label="${escAttr(label || name)}" title="${escAttr(label || "")}">${icon(name)}</button>`;
   }
 
   // Badges, puces
@@ -40,7 +43,7 @@
   }
   function chip(label, onclick, on, opts) {
     opts = opts || {};
-    return `<button type="button" onclick="${onclick}" class="chip ${opts.gold ? "chip-gold" : ""} ${on ? "on" : ""}" aria-pressed="${on ? "true" : "false"}">${opts.icon ? icon(opts.icon, "text-[16px]") : ""}${label}</button>`;
+    return `<button type="button" onclick="${attrJs(onclick)}" class="chip ${opts.gold ? "chip-gold" : ""} ${on ? "on" : ""}" aria-pressed="${on ? "true" : "false"}">${opts.icon ? icon(opts.icon, "text-[16px]") : ""}${label}</button>`;
   }
   function stars(rating, cls) {
     const r = Math.round((rating || 0) * 2) / 2;
@@ -70,7 +73,7 @@
   function sectionTitle(title, action, onclick, sub) {
     return `<div class="flex items-end justify-between gap-3 mb-3 min-w-0">
       <div class="min-w-0"><h2 class="t-h2 truncate">${title}</h2>${sub ? `<p class="t-small text-ink-2 mt-0.5 truncate">${sub}</p>` : ""}</div>
-      ${action ? `<button type="button" onclick="${onclick}" class="t-small font-bold text-gold-deep dark:text-gold hover:underline whitespace-nowrap flex-shrink-0">${action}</button>` : ""}
+      ${action ? `<button type="button" onclick="${attrJs(onclick)}" class="t-small font-bold text-gold-deep dark:text-gold hover:underline whitespace-nowrap flex-shrink-0">${action}</button>` : ""}
     </div>`;
   }
 
@@ -78,11 +81,11 @@
   function restaurantCard(r, compact) {
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[240px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(r.img, r.name)}
-        <span class="absolute top-2.5 left-2.5 badge badge-dark">${r.time}</span>
-        <span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">${icon("star", "text-gold text-[14px]", true)}${r.rating}</span>
+        <span class="absolute top-2.5 left-2.5 badge badge-dark">${esc(r.time)}</span>
+        ${r.partnerId ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${esc(String(r.rating))}</span>`}
       </div>
       <div class="p-3.5">
-        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${esc(r.name)}</h3><span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span></div>
+        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${esc(r.name)}</h3>${r.partnerId ? "" : `<span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span>`}</div>
         <p class="t-small text-ink-2 truncate mt-0.5">${esc(r.cat)} · ${esc(r.area)}, ${esc(r.city)} · ~${ACStore.fmtFCFA(r.avg)}</p>
       </div>
     </button>`;
@@ -96,7 +99,7 @@
         ${out ? `<span class="absolute inset-0 bg-black/45 flex items-center justify-center"><span class="badge badge-dark">Rupture</span></span>` : ""}
       </button>
       <div class="p-3 flex-1 flex flex-col">
-        <button type="button" onclick="${go("productDetail", { id: p.id })}" class="text-left"><h3 class="t-title line-clamp-2 leading-snug">${esc(p.name)}</h3></button>
+        <button type="button" onclick="${go("productDetail", { id: p.id })}" class="text-left"><h3 class="t-title line-clamp-2 leading-snug">${p.name}</h3></button>
         <p class="t-small text-ink-2 truncate mt-0.5">${seller.name}</p>
         <div class="mt-auto pt-2 flex items-center justify-between gap-2">
           <div><span class="t-title font-extrabold">${ACStore.fmtFCFA(p.price)}</span>${p.old ? `<span class="t-small text-ink-3 line-through ml-1.5">${ACStore.fmtFCFA(p.old)}</span>` : ""}<div>${rating(p.rating, p.reviews)}</div></div>
@@ -109,14 +112,14 @@
     return `<button type="button" onclick="${go("eventDetail", { id: e.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[260px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-36" : "ratio-16-10"} bg-card-high overflow-hidden">${img(e.img, e.name)}
         <div class="absolute inset-0 gradient-up"></div>
-        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-[#0A0A0A]">${esc(e.cat)}</span>
+        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-ink">${e.cat}</span>
         <div class="absolute bottom-2.5 left-3 right-3 text-white">
-          <p class="t-caption text-gold">${YCData.fmtDate(e.date)} · ${esc(e.time)}</p>
-          <h3 class="t-title leading-snug line-clamp-2">${esc(e.name)}</h3>
+          <p class="t-caption text-gold">${YCData.fmtDate(e.date)} · ${e.time}</p>
+          <h3 class="t-title leading-snug line-clamp-2">${e.name}</h3>
         </div>
       </div>
       <div class="p-3 flex items-center justify-between gap-2">
-        <p class="t-small text-ink-2 truncate flex items-center gap-1">${icon("location_on", "text-[15px]")}${esc(e.place)}</p>
+        <p class="t-small text-ink-2 truncate flex items-center gap-1">${icon("location_on", "text-[15px]")}${e.place}</p>
         <span class="t-small font-bold whitespace-nowrap">dès ${ACStore.fmtFCFA(YCData.minPrice(e))}</span>
       </div>
     </button>`;
@@ -125,10 +128,10 @@
     const type = YCData.siteType(s.type);
     return `<button type="button" onclick="${go("cultureDetail", { id: s.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[220px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(s.img, s.name)}
-        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-[#0A0A0A]">${icon(type.icon, "text-[14px] text-[#0A0A0A]")}${type.label}</span>
+        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${type.label}</span>
         ${s.unesco ? `<span class="absolute top-2.5 right-2.5 badge badge-gold">UNESCO</span>` : ""}
       </div>
-      <div class="p-3.5"><h3 class="t-title line-clamp-2 leading-snug">${esc(s.name)}</h3><p class="t-small text-ink-2 truncate mt-0.5">${esc(s.place)}</p></div>
+      <div class="p-3.5"><h3 class="t-title line-clamp-2 leading-snug">${s.name}</h3><p class="t-small text-ink-2 truncate mt-0.5">${s.place}</p></div>
     </button>`;
   }
   function destinationCard(name, tall) {
@@ -146,7 +149,7 @@
     return `<section class="card-dark p-4 lg:p-5">
       <p class="t-caption text-gold mb-3">${title || t("next_steps")}</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 ${items.length > 2 ? "lg:grid-cols-3" : ""} gap-2.5">
-        ${items.map((it) => `<button type="button" onclick="${it.onclick}" class="flex items-center gap-3 rounded-xl bg-white/10 hover:bg-white/15 p-3 text-left transition-colors">
+        ${items.map((it) => `<button type="button" onclick="${attrJs(it.onclick)}" class="flex items-center gap-3 rounded-xl bg-white/10 hover:bg-white/15 p-3 text-left transition-colors">
           <span class="w-10 h-10 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center flex-shrink-0">${icon(it.icon, "text-[20px]")}</span>
           <span class="min-w-0"><span class="block t-title truncate">${it.label}</span>${it.sub ? `<span class="block t-small text-white/70 truncate">${it.sub}</span>` : ""}</span>
           ${icon("chevron_right", "ml-auto text-white/60")}
@@ -199,14 +202,14 @@
   function error(id) { return `<p id="${id}" class="hidden t-small text-danger font-semibold" role="alert"></p>`; }
   function showError(id, msg) { const el = document.getElementById(id); if (!el) return; el.textContent = msg; el.classList.remove("hidden"); }
   function toggle(on, onclick, label) {
-    return `<button type="button" role="switch" aria-checked="${on ? "true" : "false"}" onclick="${onclick}" class="switch ${on ? "on" : ""}" aria-label="${escAttr(label || "")}"></button>`;
+    return `<button type="button" role="switch" aria-checked="${on ? "true" : "false"}" onclick="${attrJs(onclick)}" class="switch ${on ? "on" : ""}" aria-label="${escAttr(label || "")}"></button>`;
   }
   function qtyControl(qty, onMinus, onPlus, small) {
     const s = small ? "w-8 h-8" : "w-9 h-9";
     return `<span class="inline-flex items-center gap-2.5">
-      <button type="button" onclick="${onMinus}" class="${s} rounded-full border border-line bg-card flex items-center justify-center active:scale-95" aria-label="Moins">${icon(qty <= 1 ? "delete" : "remove", "text-[18px]")}</button>
+      <button type="button" onclick="${attrJs(onMinus)}" class="${s} rounded-full border border-line bg-card flex items-center justify-center active:scale-95" aria-label="Moins">${icon(qty <= 1 ? "delete" : "remove", "text-[18px]")}</button>
       <span class="w-5 text-center font-bold">${qty}</span>
-      <button type="button" onclick="${onPlus}" class="${s} rounded-full bg-inverse text-inverse-ink flex items-center justify-center active:scale-95" aria-label="Plus">${icon("add", "text-[18px]")}</button>
+      <button type="button" onclick="${attrJs(onPlus)}" class="${s} rounded-full bg-inverse text-inverse-ink flex items-center justify-center active:scale-95" aria-label="Plus">${icon("add", "text-[18px]")}</button>
     </span>`;
   }
   function row(label, value, bold) {
@@ -232,8 +235,8 @@
   function successHero(o) {
     return `<div class="flex flex-col items-center text-center pt-4 pb-2">
       <div class="w-20 h-20 rounded-full ${o.tone === "danger" ? "bg-danger-soft text-danger" : o.tone === "warn" ? "bg-warn-soft text-warn" : "bg-gold-soft text-gold-deep"} flex items-center justify-center animate-pop">${icon(o.icon || "check_circle", "text-[44px]", true)}</div>
-      <h2 class="t-h1 mt-4">${esc(o.title)}</h2>
-      ${o.body ? `<p class="t-body text-ink-2 mt-1.5 max-w-[420px] text-balance">${esc(o.body)}</p>` : ""}
+      <h2 class="t-h1 mt-4">${o.title}</h2>
+      ${o.body ? `<p class="t-body text-ink-2 mt-1.5 max-w-[420px] text-balance">${o.body}</p>` : ""}
     </div>`;
   }
 
@@ -243,9 +246,10 @@
     let el = document.getElementById("ac-toast");
     if (!el) { el = document.createElement("div"); el.id = "ac-toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
     const tones = { success: "bg-inverse text-inverse-ink", error: "bg-danger text-white", info: "bg-inverse text-inverse-ink", warn: "bg-warn text-white" };
+    el.dataset.i18nSkip = "1";
     el.className = "toast " + (tones[tone] || tones.info);
     el.innerHTML = `<span class="inline-flex items-center gap-2">${icon(tone === "error" ? "error" : tone === "success" ? "check_circle" : "info", "text-[18px] " + (tone === "success" ? "text-gold" : ""))}<span>${esc(message)}</span></span>`;
-    if (window.I18N && I18N.apply) I18N.apply(el);
+    el.style.pointerEvents = "none";
     el.style.opacity = "1"; el.style.transform = "translate(-50%, 0)";
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translate(-50%, 8px)"; }, 2400);
@@ -265,7 +269,6 @@
       </div>`;
     document.body.appendChild(overlay);
     document.body.style.overflow = "hidden";
-    if (window.I18N && I18N.apply) I18N.apply(overlay);
   }
   function closeSheet() {
     const overlay = document.getElementById("ac-sheet-overlay");
@@ -273,12 +276,13 @@
     document.body.style.overflow = "";
   }
   function confirm(o) {
+    const run = "UI.closeSheet();" + (o.onOk || "");
     openSheet(`<div class="text-center lg:text-left">
       ${o.icon ? `<div class="w-14 h-14 rounded-full ${o.danger ? "bg-danger-soft text-danger" : "bg-gold-soft text-gold-deep"} flex items-center justify-center mx-auto lg:mx-0 mb-3">${icon(o.icon, "text-[28px]")}</div>` : ""}
       <h3 class="t-h3 mb-1.5">${esc(o.title)}</h3><p class="t-body text-ink-2 mb-5">${esc(o.body || "")}</p>
       <div class="flex flex-col sm:flex-row gap-2.5">
         ${button(o.cancelLabel || t("cancel"), "UI.closeSheet()", { variant: "outline" })}
-        ${button(o.okLabel || t("confirm"), "UI.closeSheet();" + o.onOk, { variant: o.danger ? "danger" : "primary" })}
+        ${button(o.okLabel || t("confirm"), run, { variant: o.danger ? "danger" : "primary" })}
       </div></div>`);
   }
 
@@ -312,32 +316,38 @@
 
   // Langue
   function setLang(id) {
+    try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) { /* no-op */ }
     if (!I18N.set(id)) return;
-    const active = document.activeElement;
-    if (active && active.blur) active.blur();
-    ACState._forceShow = true;
     toast(I18N.t("lang_done"), "success");
     ACStore.emit();
+    if (I18N.apply) I18N.apply(document.body);
+    if (I18N.applyTitle) I18N.applyTitle();
   }
-
-  function copyText(text, okMsg) {
+  function copy(text, okMsg) {
     const s = String(text == null ? "" : text);
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(s).then(function () { if (okMsg) toast(okMsg, "success"); }).catch(function () { toast(s, "info"); });
+      navigator.clipboard.writeText(s).then(function () { toast(okMsg || "Copié.", "success"); }).catch(function () { toast("Copie impossible sur cet appareil.", "info"); });
+      return;
     }
-    toast(okMsg || s, "info");
-    return Promise.resolve();
+    toast("Copie impossible sur cet appareil.", "info");
   }
 
   /* Format court d'une heure ISO/epoch */
   function timeAgo(at) {
     if (!at) return "";
-    const diff = Math.max(0, Date.now() - at) / 1000;
     const en = window.I18N && I18N.lang === "en";
+    const diff = Math.max(0, Date.now() - at) / 1000;
     if (diff < 60) return en ? "Just now" : "À l'instant";
-    if (diff < 3600) return en ? Math.round(diff / 60) + " min ago" : "Il y a " + Math.round(diff / 60) + " min";
-    if (diff < 86400) return en ? Math.round(diff / 3600) + " h ago" : "Il y a " + Math.round(diff / 3600) + " h";
-    return en ? Math.round(diff / 86400) + " d ago" : "Il y a " + Math.round(diff / 86400) + " j";
+    if (diff < 3600) {
+      const n = Math.round(diff / 60);
+      return en ? n + " min ago" : "Il y a " + n + " min";
+    }
+    if (diff < 86400) {
+      const n = Math.round(diff / 3600);
+      return en ? n + " h ago" : "Il y a " + n + " h";
+    }
+    const n = Math.round(diff / 86400);
+    return en ? n + " d ago" : "Il y a " + n + " j";
   }
 
   window.UI = {
@@ -347,7 +357,7 @@
     restaurantCard, productCard, eventCard, siteCard, destinationCard, nextSteps,
     stepper, timeline, field, togglePassword, select, error, showError, toggle, qtyControl, row,
     emptyState, skeletonList, spinner, successHero,
-    toast, openSheet, closeSheet, confirm, initOfflineBanner, applyTheme, setTheme, setLang, timeAgo, copy: copyText,
+    toast, openSheet, closeSheet, confirm, initOfflineBanner, applyTheme, setTheme, setLang, copy, timeAgo,
     lang: () => I18N.lang, langNames: () => I18N.LANGS
   };
 })();

@@ -32,7 +32,6 @@
     const base = Math.max(FARE.min, Math.round((FARE.base + (km || 0) * FARE.perKm) / 100) * 100);
     return Math.round((base * v.mult) / 100) * 100;
   }
-  function fareCharged() { return Math.max(0, Math.max(FARE.min, trip.price || 0) - (trip.promo || 0)); }
   function etaSec(km) { return trip.sec && trip.km ? Math.max(60, Math.round(trip.sec)) : Math.max(60, Math.round(((km || 1) / M().URBAN_SPEED_KMH) * 3600)); }
   function updateDistance() {
     if (!trip.from || !trip.to) { trip.km = 0; trip.sec = 0; return; }
@@ -61,26 +60,25 @@
   }
 
   /* Préréglage utilisé par le mode démo et les ponts (« Y aller ») */
+  function inCountryPoint(p) {
+    return !!(p && isFinite(p.lat) && isFinite(p.lng) && YCData.countryCodeAt(p.lat, p.lng) === ACState.user.countryCode);
+  }
+  Screens._goRide = function (name, lat, lng) {
+    const p = { name: name || "Destination", lat: Number(lat), lng: Number(lng) };
+    if (!inCountryPoint(p)) { UI.toast("Ce lieu est en dehors du pays choisi. Changez de ville pour y aller.", "info"); return; }
+    Screens._transportPreset({ toLatLng: p });
+    App.nav("transport");
+  };
   Screens._transportPreset = function (o) {
     o = o || {};
     const city = YCData.cityOf(ACState.user.city);
     const find = (name) => { if (!name) return null; const n = YCData.norm(name); return city.poi.find((p) => YCData.norm(p.name).includes(n) || n.includes(YCData.norm(p.name).split(" (")[0])) || null; };
-    if (o.fromLatLng) trip.from = o.fromLatLng; else if (o.from) { const p = find(o.from); if (p) trip.from = { name: p.name, lat: p.lat, lng: p.lng }; }
-    if (o.toLatLng) trip.to = o.toLatLng; else if (o.to) { const p = find(o.to); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; } else if (o.toName) {
-      const p = find(o.toName);
-      if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng };
-      else {
-        const n = YCData.norm(o.toName);
-        const site = YCData.SITES.find((s) => YCData.norm(s.name).includes(n) || n.includes(YCData.norm(s.name)));
-        const ev = !site && YCData.allEvents().find((e) => YCData.norm(e.place).includes(n) || YCData.norm(e.name).includes(n));
-        const rest = !site && !ev && YCData.RESTAURANTS.find((r) => YCData.norm(r.name).includes(n) || n.includes(YCData.norm(r.name)));
-        if (site) trip.to = { name: site.name, lat: site.lat, lng: site.lng };
-        else if (ev) trip.to = { name: ev.place, lat: ev.lat, lng: ev.lng };
-        else if (rest) trip.to = { name: rest.name, lat: rest.lat, lng: rest.lng };
-        else trip.to = { name: o.toName, lat: city.lat, lng: city.lng };
-      }
-    }
-    if (!trip.from) { const home = ACState.addresses[0]; trip.from = home && home.lat ? { name: home.label + " · " + home.detail.split(",")[0], lat: home.lat, lng: home.lng } : { name: city.poi[0].name, lat: city.poi[0].lat, lng: city.poi[0].lng }; }
+    if (o.fromLatLng) { if (inCountryPoint(o.fromLatLng)) trip.from = o.fromLatLng; else UI.toast("Ce lieu est en dehors du pays choisi.", "info"); }
+    else if (o.from) { const p = find(o.from); if (p) trip.from = { name: p.name, lat: p.lat, lng: p.lng }; }
+    if (o.toLatLng) { if (inCountryPoint(o.toLatLng)) trip.to = o.toLatLng; else UI.toast("Ce lieu est en dehors du pays choisi.", "info"); }
+    else if (o.to) { const p = find(o.to); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; }
+    else if (o.toName) { const p = find(o.toName); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; else UI.toast("Ce lieu est en dehors du pays choisi.", "info"); }
+    if (!trip.from) { const home = ACState.addresses[0]; trip.from = home && home.lat && inCountryPoint(home) ? { name: home.label + " · " + home.detail.split(",")[0], lat: home.lat, lng: home.lng } : { name: city.poi[0].name, lat: city.poi[0].lat, lng: city.poi[0].lng }; }
     if (o.vehicle) trip.vehicle = o.vehicle;
     trip.route = null; trip.status = "idle"; trip.driver = null; updateDistance(); syncTrip();
   };
@@ -125,7 +123,7 @@
         <div class="absolute inset-0 lg:static lg:h-full">
           <div id="tr-map" class="absolute inset-0 lg:relative lg:h-full w-full"></div>
           <div class="absolute top-3 right-3 z-10 flex flex-col gap-2">
-            <button type="button" onclick="Screens._useMyPosition()" class="icon-btn" title="Ma position" aria-label="Ma position">${icon("my_location")}</button>
+            <button type="button" onclick="Screens._useMyPosition('from')" class="icon-btn" title="Ma position" aria-label="Ma position">${icon("my_location")}</button>
             <button type="button" onclick="Shell.openCityPicker()" class="icon-btn" title="Changer de ville" aria-label="Changer de ville">${icon("public")}</button>
           </div>
         </div>
@@ -138,8 +136,11 @@
     map = M().create("tr-map", { interactive: true, zoomPosition: "bottomright" });
     if (!map) { refreshPanel(); return; }
     refreshMarkers();
-    map.onClick((p) => Screens._setTripPoint(trip.pickMode, { name: "Point sur la carte (" + p.lat.toFixed(4) + ", " + p.lng.toFixed(4) + ")", lat: p.lat, lng: p.lng }));
-    M().locate((pos) => { if (map) map.setUser([pos.lat, pos.lng]); });
+    map.onClick((p) => {
+      if (YCData.countryCodeAt(p.lat, p.lng) !== ACState.user.countryCode) { UI.toast("Ce point est en dehors du pays choisi.", "info"); return; }
+      Screens._setTripPoint(trip.pickMode, { name: "Point sur la carte (" + p.lat.toFixed(4) + ", " + p.lng.toFixed(4) + ")", lat: p.lat, lng: p.lng });
+    });
+    M().locate((pos) => { if (map && pos.ok) map.setUser([pos.lat, pos.lng]); });
     refreshPanel();
     loadRoute();
   }
@@ -154,8 +155,15 @@
   }
   Screens._pickOperator = function (id) {
     const o = OPERATORS.find((x) => x.id === id);
-    if (!o || !o.available) { UI.toast("Partenariat pas encore ouvert. Course via YOUSS Ride.", "info"); return; }
+    if (!o || !o.available) return;
     trip.operator = id; syncTrip(); refreshPanel();
+  };
+  Screens._waitOperator = function (id) {
+    const bag = ACState.prefs.waitlist || (ACState.prefs.waitlist = {});
+    bag[id] = Date.now();
+    ACStore.emit();
+    refreshPanel();
+    UI.toast("Demande notée sur cet appareil. YOUSS Ride reste disponible.", "info");
   };
   function refreshPanel() {
     updateDistance();
@@ -172,9 +180,16 @@
     }).join("");
     if (ops) ops.innerHTML = OPERATORS.map((o) => {
       const sel = trip.operator === o.id;
-      return `<button type="button" onclick="Screens._pickOperator('${o.id}')" class="w-full rounded-2xl border p-3 flex items-center justify-between gap-3 text-left ${sel ? "border-gold bg-gold/10" : "border-line"} ${o.available ? "" : "opacity-60"}">
-        <span class="min-w-0"><span class="block t-title">${o.label}${o.available ? "" : " · bientôt"}</span><span class="block t-small text-ink-2">${o.sub}</span></span>
-        ${sel && o.available ? icon("check_circle", "text-gold", true) : ""}
+      if (!o.available) {
+        const asked = ACState.prefs.waitlist && ACState.prefs.waitlist[o.id];
+        return `<div class="w-full rounded-2xl border border-line p-3 flex items-center justify-between gap-3 text-left">
+          <span class="min-w-0"><span class="block t-title">${o.label}</span><span class="block t-small text-ink-2">Partenariat en cours. YOUSS Ride assure la course.</span></span>
+          <button type="button" onclick="Screens._waitOperator('${o.id}')" class="btn btn-sm btn-outline flex-shrink-0">${asked ? "Noté" : "Me prévenir"}</button>
+        </div>`;
+      }
+      return `<button type="button" onclick="Screens._pickOperator('${o.id}')" class="w-full rounded-2xl border p-3 flex items-center justify-between gap-3 text-left ${sel ? "border-gold bg-gold/10" : "border-line"}">
+        <span class="min-w-0"><span class="block t-title">${o.label}</span><span class="block t-small text-ink-2">${o.sub}</span></span>
+        ${sel ? icon("check_circle", "text-gold", true) : ""}
       </button>`;
     }).join("");
     if (btn) btn.innerHTML = `${I18N.t("continue")}${trip.km ? " · " + ACStore.fmtFCFA(trip.price) : ""}${icon("arrow_forward", "text-[20px]")}`;
@@ -185,17 +200,23 @@
   }
 
   // Saisie et suggestions
+  function hereRow(role) {
+    return `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._useMyPosition('${role || "from"}')" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line">
+      <span class="w-9 h-9 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center flex-shrink-0">${icon("my_location", "text-[18px]")}</span>
+      <span class="min-w-0 flex-1"><span class="block t-small font-semibold truncate">Utiliser ma position actuelle</span><span class="block t-small text-ink-3 truncate">Demande l'accès à votre position · ${esc(ACState.user.country)}</span></span>
+    </button>`;
+  }
   function renderSuggestions(list, opts) {
     const box = document.getElementById("place-suggestions"); if (!box) return;
     lastSuggestions = list;
-    if (!list.length && !(opts && opts.loading)) {
-      box.innerHTML = `<p class="px-4 py-4 t-small text-ink-2">${opts && opts.query ? "Aucun lieu trouvé pour « " + esc(opts.query) + " »" : "Saisissez une adresse, un quartier ou un lieu"}</p>`;
-    } else {
-      box.innerHTML = list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._pickSuggestion(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0">
+    const role = suggestRole || "to";
+    const empty = !list.length && !(opts && opts.loading)
+      ? `<p class="px-4 py-4 t-small text-ink-2">${opts && opts.query ? "Aucun lieu dans " + esc(ACState.user.country) + " pour « " + esc(opts.query) + " »" : "Saisissez une adresse, un quartier ou un lieu dans " + esc(ACState.user.country)}</p>`
+      : list.map((s, i) => `<button type="button" onmousedown="event.preventDefault()" onclick="Screens._pickSuggestion(${i})" class="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-low border-b border-line last:border-0">
         <span class="w-9 h-9 rounded-full bg-surface-low text-ink flex items-center justify-center flex-shrink-0">${icon(s.icon || "place", "text-[18px]")}</span>
         <span class="min-w-0 flex-1"><span class="block t-small font-semibold truncate">${esc(s.name)}</span><span class="block t-small text-ink-3 truncate">${esc(s.detail)}</span></span>${icon("north_west", "text-[16px] text-ink-3")}
       </button>`).join("") + (opts && opts.loading ? `<p class="px-4 py-2.5 t-small text-ink-3 flex items-center gap-2 border-t border-line">${UI.spinner("!w-4 !h-4 !border-2")}Recherche en cours…</p>` : "");
-    }
+    box.innerHTML = hereRow(role) + empty;
     box.classList.remove("hidden");
   }
   const hideSuggestions = () => { const b = document.getElementById("place-suggestions"); if (b) b.classList.add("hidden"); };
@@ -226,8 +247,10 @@
       if (!p || req !== suggestReq || !App.current || App.current.id !== "transport") return;
       // entre-temps l'utilisateur a pu choisir un lieu sur la carte ou dans les raccourcis
       const now = role === "from" ? trip.from : trip.to; if ((now ? now.name : null) !== before) return;
-      if (p.approx) UI.toast("Adresse gardée telle quelle, position approximative. Vous pouvez l'ajuster sur la carte.", "info");
-      const el = document.getElementById(role === "from" ? "from-input" : "dest-input"); if (fromEnter && el) el.blur();
+      const el = document.getElementById(role === "from" ? "from-input" : "dest-input");
+      if (p.outside) { UI.toast("Ce lieu est en dehors du pays choisi.", "info"); if (el) el.value = before || ""; refreshPanel(); return; }
+      if (p.approx) UI.toast("Adresse gardée telle quelle, position approximative dans " + ACState.user.country + ".", "info");
+      if (fromEnter && el) el.blur();
       Screens._setTripPoint(role, { name: p.name, lat: p.lat, lng: p.lng });
       if (fromEnter && role === "from" && !trip.to) { const d = document.getElementById("dest-input"); if (d) setTimeout(() => d.focus(), 60); }
     });
@@ -251,12 +274,21 @@
   Screens._pickPoi = function (p) { Screens._setTripPoint(trip.pickMode, { name: p.name, lat: p.lat, lng: p.lng }); UI.toast((trip.pickMode === "to" && trip.to && trip.to.name === p.name ? "Destination : " : "Départ : ") + p.name.split("(")[0].trim(), "info"); };
   Screens._swapTripPoints = function () { const f = trip.from; trip.from = trip.to; trip.to = f; trip.route = null; updateDistance(); syncTrip(); refreshMarkers(); refreshPanel(); loadRoute(); };
   Screens._pickVehicle = function (id) { trip.vehicle = id; updateDistance(); syncTrip(); refreshPanel(); };
-  Screens._useMyPosition = function () {
-    UI.toast("Localisation en cours…", "info");
+  Screens._useMyPosition = function (role) {
+    const target = role === "to" || role === "from" ? role : (suggestRole || "from");
+    UI.toast("Demande d'accès à votre position…", "info");
     M().locate((pos) => {
-      Screens._setTripPoint("from", { name: pos.ok ? "Ma position actuelle" : "Ma position (estimée)", lat: pos.lat, lng: pos.lng });
-      trip.pickMode = "to"; if (map) { map.setUser([pos.lat, pos.lng]); map.setView(pos.lat, pos.lng, 14); }
-      UI.toast("Départ = votre position", "success");
+      if (!pos.ok) {
+        if (pos.denied) UI.toast("Accès refusé. Autorisez la position dans votre navigateur, puis réessayez.", "error");
+        else if (pos.outside) UI.toast("Votre position est en dehors du pays choisi. Les destinations restent dans ce pays.", "info");
+        else UI.toast("Position indisponible. Réessayez.", "error");
+        return;
+      }
+      hideSuggestions();
+      Screens._setTripPoint(target, { name: "Position actuelle", lat: pos.lat, lng: pos.lng });
+      if (target === "from") trip.pickMode = trip.to ? trip.pickMode : "to";
+      if (map) { map.setUser([pos.lat, pos.lng]); map.setView(pos.lat, pos.lng, 15); }
+      UI.toast(target === "from" ? "Départ placé sur votre position." : "Destination placée sur votre position.", "success");
     });
   };
 
@@ -302,7 +334,7 @@
             ${UI.row("Distance", M().fmtKm(trip.km))}${UI.row("Durée estimée", "≈ " + M().fmtEta(etaSec(trip.km)))}${UI.row("Véhicule", v.label)}${UI.row("Opérateur", operatorOf().label)}
             ${trip.promo ? UI.row("Code promo", "-" + ACStore.fmtFCFA(trip.promo)) : ""}
             <div class="divider border-white/15 my-2"></div>
-            <div class="flex items-center justify-between"><span class="t-title">Prix de la course</span><span class="t-h2">${ACStore.fmtFCFA(fareCharged())}</span></div>
+            <div class="flex items-center justify-between"><span class="t-title">Prix de la course</span><span class="t-h2">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
             <p class="t-small text-white/60 mt-2">Prix fixe calculé sur l'itinéraire routier. Pas de surprise à l'arrivée.</p>
           </div>
           ${UI.primaryButton("Confirmer la course", "Screens._transportRequest()", { size: "lg", iconRight: "arrow_forward" })}
@@ -335,12 +367,35 @@
       <p id="search-status" class="t-small text-ink-3 mt-6">Demande envoyée à ${operatorOf().label} · ${vehicleOf().label.toLowerCase()} à proximité…</p>
       <button type="button" onclick="Screens._cancelSearch()" class="btn btn-outline mt-10">Annuler la demande</button>
     </div>`;
+    const liveHold = window.YCBackend && YCBackend.isLive() && window.YCProviders && !YCProviders.ride.connected;
+    if (liveHold) {
+      const held = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto px-4">
+        <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center">${icon(vehicleOf().icon, "text-gold text-[52px]")}</div>
+        <h2 class="t-h1 mt-8">Demande enregistrée</h2>
+        <p class="t-body text-ink-2 mt-2 max-w-[360px]">De ${esc(trip.from.name)} vers ${esc(trip.to.name)}. Gozem, inDrive et WeDrive ne sont pas encore branchés. Aucun chauffeur n'est envoyé et aucun montant n'est débité.</p>
+        <button type="button" onclick="Screens._cancelSearch()" class="btn btn-outline mt-10">Annuler la demande</button>
+      </div>`;
+      Shell.render(container, { title: "Recherche", back: "App.nav('transportConfirm')", body: held, nav: false, hideSearch: true });
+      if (!trip.holdSaved) {
+        trip.holdSaved = true;
+        YCProviders.saveRequest("ride", { from: trip.from, to: trip.to, vehicle: trip.vehicle, price: trip.price, method: trip.method }).then(function (res) {
+          trip.holdId = res && res.id ? res.id : "";
+          if (!res || !res.ok) UI.toast((res && res.message) || "La demande n'a pas pu être enregistrée.", "error");
+        });
+      }
+      return;
+    }
     Shell.render(container, { title: "Recherche", back: "App.nav('transportConfirm')", body, nav: false, hideSearch: true });
     const msgs = ["3 chauffeurs contactés…", "Un chauffeur a accepté. Vérification…"];
     msgs.forEach((m, i) => setTimeout(() => { const el = document.getElementById("search-status"); if (el && App.current.id === "transportSearching") el.textContent = m; }, 900 * (i + 1)));
     setTimeout(() => { if (App.current && App.current.id === "transportSearching") { Screens._transportAssignDriver(); App.replace("transportDriverFound"); } }, 2600);
   };
-  Screens._cancelSearch = function () { trip.status = "idle"; syncTrip(); UI.toast("Demande annulée. Aucun montant débité.", "info"); App.resetTo("transport"); };
+  Screens._cancelSearch = function () {
+    if (trip.holdId && trip.holdId !== "pending" && window.YCProviders) YCProviders.cancel(trip.holdId);
+    trip.holdId = "";
+    trip.holdSaved = false;
+    trip.status = "idle"; syncTrip(); UI.toast("Demande annulée. Aucun montant débité.", "info"); App.resetTo("transport");
+  };
   Screens._transportAssignDriver = function () {
     const d = YCData.driverFor(ACState.user.city, trip.vehicle === "premium" ? "premium" : trip.vehicle);
     trip.driver = Object.assign({}, d, { car: trip.vehicle === "moto" && d.vehicle !== "moto" ? "Honda CG 125 · Noire" : d.car, etaMin: trip.vehicle === "moto" ? 2 : trip.vehicle === "premium" ? 6 : 4 });
@@ -365,11 +420,11 @@
           <div class="rounded-xl bg-gold-soft p-3"><p class="t-caption text-gold-deep">Arrivée</p><p class="t-small font-bold mt-0.5 text-gold-deep" id="df-eta">${d.etaMin} min</p></div>
         </div>
         <div class="flex gap-2 w-full mt-4">
-          <a href="tel:${esc(d.phone)}" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}${I18N.t("call")}</a>
+          <button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}${I18N.t("call")}</button>
           <button type="button" onclick="Screens._tripChat()" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}${I18N.t("message")}</button>
         </div>
       </div>
-      <div class="card p-4 space-y-2">${UI.row("Trajet", esc(trip.from.name.split("(")[0]) + " vers " + esc(trip.to.name.split("(")[0]))}${UI.row("Prix", ACStore.fmtFCFA(fareCharged()), true)}${UI.row("Paiement", (ACState.paymentMethods.find((m) => m.type === trip.method) || {}).label || "Youss Wallet")}</div>
+      <div class="card p-4 space-y-2">${UI.row("Trajet", esc(trip.from.name.split("(")[0]) + " vers " + esc(trip.to.name.split("(")[0]))}${UI.row("Prix", ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0))), true)}${UI.row("Paiement", (ACState.paymentMethods.find((m) => m.type === trip.method) || {}).label || "Youss Wallet")}</div>
       ${UI.primaryButton("Suivre la course", "App.replace('transportInRide')", { size: "lg", icon: "near_me" })}
       <button type="button" onclick="Screens._cancelRide()" class="w-full t-small text-danger font-semibold py-2">Annuler la course</button>
     </div>`;
@@ -385,9 +440,9 @@
   Screens._tripChat = function () {
     const d = trip.driver || {};
     const canned = ["Je suis au point de départ", "J'arrive dans 2 minutes", "Pouvez-vous m'attendre ?", "Appelez-moi en arrivant"];
-    UI.openSheet(`<div class="flex items-center gap-3 mb-4">${UI.avatar(d, "w-11 h-11")}<div><p class="t-title">${esc(d.name || "Chauffeur")}</p><p class="t-small text-success font-semibold">En ligne</p></div></div>
+    UI.openSheet(`<div class="flex items-center gap-3 mb-4">${UI.avatar(d, "w-11 h-11")}<div><p class="t-title">${esc(d.name || "Chauffeur")}</p><p class="t-small text-ink-2">Sur cet appareil</p></div></div>
       <div id="chat-log" class="space-y-2 max-h-[260px] overflow-y-auto mb-3">
-        <div class="max-w-[80%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">Bonjour ${esc(ACState.user.name)}, je suis en route. ${esc((d.car || "").split("·")[0])}</div>
+        <div class="max-w-[90%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">Ce message reste sur cet appareil. Le chauffeur ne le reçoit pas.</div>
       </div>
       <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">${canned.map((c) => `<button type="button" onclick="Screens._chatSend(${UI.js(c)})" class="chip">${c}</button>`).join("")}</div>
       <form onsubmit="event.preventDefault();Screens._chatSend(document.getElementById('chat-input').value)" class="flex gap-2 mt-2"><input id="chat-input" class="input flex-1" placeholder="Votre message…"/><button type="submit" class="btn btn-primary !w-12 !px-0" aria-label="Envoyer">${icon("send")}</button></form>`);
@@ -398,7 +453,6 @@
     if (!log) return;
     log.insertAdjacentHTML("beforeend", `<div class="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-inverse text-inverse-ink p-3 t-small">${esc(text)}</div>`);
     log.scrollTop = log.scrollHeight;
-    setTimeout(() => { if (!document.getElementById("chat-log")) return; log.insertAdjacentHTML("beforeend", `<div class="max-w-[80%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">D'accord, à tout de suite 👍</div>`); log.scrollTop = log.scrollHeight; }, 900);
   };
 
   // Suivi en course
@@ -414,8 +468,8 @@
           <div class="h-1.5 rounded-full bg-card-high overflow-hidden mt-3"><div id="ride-progress" class="h-full rounded-full bg-gold transition-[width] duration-200" style="width:0%"></div></div>
         </div>
         <div class="flex items-center gap-3">${UI.avatar(d, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(d.name)} · ★ ${d.rating}</p><p class="t-small text-ink-2 truncate">${esc(d.car)} · ${esc(d.plate)}</p></div>
-          <a href="tel:${esc(d.phone)}" class="icon-btn" aria-label="Appeler">${icon("call")}</a><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
-        <div class="flex items-center justify-between"><span class="t-body text-ink-2">Montant</span><span class="t-title font-extrabold">${ACStore.fmtFCFA(fareCharged())}</span></div>
+          <button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
+        <div class="flex items-center justify-between"><span class="t-body text-ink-2">Montant</span><span class="t-title font-extrabold">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
         <button type="button" id="finish-btn" onclick="Screens._transportFinish()" class="btn btn-lg btn-dark btn-block">Terminer la course</button>
       </div>`;
     const body = `<div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
@@ -471,7 +525,9 @@
   }
   Screens._shareRide = function () {
     const text = "Je suis en course YOUSS CONNECT avec " + trip.driver.name + " (" + trip.driver.plate + ") vers " + trip.to.name + ".";
-    if (navigator.share) navigator.share({ title: "Ma course YOUSS CONNECT", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien de suivi copié.", "success")).catch(() => UI.toast(text, "info")); else UI.toast("Lien de suivi partagé.", "success");
+    if (navigator.share) navigator.share({ title: "Ma course YOUSS CONNECT", text }).catch(function () {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { UI.toast("Texte de la course copié.", "success"); }).catch(function () { UI.toast("Le partage n'est pas disponible sur cet appareil.", "info"); });
+    else UI.toast("Le partage n'est pas disponible sur cet appareil.", "info");
   };
   Screens._transportMarkArrived = function () { trip.status = "arrived"; trip.fastDemo = true; syncTrip(); };
   Screens._transportFinish = function () { trip.status = "arrived"; syncTrip(); App.nav("transportEnd"); };
@@ -480,7 +536,8 @@
   Screens.transportEnd = function (container) {
     if (!trip.driver) { App.resetTo("transport"); return; }
     const d = trip.driver;
-    const total = fareCharged();
+    const fareCharged = Math.max(0, Math.max(FARE.min, trip.price) - (trip.promo || 0));
+    const total = fareCharged;
     const durationMin = Math.max(3, Math.round(etaSec(trip.km) / 60));
     const method = ACState.paymentMethods.find((m) => m.type === trip.method) || ACState.paymentMethods[0];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -500,7 +557,7 @@
         <textarea id="ride-comment" class="textarea mt-3" placeholder="Un commentaire (optionnel)">${esc(trip.comment || "")}</textarea>
         <div class="flex items-center justify-center gap-2 mt-3"><span class="t-small text-ink-2">Pourboire :</span>${[0, 200, 500, 1000].map((v) => `<button type="button" onclick="Screens._setTip(${v})" class="chip ${(trip.tip || 0) === v ? "on" : ""}">${v ? ACStore.fmtFCFA(v) : "Aucun"}</button>`).join("")}</div>
       </div>
-      ${UI.primaryButton((trip.method === "cash" ? "Terminer · payé en espèces " : "Payer ") + ACStore.fmtFCFA(total + (trip.tip || 0)), "Screens._transportPay()", { size: "lg", icon: trip.method === "cash" ? "check" : "account_balance_wallet" })}
+      ${UI.primaryButton((trip.method === "cash" ? "Terminer · payé en espèces " : "Payer ") + ACStore.fmtFCFA(total + (trip.tip || 0)), "Screens._transportPay()", { size: "lg", icon: "lock", id: "yc-pay-ride" })}
     </div>`;
     Shell.render(container, { title: "Fin de course", back: "App.nav('home')", body, nav: false, hideSearch: true });
   };
@@ -508,15 +565,25 @@
   Screens._setTip = function (v) { trip.tip = v; trip.comment = (document.getElementById("ride-comment") || {}).value || ""; App.replace("transportEnd"); };
   Screens._ratingTag = function (btn) { btn.classList.toggle("on"); };
   Screens._transportPay = function () {
-    const total = fareCharged() + (trip.tip || 0);
+    if (!trip.to) { UI.toast("La course est incomplète.", "error"); return; }
+    if (Screens._preferCard) { trip.method = "card"; Screens._preferCard = false; }
+    if (Screens.needCard(trip.method)) return;
+    const fareCharged = Math.max(0, Math.max(FARE.min, trip.price) - (trip.promo || 0));
+    const total = fareCharged + (trip.tip || 0);
+    Screens.requirePay("Course · " + ACStore.fmtFCFA(total), function () { Screens._transportPayNow(); });
+  };
+  Screens._transportPayNow = function () {
+    const fareCharged = Math.max(0, Math.max(FARE.min, trip.price) - (trip.promo || 0));
+    const total = fareCharged + (trip.tip || 0);
     trip.comment = (document.getElementById("ride-comment") || {}).value || "";
     const dest = trip.to.name.split("(")[0].trim();
     ACStore.whenPaid(ACStore.pay({
       amount: total, label: "Course · " + dest, service: "transport", pointsEarned: 25, method: trip.method,
       meta: { from: trip.from.name, to: trip.to.name, km: String(trip.km || "") },
       activity: { detail: { from: trip.from.name, to: trip.to.name, km: trip.km, driver: trip.driver.name, rating: trip.rating, vehicle: vehicleOf().label, duration: Math.round(etaSec(trip.km) / 60) } }
-    }), function () {
+    }), function (res) {
       const city = ACState.user.city;
+      if (window.YCReceipt) YCReceipt.deliver(res && res.tx, { title: "Reçu de course", label: "Course · " + dest });
       trip.status = "done"; trip.driver = null; trip.promo = 0; trip.tip = 0; trip.fastDemo = false; syncTrip();
       const rest = YCData.nearby(trip.to.lat, trip.to.lng, YCData.restaurantsIn(city), 1)[0];
       App.resetTo("paymentSuccess", { amount: total, title: "Course payée", body: "+25 points Youss Bonus ajoutés. Merci " + ACState.user.name + " !", next: "transport", rest: rest ? rest.id : "" });

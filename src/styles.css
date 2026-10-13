@@ -62,12 +62,14 @@
   .divider { @apply border-t border-line; }
 
   /* Boutons */
-  .btn { @apply inline-flex items-center justify-center gap-2 h-12 px-5 rounded-2xl t-title transition-all duration-150 active:scale-[.98] disabled:opacity-40 disabled:pointer-events-none; }
-  .btn-sm { @apply h-9 px-3.5 rounded-xl text-[13px] font-semibold; }
-  .btn-lg { @apply h-14 px-7 rounded-2xl text-[16px]; }
+  .btn { @apply inline-flex items-center justify-center gap-2 min-h-12 h-auto min-w-0 whitespace-normal text-center px-5 py-2 rounded-2xl t-title leading-tight transition-all duration-150 active:scale-[.98] disabled:opacity-40 disabled:pointer-events-none; }
+  .btn > span { @apply min-w-0; }
+  .btn-sm { @apply min-h-9 h-auto px-3.5 py-1.5 rounded-xl text-[13px] font-semibold; }
+  .btn-lg { @apply min-h-14 h-auto px-7 py-2.5 rounded-2xl text-[16px]; }
   .btn-primary { @apply bg-gold text-[#0A0A0A] font-bold hover:brightness-[1.03]; }
   .btn-dark { @apply bg-inverse text-inverse-ink font-bold hover:opacity-90; }
   .btn-outline { @apply bg-card border border-line text-ink font-semibold hover:bg-surface-low; }
+  .btn-secondary { @apply bg-card border border-line text-ink font-semibold hover:bg-surface-low; }
   .btn-ghost { @apply bg-transparent text-ink font-semibold hover:bg-surface-low; }
   .btn-danger { @apply bg-danger text-white font-bold; }
   .btn-block { @apply w-full; }
@@ -114,8 +116,10 @@
   /* Scroll horizontal sans barre */
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  .hscroll { @apply flex gap-3 overflow-x-auto no-scrollbar max-w-full min-w-0 -mx-5 px-5 lg:mx-0 lg:px-0 lg:flex-wrap; }
+  .hscroll { @apply flex gap-3 overflow-x-auto no-scrollbar max-w-full min-w-0 -mx-4 px-4 sm:-mx-5 sm:px-5 lg:mx-0 lg:px-0 lg:flex-wrap; }
   .hscroll > * { @apply flex-shrink-0; }
+  /* Une colonne ne doit pas élargir la page : le texte passe à la ligne. */
+  .grid > * { min-width: 0; }
 
   /* Icônes Material Symbols */
   /* le nom de l'icône (arrow_back...) ne doit pas apparaître en texte brut avant le chargement de la police */
@@ -141,7 +145,7 @@
 
   /* Youss Wallet : grilles d'actions, KPI solde, montants de recharge */
   .wallet-kpi-grid { @apply grid grid-cols-2 gap-2 sm:gap-3 min-w-0; }
-  .wallet-kpi-cell { @apply rounded-xl bg-white/10 p-2.5 sm:p-3 min-w-0 overflow-hidden; }
+  .wallet-kpi-cell { @apply rounded-xl bg-inverse-ink/10 p-2.5 sm:p-3 min-w-0 overflow-hidden; }
   .wallet-action-grid { @apply grid grid-cols-3 gap-1.5 sm:gap-3 min-w-0 max-w-full; grid-auto-rows: 1fr; }
   .wallet-action-btn { @apply card card-press flex flex-col items-center justify-center gap-1 p-1.5 sm:p-3 min-h-[72px] sm:min-h-[92px] min-w-0 h-full text-center overflow-hidden; }
   .wallet-action-btn__icon { @apply w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center flex-shrink-0; }
@@ -185,7 +189,7 @@
   /* Feuille basse / modale */
   .sheet-overlay { @apply fixed inset-0 z-[900] flex items-end lg:items-center justify-center p-0 lg:p-6; }
   .sheet { @apply relative w-full lg:max-w-[520px] bg-card border border-line rounded-t-3xl lg:rounded-3xl p-5 pb-8 lg:pb-6 max-h-[88vh] overflow-y-auto; }
-  .toast { @apply fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-[999] px-4 py-3 rounded-2xl t-small font-semibold text-center max-w-[360px] transition-all duration-200; }
+  .toast { @apply pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-[999] px-4 py-3 rounded-2xl t-small font-semibold text-center max-w-[360px] transition-all duration-200; }
 
   /* Entrée d'écran */
   .screen-enter { animation: screen-in .22s ease-out both; }
@@ -193,6 +197,29 @@
 }
 
 @layer utilities {
+  /* Premières pages : la photo ne doit pas manger le titre ni le bouton sur un téléphone. */
+  .splash-logo { width: min(200px, 52vw); }
+  @media (min-width: 640px) { .splash-logo { width: 220px; } }
+  @media (min-width: 1024px) { .splash-logo { width: 280px; } }
+  .onb { @apply h-dvh max-h-dvh bg-[#0A0A0A] text-white flex flex-col overflow-hidden; }
+  .onb-photo { @apply relative w-full shrink-0 overflow-hidden; height: 34dvh; min-height: 148px; max-height: 250px; }
+  .onb-copy { @apply relative flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pt-3; padding-bottom: max(1.15rem, env(safe-area-inset-bottom)); }
+  .onb-title { @apply text-[28px] leading-[34px] font-extrabold tracking-[-0.02em]; }
+  .onb-actions { @apply mt-4 flex flex-row items-center gap-3 shrink-0; }
+  .onb-back { @apply shrink-0 w-14 h-14 rounded-2xl bg-white/10 text-white flex items-center justify-center; }
+  .onb-next { @apply btn btn-lg btn-primary min-w-0 shrink-0; flex: 1 1 auto; min-height: 3.5rem; height: auto; }
+  @media (max-height: 700px) {
+    .onb-photo { height: 26dvh; min-height: 120px; max-height: 180px; }
+    .onb-title { font-size: 24px; line-height: 30px; }
+    .onb-copy { padding-top: 0.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .onb { display: grid; grid-template-columns: 1fr 1fr; height: auto; max-height: none; min-height: 100dvh; overflow: visible; }
+    .onb-photo { height: 100dvh; max-height: none; min-height: 0; }
+    .onb-copy { @apply justify-center px-16 py-16; }
+    .onb-title { font-size: 40px; line-height: 48px; }
+    .onb-actions { @apply mt-8; }
+  }
   .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px); }
   .safe-top { padding-top: env(safe-area-inset-top, 0px); }
   .text-balance { text-wrap: balance; }
