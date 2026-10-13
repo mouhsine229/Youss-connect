@@ -107,7 +107,13 @@
   Screens._dlFragile = () => { parcel.fragile = !parcel.fragile; rerender(); };
   Screens._dlVehicle = (id) => { parcel.vehicle = id; rerender(); };
   Screens._dlSwap = () => { const f = parcel.from; parcel.from = parcel.to; parcel.to = f; rerender(); };
-  Screens._dlUseAddress = (id) => { const a = ACState.addresses.find((x) => x.id === id); if (!a) return; const c = YCData.cityOf(ACState.user.city); parcel.to = { name: a.label + " · " + a.detail, lat: a.lat || c.lat, lng: a.lng || c.lng, city: c.name }; rerender(); };
+  Screens._dlUseAddress = (id) => {
+    const a = ACState.addresses.find((x) => x.id === id); if (!a) return;
+    const fromDetail = Object.keys(YCData.CITIES).find((c) => (a.detail || "").indexOf(c) >= 0);
+    const c = YCData.cityOf(fromDetail || ACState.user.city);
+    parcel.to = { name: a.label + " · " + a.detail, lat: a.lat || c.lat, lng: a.lng || c.lng, city: c.name };
+    rerender();
+  };
   let lastList = [];
   function showSuggest(list) {
     const box = document.getElementById("dl-suggest"); if (!box) return;
@@ -197,7 +203,7 @@
   Screens._dlMethod = (t) => { parcel.method = t; App.replace("deliveryConfirm"); };
   Screens._payDelivery = function () {
     ACStore.whenPaid(ACStore.pay({ amount: parcel.price, label: "Livraison " + CATS.find((c) => c.id === parcel.cat).label.toLowerCase() + " vers " + parcel.to.name.split("·")[0].trim(), service: "livraison", pointsEarned: 15, method: parcel.method, activity: { status: "En cours", detail: { from: parcel.from.name, to: parcel.to.name, recipient: parcel.recipient, km: parcel.km } } }),
-      function () { parcel.status = "searching"; parcel.code = String(Math.floor(1000 + Math.random() * 8999)); App.resetTo("deliverySearching"); },
+      function (res) { parcel.status = "searching"; parcel.code = String(Math.floor(1000 + Math.random() * 8999)); parcel.activityId = res && res.activityId; App.resetTo("deliverySearching"); },
       function (res) { App.nav("paymentFailed", { retry: "deliveryConfirm", amount: parcel.price, reason: res.reason }); });
   };
 
@@ -286,7 +292,8 @@
 
   Screens.deliveryDone = function (container) {
     const c = parcel.courier || {};
-    const act = ACState.activities.find((a) => a.service === "livraison" && a.status === "En cours");
+    const act = (parcel.activityId && ACState.activities.find((a) => a.id === parcel.activityId))
+      || ACState.activities.find((a) => a.service === "livraison" && a.status === "En cours" && a.detail && a.detail.to === (parcel.to && parcel.to.name));
     if (act) { act.status = "Livré"; ACStore.emit(); }
     const city = ACState.user.city;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">

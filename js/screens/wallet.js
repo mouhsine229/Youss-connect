@@ -13,11 +13,11 @@
     return `<button type="button" onclick="${go("walletTxnDetail", { id: t.id })}" class="w-full max-w-full min-w-0 flex items-center justify-between gap-2 sm:gap-3 p-3.5 text-left hover:bg-surface-low transition-colors overflow-hidden">
       <span class="flex items-center gap-3 min-w-0 flex-1 overflow-hidden"><span class="w-10 h-10 rounded-full ${t.type === "credit" ? "bg-success-soft text-success" : t.status === "failed" ? "bg-danger-soft text-danger" : "bg-surface-low text-ink"} flex items-center justify-center flex-shrink-0">${icon(t.type === "credit" ? "south_west" : ACStore.iconForService(t.service), "text-[20px]")}</span>
         <span class="min-w-0 flex-1"><span class="block t-title truncate">${esc(t.label)}</span><span class="block t-small text-ink-2 min-w-0"><span class="truncate block">${esc(t.date)}</span>${t.status !== "success" ? `<span class="inline-block mt-0.5">${UI.badge(st[0], st[1])}</span>` : ""}</span></span></span>
-      <span class="t-small sm:t-title font-extrabold whitespace-nowrap flex-shrink-0 text-right tabular-nums ${t.type === "credit" ? "text-success" : t.status === "failed" ? "text-ink-3 line-through" : ""}">${t.type === "credit" ? "+" : "−"}${ACStore.fmtFCFA(Math.abs(t.amount))}</span></button>`;
+      <span class="t-small sm:t-title font-extrabold whitespace-nowrap flex-shrink-0 text-right tabular-nums ${t.type === "credit" ? "text-success" : t.status === "failed" ? "text-ink-3 line-through" : ""}">${wf.masked ? "••••••" : ((t.type === "credit" ? "+" : "−") + ACStore.fmtFCFA(Math.abs(t.amount)))}</span></button>`;
   }
   function inLast30Days(t) {
     if (t.status !== "success") return false;
-    if (!t.at) return true;
+    if (!t.at) return false;
     return t.at >= Date.now() - MONTH_MS;
   }
   function monthly() {
@@ -150,7 +150,7 @@
   // Code PIN (confirmation sécurisée)
   Screens.securityPin = function (container, params) {
     params = params || {}; const action = params.action || "confirm";
-    const titles = { walletSendConfirm: "Confirmer l'envoi", changePin: "Nouveau code PIN", walletQrPayConfirm: "Confirmer le paiement", withdraw: "Confirmer le retrait", confirm: "Confirmation sécurisée" };
+    const titles = { walletSendConfirm: "Confirmer l'envoi", changePin: "Code PIN actuel", setPin: "Nouveau code PIN", walletQrPayConfirm: "Confirmer le paiement", withdraw: "Confirmer le retrait", confirm: "Confirmation sécurisée" };
     const body = `<div class="max-w-narrow mx-auto w-full flex-1 flex flex-col items-center text-center py-6 space-y-5">
       <div class="w-16 h-16 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("lock", "text-[30px]")}</div>
       <div><h2 class="t-h2">${titles[action] || titles.confirm}</h2><p class="t-small text-ink-2 mt-1">Entrez votre code PIN à 4 chiffres. Démo : <b>0000</b></p></div>
@@ -163,10 +163,22 @@
   };
   Screens._pinInput = (i, el) => { el.value = el.value.replace(/\D/g, "").slice(-1); if (el.value && i < 3) document.getElementById("pin-" + (i + 1)).focus(); };
   Screens._pinPaste = (ev) => { const t = (ev.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 4); if (!t) return; ev.preventDefault(); t.split("").forEach((c, i) => { const el = document.getElementById("pin-" + i); if (el) el.value = c; }); };
-  Screens._biometric = (action) => { UI.toast("Empreinte reconnue (simulation).", "success"); setTimeout(() => Screens._pinDone(action), 500); };
+  Screens._biometric = (action) => {
+    if (!ACState.prefs.biometric) { UI.toast("Activez d'abord la biométrie dans Sécurité.", "error"); return; }
+    UI.toast("Empreinte reconnue (simulation).", "success");
+    setTimeout(() => Screens._pinDone(action), 500);
+  };
   Screens._pinConfirm = function (action) {
     const pin = [0, 1, 2, 3].map((i) => (document.getElementById("pin-" + i) || {}).value || "").join("");
-    if (pin !== "0000") return UI.showError("pin-error", "Code PIN incorrect (démo : 0000).");
+    if (pin.length !== 4) return UI.showError("pin-error", "Saisissez les 4 chiffres.");
+    if (action === "setPin") {
+      ACState.prefs.pin = pin;
+      ACStore.emit();
+      UI.toast("Code PIN mis à jour.", "success");
+      App.resetTo("security");
+      return;
+    }
+    if (pin !== (ACState.prefs.pin || "0000")) return UI.showError("pin-error", "Code PIN incorrect.");
     Screens._pinDone(action);
   };
   Screens._pinDone = function (action) {
@@ -185,7 +197,7 @@
         return;
       }
       ACStore.whenPaid(ACStore.payFromWallet({ amount: s.amount, label: "Envoi à " + s.name.split("·")[0].trim() + (s.note ? " · " + s.note : ""), service: "wallet" }), () => { pendingSend = null; App.resetTo("paymentSuccess", { amount: s.amount, title: "Argent envoyé", body: s.name.split("·")[0].trim() + " a reçu " + ACStore.fmtFCFA(s.amount) + ".", next: "wallet" }); }, (res) => App.nav("paymentFailed", { retry: "walletSend", amount: s.amount, reason: res.reason }));
-    } else if (action === "changePin") { UI.toast("Code PIN mis à jour.", "success"); App.resetTo("security"); }
+    } else if (action === "changePin") { App.replace("securityPin", { action: "setPin" }); }
     else if (action === "walletQrPayConfirm") Screens._confirmQrPayPaid();
     else if (action === "withdraw") Screens._doWithdrawPaid();
     else App.back();
@@ -204,7 +216,7 @@
     Shell.render(container, { title: "Recevoir de l'argent", back: true, body, nav: false, showNav: true, onMount: () => YCScanner.render("yc-receive-qr", receivePayload(amount), { size: 208, cell: 6 }) });
   };
   Screens._shareQr = () => { const p = receivePayload(); if (navigator.share) navigator.share({ title: "Mon code Youss Wallet", text: "Payez-moi avec YOUSS CONNECT : " + p }).catch(() => {}); else Screens._copyQr(); };
-  Screens._copyQr = () => { const p = receivePayload(); if (navigator.clipboard) navigator.clipboard.writeText(p).then(() => UI.toast("Code copié.", "success")); else UI.toast("Code : " + p, "info"); };
+  Screens._copyQr = () => { const p = receivePayload(); if (navigator.clipboard) navigator.clipboard.writeText(p).then(() => UI.toast("Code copié.", "success")).catch(() => UI.toast("Code : " + p, "info")); else UI.toast("Code : " + p, "info"); };
 
   // Payer (hub)
   Screens.walletPay = function (container) {
@@ -214,9 +226,9 @@
     Shell.render(container, { title: "Payer", subtitle: "Youss Wallet", back: true, body, nav: false, showNav: true });
   };
   Screens._payMerchant = () => UI.openSheet(`<h3 class="t-h3 mb-3">Code marchand</h3>${UI.field("mc-code", "Code à 6 chiffres", { placeholder: "Ex. 420 118", inputmode: "numeric", icon: "storefront" })}<div class="mt-3">${UI.field("mc-amount", "Montant (FCFA)", { placeholder: "0", type: "number", icon: "payments" })}</div><div class="mt-4">${UI.primaryButton("Continuer", "Screens._payMerchantGo()", { iconRight: "arrow_forward" })}</div>`);
-  Screens._payMerchantGo = () => { const code = document.getElementById("mc-code").value.replace(/\D/g, ""), amount = parseInt(document.getElementById("mc-amount").value, 10); if (code.length < 6 || !amount) { UI.toast("Code à 6 chiffres et montant requis.", "error"); return; } UI.closeSheet(); Screens._qrPayFromScan({ type: "pay", to: "Marchand " + code, name: "Marchand #" + code, amount }); };
+  Screens._payMerchantGo = () => { const code = document.getElementById("mc-code").value.replace(/\D/g, ""), amount = parseInt(document.getElementById("mc-amount").value, 10); if (code.length < 6 || !(amount > 0)) { UI.toast("Code à 6 chiffres et montant positif requis.", "error"); return; } UI.closeSheet(); Screens._qrPayFromScan({ type: "pay", to: "Marchand " + code, name: "Marchand #" + code, amount }); };
   Screens._payBill = () => UI.openSheet(`<h3 class="t-h3 mb-1">Payer une facture</h3><p class="t-small text-ink-2 mb-3">Fonction conceptuelle : les émetteurs de factures seront intégrés selon les partenariats.</p>${UI.select("bill-type", "Type", ["Électricité", "Eau", "Internet", "Scolarité"], "Électricité")}<div class="mt-3">${UI.field("bill-ref", "Référence de la facture", { placeholder: "N° client", icon: "tag" })}</div><div class="mt-3">${UI.field("bill-amount", "Montant (FCFA)", { placeholder: "0", type: "number", icon: "payments" })}</div><div class="mt-4">${UI.primaryButton("Payer", "Screens._payBillGo()", { icon: "lock" })}</div>`);
-  Screens._payBillGo = () => { const amount = parseInt(document.getElementById("bill-amount").value, 10), type = document.getElementById("bill-type").value; if (!amount) { UI.toast("Indiquez le montant.", "error"); return; } UI.closeSheet(); Screens._qrPayFromScan({ type: "pay", to: "Facture " + type, name: "Facture " + type + " (démo)", amount }); };
+  Screens._payBillGo = () => { const amount = parseInt(document.getElementById("bill-amount").value, 10), type = document.getElementById("bill-type").value; if (!(amount > 0)) { UI.toast("Indiquez un montant positif.", "error"); return; } UI.closeSheet(); Screens._qrPayFromScan({ type: "pay", to: "Facture " + type, name: "Facture " + type + " (démo)", amount }); };
 
   // QR Pay
   const QR_MESSAGES = { unsupported: "Ce navigateur ne permet pas d'accéder à la caméra.", insecure: "La caméra nécessite une connexion sécurisée (HTTPS).", denied: "Accès caméra refusé. Importez une image ou simulez un scan.", nocamera: "Aucune caméra détectée.", busy: "La caméra est utilisée par une autre application.", error: "Impossible de démarrer la caméra." };
@@ -261,8 +273,8 @@
     const p = pendingQrPay || {}; let amount = p.amount;
     if (!amount) { const input = document.getElementById("yc-qrpay-amount"); amount = parseInt(input && input.value, 10); if (!isFinite(amount) || amount < 100) { UI.toast("Saisissez un montant valide.", "error"); return; } pendingQrPay.amount = amount; }
     UI.closeSheet();
-    if (amount >= 20000) { App.nav("securityPin", { action: "walletQrPayConfirm" }); return; }
-    Screens._confirmQrPayPaid();
+    if (!(amount > 0)) { UI.toast("Saisissez un montant valide.", "error"); return; }
+    App.nav("securityPin", { action: "walletQrPayConfirm" });
   };
   Screens._confirmQrPayPaid = function () {
     const p = pendingQrPay || {}; const amount = p.amount;
@@ -354,7 +366,7 @@
     App.resetTo("paymentSuccess", { amount: Math.abs(t.amount), title: "Opération confirmée", body: t.type === "credit" ? "Votre solde a été crédité." : "L'opération est confirmée.", next: "wallet" });
   };
   Screens.paymentFailed = function (container, params) {
-    const reasons = { insufficient_balance: ["Solde insuffisant", "Votre solde Youss Wallet ne couvre pas ce montant. Rechargez ou choisissez un autre moyen de paiement."], offline: ["Vous êtes hors ligne", "Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible."], error: ["Paiement impossible", "Une erreur est survenue. Aucun montant n'a été débité."] };
+    const reasons = { insufficient_balance: ["Solde insuffisant", "Votre solde Youss Wallet ne couvre pas ce montant. Rechargez ou choisissez un autre moyen de paiement."], offline: ["Vous êtes hors ligne", "Le paiement nécessite une connexion. Réessayez dès que le réseau est disponible."], busy: ["Paiement déjà en cours", "Attendez la confirmation avant de payer à nouveau."], invalid_amount: ["Montant invalide", "Indiquez un montant positif."], error: ["Paiement impossible", "Une erreur est survenue. Aucun montant n'a été débité."] };
     const r = reasons[params.reason] || reasons.error;
     const amount = parseInt(params.amount, 10) || 0;
     const retry = params.retry ? `App.resetTo('${esc(params.retry)}'${params.retryParams ? ",{id:'" + esc(params.retryParams) + "'}" : ""})` : "App.back()";

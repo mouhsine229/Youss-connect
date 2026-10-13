@@ -121,7 +121,7 @@
         ${UI.field("li-pass", I18N.t("password"), { type: "password", placeholder: "••••••••", autocomplete: "current-password" })}
         ${UI.error("li-error")}
         <div class="flex items-center justify-between">
-          <label class="inline-flex items-center gap-2 t-small text-ink-2"><input type="checkbox" class="form-checkbox rounded border-line text-gold focus:ring-gold/40" checked/>Rester connecté</label>
+          <label class="inline-flex items-center gap-2 t-small text-ink-2"><input id="li-stay" type="checkbox" class="form-checkbox rounded border-line text-gold focus:ring-gold/40" checked/>Rester connecté</label>
           <button type="button" onclick="App.nav('forgotPassword')" class="t-small font-bold text-gold-deep dark:text-gold">${I18N.t("forgot")}</button>
         </div>
         <button type="submit" class="btn btn-lg btn-primary btn-block">${I18N.t("login")}${icon("arrow_forward", "text-[20px]")}</button>
@@ -152,8 +152,12 @@
     if (!p.ok) return UI.showError("li-error", "Indiquez un numéro de téléphone valide (8 chiffres minimum).");
     if (!pass) return UI.showError("li-error", "Indiquez votre mot de passe.");
     ACState.user.phone = p.phone; ACState.user.countryCode = p.country.code; ACState.user.dial = p.country.dial; ACState.user.country = p.country.name;
+    try {
+      sessionStorage.setItem("yc-otp-pending", "1");
+      sessionStorage.setItem("yc-stay", document.getElementById("li-stay") && document.getElementById("li-stay").checked ? "1" : "0");
+    } catch (e) { /* no-op */ }
     if (window.YCBackend && YCBackend.configured()) {
-      YCBackend.sendOtp(p.phone).then((res) => { if (res && res.error) UI.showError("li-error", YCBackend.explain(res.error)); else App.nav("otp", { next: "home" }); });
+      YCBackend.sendOtp(p.phone).then((res) => { if (res && res.error) UI.showError("li-error", YCBackend.explain(res.error)); else App.nav("otp", { next: "home" }); }).catch(function () { UI.showError("li-error", "Impossible d'envoyer le code. Réessayez."); });
       return;
     }
     App.nav("otp", { next: "home" });
@@ -178,6 +182,7 @@
     const p = readPhone("fp-phone");
     if (!p.ok) return UI.showError("fp-error", "Indiquez un numéro valide.");
     ACState.user.phone = p.phone;
+    try { sessionStorage.setItem("yc-otp-pending", "1"); } catch (e) { /* no-op */ }
     App.nav("otp", { next: "login", mode: "reset" });
   };
 
@@ -230,9 +235,11 @@
     ACStore.emit();
     if (window.YCBackend && YCBackend.configured()) {
       sessionStorage.setItem("yc-pending-name", ACState.user.fullName);
-      YCBackend.sendOtp(p.phone, ACState.user.fullName).then((res) => { if (res && res.error) UI.showError("su-error", YCBackend.explain(res.error)); else App.nav("otp", { next: "home" }); });
+      try { sessionStorage.setItem("yc-otp-pending", "1"); sessionStorage.setItem("yc-stay", "1"); } catch (e) { /* no-op */ }
+      YCBackend.sendOtp(p.phone, ACState.user.fullName).then((res) => { if (res && res.error) UI.showError("su-error", YCBackend.explain(res.error)); else App.nav("otp", { next: "home" }); }).catch(function () { UI.showError("su-error", "Impossible d'envoyer le code. Réessayez."); });
       return;
     }
+    try { sessionStorage.setItem("yc-otp-pending", "1"); sessionStorage.setItem("yc-stay", "1"); } catch (e) { /* no-op */ }
     App.nav("otp", { next: "home" });
   };
 
@@ -279,7 +286,7 @@
       YCBackend.verifyOtp(ACState.user.phone, code).then((res) => {
         if (res && res.error) return UI.showError("otp-error", YCBackend.explain(res.error));
         finishAuth(next, mode);
-      });
+      }).catch(function () { UI.showError("otp-error", "Vérification impossible. Réessayez."); });
       return;
     }
     if (code !== "1234") { UI.showError("otp-error", "Code incorrect. Réessayez (démo : 1234)."); [0, 1, 2, 3].forEach((i) => { const el = document.getElementById("otp-" + i); if (el) el.classList.add("border-danger"); }); return; }
@@ -288,7 +295,9 @@
   function finishAuth(next, mode) {
     clearInterval(otpTimer);
     if (mode === "reset") { UI.toast("Code validé. Choisissez un nouveau mot de passe (démo).", "success"); App.resetTo("login"); return; }
+    try { sessionStorage.removeItem("yc-otp-pending"); } catch (e) { /* no-op */ }
     ACState.session.authenticated = true; ACState.session.onboardingSeen = true;
+    ACState.session.ephemeral = (function () { try { return sessionStorage.getItem("yc-stay") === "0"; } catch (e) { return false; } })();
     ACStore.emit();
     UI.toast("Bienvenue " + ACState.user.name + " !", "success");
     const after = sessionStorage.getItem("yc-after-login");

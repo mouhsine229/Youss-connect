@@ -51,7 +51,7 @@
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left">
       <div class="relative ratio-16-10 bg-card-high overflow-hidden">${UI.img(r.img, r.name)}
         <span class="absolute top-2.5 left-2.5 badge ${open ? "badge-success" : "badge-neutral"}">${open ? "Ouvert" : "Fermé"} · ${r.time}</span>
-        <span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${r.rating} <span class="text-ink-3 font-normal">(${r.reviews})</span></span>
+        <span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">${icon("star", "text-gold text-[14px]", true)}${r.rating} <span class="text-[#71717A] font-normal">(${r.reviews})</span></span>
       </div>
       <div class="p-4"><div class="flex items-start justify-between gap-2"><h3 class="t-h3 truncate">${r.name}</h3><span class="t-small text-ink-2 whitespace-nowrap mt-1">${r.km} km</span></div>
         <p class="t-small text-ink-2 mt-0.5">${r.cat} · ${r.area}, ${r.city}</p>
@@ -74,7 +74,11 @@
   // Fiche restaurant
   const tabState = { tab: "menu" };
   Screens.restaurantDetail = function (container, params) {
-    const r = YCData.restaurant(params.id) || YCData.RESTAURANTS[0];
+    const r = YCData.restaurant(params.id);
+    if (!r) {
+      Shell.render(container, { title: "Restaurant", back: true, body: UI.emptyState({ icon: "restaurant", title: "Restaurant introuvable", body: "Ce restaurant n'est plus disponible.", actionLabel: "Voir les restaurants", actionOnclick: "App.resetTo('restaurants')" }), nav: false, showNav: true });
+      return;
+    }
     if (params.tab) tabState.tab = params.tab;
     const open = isOpen(r);
     const groups = {}; r.menu.forEach((d) => { (groups[d.group] = groups[d.group] || []).push(d); });
@@ -150,7 +154,11 @@
     const ex = ACState.cart.items.find((i) => i.id === dishId);
     if (ex) ex.qty += 1; else ACState.cart.items.push({ id: dishId, name: d.name, price: d.price, qty: 1, img: d.img });
     ACStore.emit(); UI.toast(d.name + " ajouté au panier", "success");
-    if (App.current && App.current.id === "restaurantDetail") App.replace("restaurantDetail", App.current.params);
+    if (App.current && App.current.id === "restaurantDetail") {
+      const p = Object.assign({}, App.current.params || {});
+      delete p.dish;
+      App.replace("restaurantDetail", p);
+    }
   };
   Screens._cartSeed = function (restId, dishIds) { ACState.cart.restaurant = restId; ACState.cart.items = []; const r = YCData.restaurant(restId); dishIds.forEach((id) => { const d = r.menu.find((x) => x.id === id); if (d) ACState.cart.items.push({ id: d.id, name: d.name, price: d.price, qty: 1, img: d.img }); }); ACStore.emit(); };
   Screens._cartQty = function (id, delta, restId) {
@@ -158,7 +166,9 @@
     it.qty += delta; if (it.qty <= 0) ACState.cart.items = ACState.cart.items.filter((i) => i.id !== id);
     if (!ACState.cart.items.length) ACState.cart.restaurant = null;
     ACStore.emit();
-    App.replace(App.current.id, App.current.params);
+    const p = Object.assign({}, (App.current && App.current.params) || {});
+    delete p.dish;
+    App.replace(App.current.id, p);
   };
   Screens.cartRestaurant = function (container) {
     const r = YCData.restaurant(ACState.cart.restaurant), items = ACState.cart.items;
@@ -206,7 +216,7 @@
     else stepHtml = `
       <div class="card p-4 space-y-3">
         <div class="flex items-center gap-3"><span class="menu-icon">${icon(co.mode === "pickup" ? "storefront" : "location_on")}</span><div class="flex-1 min-w-0"><p class="t-caption text-ink-3">${co.mode === "pickup" ? "Retrait" : "Livraison"}</p><p class="t-title truncate">${co.mode === "pickup" ? esc(r.name) + " · " + r.area : esc(addr ? addr.label + " · " + addr.detail : "")}</p></div><button type="button" onclick="Screens._coStep(0)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
-        <div class="flex items-center gap-3"><span class="menu-icon">${icon(method.icon)}</span><div class="flex-1"><p class="t-caption text-ink-3">Paiement</p><p class="t-title">${method.label}</p></div><button type="button" onclick="Screens._coStep(1)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
+        <div class="flex items-center gap-3"><span class="menu-icon">${icon((method && method.icon) || "payments")}</span><div class="flex-1"><p class="t-caption text-ink-3">Paiement</p><p class="t-title">${esc((method && method.label) || "—")}</p></div><button type="button" onclick="Screens._coStep(1)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
         <div class="divider"></div>${items.map((i) => `<div class="flex justify-between t-small"><span>${i.qty} × ${esc(i.name)}</span><span>${ACStore.fmtFCFA(i.price * i.qty)}</span></div>`).join("")}
       </div>
       <div class="flex gap-3">${UI.secondaryButton(I18N.t("back"), "Screens._coStep(1)")}${UI.primaryButton("Confirmer la commande · " + ACStore.fmtFCFA(total), `Screens._payRestaurant(${total})`, { size: "lg", icon: "check" })}</div>`;
@@ -214,7 +224,23 @@
       <aside class="card p-5 lg:sticky lg:top-24 self-start"><p class="t-h3 mb-3">${esc(r.name)}</p>${UI.row("Sous-total", ACStore.fmtFCFA(sub))}${UI.row(co.mode === "pickup" ? "À emporter" : "Livraison", ACStore.fmtFCFA(fee))}${UI.row("Service", ACStore.fmtFCFA(service))}<div class="divider my-2"></div>${UI.row("Total", ACStore.fmtFCFA(total), true)}<p class="t-small text-ink-3 mt-2">Livraison estimée : ${r.time}</p></aside></div>`;
     Shell.render(container, { title: "Commander", subtitle: steps[co.step], back: co.step > 0 ? `Screens._coStep(${co.step - 1})` : true, body, nav: false, narrow: false });
   };
-  Screens._coStep = (s) => { co.step = s; App.replace("checkoutRestaurant", { step: s }); };
+  Screens._coStep = (s) => {
+    const r = YCData.restaurant(ACState.cart.restaurant);
+    const items = ACState.cart.items || [];
+    const sub = items.reduce((n, i) => n + i.price * i.qty, 0);
+    const fee = co.mode === "pickup" ? 0 : (r ? r.fee : 0);
+    const total = sub + fee + 200;
+    if (s === 2 && co.method === "wallet" && ACState.wallet.balance < total) {
+      UI.toast("Solde insuffisant. Rechargez ou changez de moyen de paiement.", "error");
+      return;
+    }
+    if (s === 2 && !ACState.paymentMethods.find((m) => m.type === co.method)) {
+      UI.toast("Choisissez un moyen de paiement.", "error");
+      return;
+    }
+    co.step = s;
+    App.replace("checkoutRestaurant", { step: s });
+  };
   Screens._coMode = (m) => { co.mode = m; App.replace("checkoutRestaurant", { step: 0 }); };
   Screens._coAddress = (id) => { co.address = id; App.replace("checkoutRestaurant", { step: 0 }); };
   Screens._coMethod = (t) => { co.method = t; App.replace("checkoutRestaurant", { step: 1 }); };
@@ -223,7 +249,8 @@
     const items = ACState.cart.items.slice();
     const addr = ACState.addresses.find((a) => a.id === co.address);
     ACStore.whenPaid(ACStore.pay({ amount: total, label: "Commande " + r.name, service: "restaurant", pointsEarned: Math.round(total / 100), method: co.method, activity: false }), function () {
-      const order = ACStore.createOrder({ type: "restaurant", title: r.name, img: r.img, items, total, address: co.mode === "pickup" ? "À emporter · " + r.name : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: r.time, from: { lat: r.lat, lng: r.lng }, to: addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null, note: ACState.cart.note, restaurantId: r.id, courier: YCData.courierFor(r.city) });
+      const pickup = co.mode === "pickup";
+      const order = ACStore.createOrder({ type: "restaurant", fulfillment: pickup ? "pickup" : "delivery", title: r.name, img: r.img, items, total, address: pickup ? "À emporter · " + r.name : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: r.time, from: { lat: r.lat, lng: r.lng }, to: pickup ? { lat: r.lat, lng: r.lng } : (addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null), note: ACState.cart.note, restaurantId: r.id, courier: pickup ? null : YCData.courierFor(r.city) });
       ACStore.addActivity({ service: "restaurant", title: "Commande " + r.name, amount: total, status: "En cours", icon: "restaurant", orderId: order.id, detail: { items: items.map((i) => i.name + " × " + i.qty), address: order.address } });
       ACStore.addNotification("Commande confirmée", r.name + " a reçu votre commande " + order.number + ". Préparation en cours.", "restaurant", "orderTracking?id=" + order.id);
       ACState.cart.items = []; ACState.cart.restaurant = null; ACState.cart.note = ""; co.step = 0;

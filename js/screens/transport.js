@@ -32,6 +32,7 @@
     const base = Math.max(FARE.min, Math.round((FARE.base + (km || 0) * FARE.perKm) / 100) * 100);
     return Math.round((base * v.mult) / 100) * 100;
   }
+  function fareCharged() { return Math.max(0, Math.max(FARE.min, trip.price || 0) - (trip.promo || 0)); }
   function etaSec(km) { return trip.sec && trip.km ? Math.max(60, Math.round(trip.sec)) : Math.max(60, Math.round(((km || 1) / M().URBAN_SPEED_KMH) * 3600)); }
   function updateDistance() {
     if (!trip.from || !trip.to) { trip.km = 0; trip.sec = 0; return; }
@@ -65,7 +66,20 @@
     const city = YCData.cityOf(ACState.user.city);
     const find = (name) => { if (!name) return null; const n = YCData.norm(name); return city.poi.find((p) => YCData.norm(p.name).includes(n) || n.includes(YCData.norm(p.name).split(" (")[0])) || null; };
     if (o.fromLatLng) trip.from = o.fromLatLng; else if (o.from) { const p = find(o.from); if (p) trip.from = { name: p.name, lat: p.lat, lng: p.lng }; }
-    if (o.toLatLng) trip.to = o.toLatLng; else if (o.to) { const p = find(o.to); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; } else if (o.toName) { const p = find(o.toName); trip.to = p ? { name: p.name, lat: p.lat, lng: p.lng } : { name: o.toName, lat: city.lat + 0.01, lng: city.lng + 0.01 }; }
+    if (o.toLatLng) trip.to = o.toLatLng; else if (o.to) { const p = find(o.to); if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng }; } else if (o.toName) {
+      const p = find(o.toName);
+      if (p) trip.to = { name: p.name, lat: p.lat, lng: p.lng };
+      else {
+        const n = YCData.norm(o.toName);
+        const site = YCData.SITES.find((s) => YCData.norm(s.name).includes(n) || n.includes(YCData.norm(s.name)));
+        const ev = !site && YCData.allEvents().find((e) => YCData.norm(e.place).includes(n) || YCData.norm(e.name).includes(n));
+        const rest = !site && !ev && YCData.RESTAURANTS.find((r) => YCData.norm(r.name).includes(n) || n.includes(YCData.norm(r.name)));
+        if (site) trip.to = { name: site.name, lat: site.lat, lng: site.lng };
+        else if (ev) trip.to = { name: ev.place, lat: ev.lat, lng: ev.lng };
+        else if (rest) trip.to = { name: rest.name, lat: rest.lat, lng: rest.lng };
+        else trip.to = { name: o.toName, lat: city.lat, lng: city.lng };
+      }
+    }
     if (!trip.from) { const home = ACState.addresses[0]; trip.from = home && home.lat ? { name: home.label + " · " + home.detail.split(",")[0], lat: home.lat, lng: home.lng } : { name: city.poi[0].name, lat: city.poi[0].lat, lng: city.poi[0].lng }; }
     if (o.vehicle) trip.vehicle = o.vehicle;
     trip.route = null; trip.status = "idle"; trip.driver = null; updateDistance(); syncTrip();
@@ -288,7 +302,7 @@
             ${UI.row("Distance", M().fmtKm(trip.km))}${UI.row("Durée estimée", "≈ " + M().fmtEta(etaSec(trip.km)))}${UI.row("Véhicule", v.label)}${UI.row("Opérateur", operatorOf().label)}
             ${trip.promo ? UI.row("Code promo", "-" + ACStore.fmtFCFA(trip.promo)) : ""}
             <div class="divider border-white/15 my-2"></div>
-            <div class="flex items-center justify-between"><span class="t-title">Prix de la course</span><span class="t-h2">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
+            <div class="flex items-center justify-between"><span class="t-title">Prix de la course</span><span class="t-h2">${ACStore.fmtFCFA(fareCharged())}</span></div>
             <p class="t-small text-white/60 mt-2">Prix fixe calculé sur l'itinéraire routier. Pas de surprise à l'arrivée.</p>
           </div>
           ${UI.primaryButton("Confirmer la course", "Screens._transportRequest()", { size: "lg", iconRight: "arrow_forward" })}
@@ -355,7 +369,7 @@
           <button type="button" onclick="Screens._tripChat()" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}${I18N.t("message")}</button>
         </div>
       </div>
-      <div class="card p-4 space-y-2">${UI.row("Trajet", esc(trip.from.name.split("(")[0]) + " vers " + esc(trip.to.name.split("(")[0]))}${UI.row("Prix", ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0))), true)}${UI.row("Paiement", (ACState.paymentMethods.find((m) => m.type === trip.method) || {}).label || "Youss Wallet")}</div>
+      <div class="card p-4 space-y-2">${UI.row("Trajet", esc(trip.from.name.split("(")[0]) + " vers " + esc(trip.to.name.split("(")[0]))}${UI.row("Prix", ACStore.fmtFCFA(fareCharged()), true)}${UI.row("Paiement", (ACState.paymentMethods.find((m) => m.type === trip.method) || {}).label || "Youss Wallet")}</div>
       ${UI.primaryButton("Suivre la course", "App.replace('transportInRide')", { size: "lg", icon: "near_me" })}
       <button type="button" onclick="Screens._cancelRide()" class="w-full t-small text-danger font-semibold py-2">Annuler la course</button>
     </div>`;
@@ -401,7 +415,7 @@
         </div>
         <div class="flex items-center gap-3">${UI.avatar(d, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(d.name)} · ★ ${d.rating}</p><p class="t-small text-ink-2 truncate">${esc(d.car)} · ${esc(d.plate)}</p></div>
           <a href="tel:${esc(d.phone)}" class="icon-btn" aria-label="Appeler">${icon("call")}</a><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
-        <div class="flex items-center justify-between"><span class="t-body text-ink-2">Montant</span><span class="t-title font-extrabold">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
+        <div class="flex items-center justify-between"><span class="t-body text-ink-2">Montant</span><span class="t-title font-extrabold">${ACStore.fmtFCFA(fareCharged())}</span></div>
         <button type="button" id="finish-btn" onclick="Screens._transportFinish()" class="btn btn-lg btn-dark btn-block">Terminer la course</button>
       </div>`;
     const body = `<div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
@@ -457,7 +471,7 @@
   }
   Screens._shareRide = function () {
     const text = "Je suis en course YOUSS CONNECT avec " + trip.driver.name + " (" + trip.driver.plate + ") vers " + trip.to.name + ".";
-    if (navigator.share) navigator.share({ title: "Ma course YOUSS CONNECT", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien de suivi copié.", "success")); else UI.toast("Lien de suivi partagé.", "success");
+    if (navigator.share) navigator.share({ title: "Ma course YOUSS CONNECT", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien de suivi copié.", "success")).catch(() => UI.toast(text, "info")); else UI.toast("Lien de suivi partagé.", "success");
   };
   Screens._transportMarkArrived = function () { trip.status = "arrived"; trip.fastDemo = true; syncTrip(); };
   Screens._transportFinish = function () { trip.status = "arrived"; syncTrip(); App.nav("transportEnd"); };
@@ -466,7 +480,7 @@
   Screens.transportEnd = function (container) {
     if (!trip.driver) { App.resetTo("transport"); return; }
     const d = trip.driver;
-    const total = Math.max(FARE.min, trip.price - (trip.promo || 0));
+    const total = fareCharged();
     const durationMin = Math.max(3, Math.round(etaSec(trip.km) / 60));
     const method = ACState.paymentMethods.find((m) => m.type === trip.method) || ACState.paymentMethods[0];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -494,7 +508,7 @@
   Screens._setTip = function (v) { trip.tip = v; trip.comment = (document.getElementById("ride-comment") || {}).value || ""; App.replace("transportEnd"); };
   Screens._ratingTag = function (btn) { btn.classList.toggle("on"); };
   Screens._transportPay = function () {
-    const total = Math.max(FARE.min, trip.price - (trip.promo || 0)) + (trip.tip || 0);
+    const total = fareCharged() + (trip.tip || 0);
     trip.comment = (document.getElementById("ride-comment") || {}).value || "";
     const dest = trip.to.name.split("(")[0].trim();
     ACStore.whenPaid(ACStore.pay({

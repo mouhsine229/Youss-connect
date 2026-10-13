@@ -525,8 +525,12 @@
       out.push({ kind: "restaurant", title: r.name, sub: r.cat + " · " + r.area + ", " + r.city, icon: "restaurant", img: r.img, route: "restaurantDetail", params: { id: r.id }, keys: [r.name, r.cat, r.area, r.city, r.tags.join(" ")].join(" "), rating: r.rating, price: r.avg, city: r.city, lat: r.lat, lng: r.lng, open: r.open });
       r.menu.forEach((d) => out.push({ kind: "plat", title: d.name, sub: r.name + " · " + r.city, icon: "lunch_dining", img: d.img, route: "restaurantDetail", params: { id: r.id, dish: d.id }, keys: [d.name, d.desc, r.name].join(" "), rating: r.rating, price: d.price, city: r.city, lat: r.lat, lng: r.lng }));
     });
-    PRODUCTS.forEach((p) => out.push({ kind: "produit", title: p.name, sub: SELLERS[p.seller].name + " · " + p.cat, icon: "shopping_bag", img: p.img, route: "productDetail", params: { id: p.id }, keys: [p.name, p.cat, SELLERS[p.seller].name, p.desc].join(" "), rating: p.rating, price: p.price, city: SELLERS[p.seller].city, available: p.stock > 0 }));
-    allEvents().forEach((e) => out.push({ kind: "evenement", title: e.name, sub: e.cat + " · " + e.city + " · " + fmtDateShort(e.date), icon: "confirmation_number", img: e.img, route: "eventDetail", params: { id: e.id }, keys: [e.name, e.cat, e.city, e.place, e.organizer].join(" "), rating: 4.8, price: minPrice(e), city: e.city, lat: e.lat, lng: e.lng }));
+    PRODUCTS.forEach((p) => {
+      const s = SELLERS[p.seller] || {};
+      const sc = CITIES[s.city];
+      out.push({ kind: "produit", title: p.name, sub: (s.name || "") + " · " + p.cat, icon: "shopping_bag", img: p.img, route: "productDetail", params: { id: p.id }, keys: [p.name, p.cat, s.name, p.desc].join(" "), rating: p.rating, price: p.price, city: s.city, lat: sc && sc.lat, lng: sc && sc.lng, available: p.stock > 0 });
+    });
+    allEvents().forEach((e) => out.push({ kind: "evenement", title: e.name, sub: e.cat + " · " + e.city + " · " + fmtDateShort(e.date), icon: "confirmation_number", img: e.img, route: "eventDetail", params: { id: e.id }, keys: [e.name, e.cat, e.city, e.place, e.organizer].join(" "), rating: 4.8, price: minPrice(e), city: e.city, country: e.country, lat: e.lat, lng: e.lng }));
     SITES.forEach((s) => out.push({ kind: "lieu", title: s.name, sub: siteType(s.type).label + " · " + s.place, icon: siteType(s.type).icon, img: s.img, route: "cultureDetail", params: { id: s.id }, keys: [s.name, s.place, s.type, siteType(s.type).label, s.city, s.near || ""].join(" "), rating: 4.7, price: 0, city: s.city, lat: s.lat, lng: s.lng }));
     DESTINATIONS.forEach((c) => out.push({ kind: "destination", title: c, sub: CITIES[c].country + " · Destination", icon: "travel_explore", img: CITIES[c].hero, route: "destination", params: { city: c }, keys: [c, CITIES[c].country, "destination tourisme ville"].join(" "), rating: 4.9, price: 0, city: c }));
     [
@@ -541,7 +545,7 @@
   }
   let _index = null;
   function search(q, filters) {
-    if (!_index) _index = searchIndex();
+    _index = searchIndex();
     const words = norm(q).trim().split(/\s+/).filter(Boolean);
     const f = filters || {};
     return _index.filter((item) => {
@@ -550,11 +554,15 @@
         if (!words.every((w) => hay.includes(w))) return false;
       }
       if (f.kind && f.kind !== "all" && item.kind !== f.kind) return false;
-      if (f.city && item.city && item.city !== f.city) return false;
+      if (f.city && item.city && item.city !== f.city) {
+        const dest = CITIES[f.city];
+        if (!(item.kind === "evenement" && item.country && dest && item.country === dest.country)) return false;
+      }
       if (f.rating && (item.rating || 0) < f.rating) return false;
       if (f.maxPrice && item.price && item.price > f.maxPrice) return false;
       if (f.available && item.available === false) return false;
-      if (f.maxKm && item.lat != null && f.from) {
+      if (f.maxKm && f.from) {
+        if (item.lat == null) return false;
         if (distanceKm(f.from.lat, f.from.lng, item.lat, item.lng) > f.maxKm) return false;
       }
       return true;

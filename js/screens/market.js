@@ -61,7 +61,11 @@
   // Fiche produit
   const gal = { idx: 0 };
   Screens.productDetail = function (container, params) {
-    const p = YCData.product(params.id) || YCData.PRODUCTS[0];
+    const p = YCData.product(params.id);
+    if (!p) {
+      Shell.render(container, { title: "Produit", back: true, body: UI.emptyState({ icon: "shopping_bag", title: "Produit introuvable", body: "Cet article n'est plus disponible.", actionLabel: "Voir Youss Market", actionOnclick: "App.resetTo('market')" }), nav: false, showNav: true });
+      return;
+    }
     const s = YCData.seller(p.seller);
     const fav = ACState.favorites.indexOf(p.id) >= 0;
     const similar = YCData.PRODUCTS.filter((x) => x.id !== p.id && (x.cat === p.cat || x.seller === p.seller)).slice(0, 4);
@@ -100,20 +104,36 @@
   Screens._marketAdd = function (id) {
     const p = YCData.product(id); if (!p || p.stock === 0) return;
     const ex = ACState.cart.market.find((i) => i.id === id);
-    if (ex) ex.qty++; else ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller });
+    if (ex) {
+      if (ex.qty >= p.stock) { UI.toast("Stock insuffisant.", "error"); return; }
+      ex.qty++;
+    } else ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller });
     ACStore.emit(); UI.toast(p.name + " ajouté au panier Market.", "success");
     App.replace(App.current.id, App.current.params);
   };
-  Screens._marketSeed = (ids) => { ACState.cart.market = ids.map((id) => { const p = YCData.product(id); return { id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller }; }); ACStore.emit(); };
+  Screens._marketSeed = (ids) => { ACState.cart.market = ids.map((id) => { const p = YCData.product(id); if (!p || p.stock <= 0) return null; return { id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller }; }).filter(Boolean); ACStore.emit(); };
   Screens._marketQty = function (id, d) {
     const it = ACState.cart.market.find((i) => i.id === id); if (!it) return;
-    it.qty += d; if (it.qty <= 0) ACState.cart.market = ACState.cart.market.filter((i) => i.id !== id);
+    const p = YCData.product(id);
+    const next = it.qty + d;
+    if (d > 0 && p && next > p.stock) { UI.toast("Stock insuffisant.", "error"); return; }
+    it.qty = next; if (it.qty <= 0) ACState.cart.market = ACState.cart.market.filter((i) => i.id !== id);
     ACStore.emit(); App.replace(App.current.id, App.current.params);
   };
-  Screens._buyNow = (id) => { if (!ACState.cart.market.find((i) => i.id === id)) { const p = YCData.product(id); ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller }); ACStore.emit(); } App.nav("checkoutMarket", { step: 0 }); };
+  Screens._buyNow = (id) => {
+    const p = YCData.product(id); if (!p || p.stock === 0) { UI.toast("Produit indisponible.", "error"); return; }
+    const ex = ACState.cart.market.find((i) => i.id === id);
+    if (!ex) ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller });
+    else if (ex.qty > p.stock) ex.qty = p.stock;
+    ACStore.emit(); App.nav("checkoutMarket", { step: 0 });
+  };
 
   Screens.sellerProfile = function (container, params) {
-    const s = YCData.seller(params.id) || YCData.SELLERS.s1;
+    const s = YCData.seller(params.id);
+    if (!s) {
+      Shell.render(container, { title: "Vendeur", back: true, body: UI.emptyState({ icon: "storefront", title: "Vendeur introuvable", body: "Cette boutique n'est plus disponible.", actionLabel: "Voir Youss Market", actionOnclick: "App.resetTo('market')" }), nav: false, showNav: true });
+      return;
+    }
     const prods = YCData.productsBy(s.id);
     const body = `<div class="card p-5 lg:p-6 flex flex-col sm:flex-row sm:items-center gap-4">${UI.avatar({ name: s.name }, "w-20 h-20 text-2xl")}<div class="flex-1"><h2 class="t-h1 flex items-center gap-2">${s.name}${s.verified ? icon("verified", "text-gold", true) : ""}</h2><p class="t-body text-ink-2 mt-1">${s.desc}</p><div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 t-small"><span>${UI.rating(s.rating, s.reviews + " avis")}</span><span>${icon("location_on", "text-[15px]")} ${s.city}</span><span>${icon("storefront", "text-[15px]")} ${prods.length} produits</span><span>Depuis ${s.since}</span></div></div><div class="flex gap-2">${UI.button("Contacter", "UI.toast('Message envoyé au vendeur.','success')", { variant: "outline", block: false, icon: "chat" })}${UI.button("Suivre", "UI.toast('Vous suivez ce vendeur.','success')", { variant: "dark", block: false, icon: "add" })}</div></div>
       <section>${UI.sectionTitle("Produits de " + s.name)}<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">${prods.map(UI.productCard).join("")}</div></section>
@@ -142,36 +162,59 @@
     if (params.step != null) co.step = parseInt(params.step, 10) || 0;
     if (!co.address) co.address = (ACState.addresses.find((a) => a.isDefault) || ACState.addresses[0] || {}).id;
     if (!co.method) co.method = ACState.prefs.paymentMethod || "wallet";
-    const ship = SHIPPING.find((s) => s.id === co.shipping), addr = ACState.addresses.find((a) => a.id === co.address), method = ACState.paymentMethods.find((m) => m.type === co.method);
-    const sub = total(), tot = sub + ship.price;
+    const ship = SHIPPING.find((s) => s.id === co.shipping) || SHIPPING[0], addr = ACState.addresses.find((a) => a.id === co.address), method = ACState.paymentMethods.find((m) => m.type === co.method);
+    const pickup = co.shipping === "pickup";
+    const firstSeller = YCData.seller(items[0].seller);
+    const sub = total(), tot = sub + (ship.price || 0);
     const steps = ["Adresse", "Livraison", "Paiement", "Confirmation"];
     const nav = (prev, next, label) => `<div class="flex gap-3">${prev != null ? UI.secondaryButton(I18N.t("back"), `Screens._mcStep(${prev})`) : ""}${UI.primaryButton(label || I18N.t("continue"), next === "pay" ? `Screens._payMarket(${tot})` : `Screens._mcStep(${next})`, { size: "lg", iconRight: next === "pay" ? "lock" : "arrow_forward" })}</div>`;
     let html = "";
     if (co.step === 0) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Adresse de livraison</p>${ACState.addresses.map((a) => `<button type="button" onclick="Screens._mcAddress('${a.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.address === a.id ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(a.icon || "place")}</span><span class="flex-1 min-w-0"><span class="block t-title">${esc(a.label)}</span><span class="block t-small text-ink-2 truncate">${esc(a.detail)}</span></span>${co.address === a.id ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}<button type="button" onclick="App.nav('addAddress',{back:'checkoutMarket'})" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left text-ink-2"><span class="menu-icon">${icon("add")}</span><span class="t-title">Nouvelle adresse</span></button></div>${nav(null, 1)}`;
     else if (co.step === 1) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Mode de livraison</p>${SHIPPING.map((s) => `<button type="button" onclick="Screens._mcShip('${s.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.shipping === s.id ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(s.icon)}</span><span class="flex-1"><span class="block t-title">${s.label}</span><span class="block t-small text-ink-2">${s.sub}</span></span><span class="t-title font-bold">${s.price ? ACStore.fmtFCFA(s.price) : "Gratuit"}</span></button>`).join("")}</div>${nav(0, 2)}`;
-    else if (co.step === 2) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._mcMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${co.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>${nav(1, 3)}`;
+    else if (co.step === 2) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._mcMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${co.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}${co.method === "wallet" && ACState.wallet.balance < tot ? `<p class="t-small text-danger font-semibold">Solde insuffisant (${ACStore.fmtFCFA(tot)} requis). <button type="button" onclick="App.nav('walletTopup')" class="underline">Recharger</button></p>` : ""}</div>${nav(1, 3)}`;
     else html = `<div class="card p-4 space-y-3">
-        <div class="flex items-center gap-3"><span class="menu-icon">${icon("location_on")}</span><div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Livraison</p><p class="t-title truncate">${esc(addr ? addr.label + " · " + addr.detail : "")}</p></div><button type="button" onclick="Screens._mcStep(0)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
+        <div class="flex items-center gap-3"><span class="menu-icon">${icon(pickup ? "storefront" : "location_on")}</span><div class="flex-1 min-w-0"><p class="t-caption text-ink-3">${pickup ? "Retrait" : "Livraison"}</p><p class="t-title truncate">${pickup ? esc((firstSeller && firstSeller.name) || "Vendeur") + " · " + esc((firstSeller && firstSeller.city) || "") : esc(addr ? addr.label + " · " + addr.detail : "")}</p></div><button type="button" onclick="Screens._mcStep(0)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
         <div class="flex items-center gap-3"><span class="menu-icon">${icon(ship.icon)}</span><div class="flex-1"><p class="t-caption text-ink-3">Mode</p><p class="t-title">${ship.label} · ${ship.eta}</p></div><button type="button" onclick="Screens._mcStep(1)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
-        <div class="flex items-center gap-3"><span class="menu-icon">${icon(method.icon)}</span><div class="flex-1"><p class="t-caption text-ink-3">Paiement</p><p class="t-title">${method.label}</p></div><button type="button" onclick="Screens._mcStep(2)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
+        <div class="flex items-center gap-3"><span class="menu-icon">${icon((method && method.icon) || "payments")}</span><div class="flex-1"><p class="t-caption text-ink-3">Paiement</p><p class="t-title">${esc((method && method.label) || "—")}</p></div><button type="button" onclick="Screens._mcStep(2)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
         <div class="divider"></div>${items.map((i) => `<div class="flex justify-between t-small"><span>${i.qty} × ${esc(i.name)}</span><span>${ACStore.fmtFCFA(i.price * i.qty)}</span></div>`).join("")}</div>${nav(2, "pay", "Confirmer la commande · " + ACStore.fmtFCFA(tot))}`;
     const body = `<div class="grid lg:grid-cols-[1fr_380px] gap-6"><div class="space-y-5">${UI.stepper(steps, co.step)}${html}</div><aside class="card p-5 lg:sticky lg:top-24 self-start"><p class="t-h3 mb-3">Votre commande</p>${items.map((i) => `<div class="flex items-center gap-3 py-1.5"><span class="w-10 h-10 rounded-lg overflow-hidden bg-card-high">${UI.img(i.img, i.name)}</span><span class="flex-1 t-small truncate">${i.qty} × ${esc(i.name)}</span><span class="t-small font-semibold">${ACStore.fmtFCFA(i.price * i.qty)}</span></div>`).join("")}<div class="divider my-2"></div>${UI.row("Sous-total", ACStore.fmtFCFA(sub))}${UI.row("Livraison " + ship.label.toLowerCase(), ship.price ? ACStore.fmtFCFA(ship.price) : "Gratuite")}<div class="divider my-2"></div>${UI.row("Total", ACStore.fmtFCFA(tot), true)}</aside></div>`;
     Shell.render(container, { title: "Commande Market", subtitle: steps[co.step], back: co.step > 0 ? `Screens._mcStep(${co.step - 1})` : true, body, nav: false });
   };
-  Screens._mcStep = (s) => { co.step = s; App.replace("checkoutMarket", { step: s }); };
+  Screens._mcStep = (s) => {
+    const ship = SHIPPING.find((x) => x.id === co.shipping) || SHIPPING[0];
+    const tot = total() + (ship.price || 0);
+    if (s === 3 && co.method === "wallet" && ACState.wallet.balance < tot) {
+      UI.toast("Solde insuffisant. Rechargez ou changez de moyen de paiement.", "error");
+      return;
+    }
+    if (s === 3 && !ACState.paymentMethods.find((m) => m.type === co.method)) {
+      UI.toast("Choisissez un moyen de paiement.", "error");
+      return;
+    }
+    co.step = s;
+    App.replace("checkoutMarket", { step: s });
+  };
   Screens._mcAddress = (id) => { co.address = id; App.replace("checkoutMarket", { step: 0 }); };
   Screens._mcShip = (id) => { co.shipping = id; App.replace("checkoutMarket", { step: 1 }); };
   Screens._mcMethod = (t) => { co.method = t; App.replace("checkoutMarket", { step: 2 }); };
   Screens._payMarket = function (tot) {
-    const items = ACState.cart.market.slice(), ship = SHIPPING.find((s) => s.id === co.shipping), addr = ACState.addresses.find((a) => a.id === co.address);
-    const sellerNames = Array.from(new Set(items.map((i) => YCData.seller(i.seller).name))).join(", ");
+    const items = ACState.cart.market.slice(), ship = SHIPPING.find((s) => s.id === co.shipping) || SHIPPING[0], addr = ACState.addresses.find((a) => a.id === co.address);
+    for (let i = 0; i < items.length; i++) {
+      const p = YCData.product(items[i].id);
+      if (!p || items[i].qty > p.stock) { UI.toast("Stock insuffisant.", "error"); return; }
+    }
+    if (co.method === "wallet" && ACState.wallet.balance < tot) { UI.toast("Solde insuffisant.", "error"); return; }
+    const sellerNames = Array.from(new Set(items.map((i) => (YCData.seller(i.seller) || {}).name || "Vendeur"))).join(", ");
     ACStore.whenPaid(ACStore.pay({ amount: tot, label: "Achat Youss Market · " + sellerNames, service: "market", pointsEarned: Math.round(tot / 100), method: co.method, activity: false }), function () {
-      const first = YCData.seller(items[0].seller);
-      const from = YCData.restaurantsIn(ACState.user.city)[0] || YCData.cityOf(ACState.user.city);
-      const order = ACStore.createOrder({ type: "market", title: "Youss Market · " + sellerNames, img: items[0].img, items, total: tot, address: co.shipping === "pickup" ? "Retrait chez " + first.name + " · " + first.city : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: ship.eta, shipping: ship.label, from: { lat: from.lat, lng: from.lng }, to: addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null, courier: YCData.courierFor(ACState.user.city) });
+      const first = YCData.seller(items[0].seller) || { name: "Vendeur", city: ACState.user.city };
+      const pickup = co.shipping === "pickup";
+      const sellerCity = YCData.CITIES[first.city] || YCData.cityOf(ACState.user.city);
+      const fromRest = YCData.restaurantsIn(first.city)[0];
+      const from = fromRest ? { lat: fromRest.lat, lng: fromRest.lng } : { lat: sellerCity.lat, lng: sellerCity.lng };
+      const order = ACStore.createOrder({ type: "market", fulfillment: pickup ? "pickup" : "delivery", title: "Youss Market · " + sellerNames, img: items[0].img, items, total: tot, address: pickup ? "Retrait chez " + first.name + " · " + first.city : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: ship.eta, shipping: ship.label, from, to: pickup ? from : (addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null), courier: pickup ? null : YCData.courierFor(ACState.user.city) });
       ACStore.addActivity({ service: "market", title: "Achat Youss Market · " + items.map((i) => i.name).join(", "), amount: tot, status: "En cours", icon: "storefront", orderId: order.id, detail: { items: items.map((i) => i.name + " × " + i.qty), seller: sellerNames, shipping: ship.label } });
       items.forEach((i) => { const p = YCData.product(i.id); if (p) p.stock = Math.max(0, p.stock - i.qty); });
-      ACStore.addNotification("Commande confirmée", "Youss Market · " + order.number + " · livraison " + ship.label.toLowerCase() + " (" + ship.eta + ").", "market", "orderTracking?id=" + order.id);
+      ACStore.addNotification("Commande confirmée", "Youss Market · " + order.number + " · " + (pickup ? "retrait" : "livraison") + " " + ship.label.toLowerCase() + " (" + ship.eta + ").", "market", "orderTracking?id=" + order.id);
       ACState.cart.market = []; co.step = 0; ACStore.emit();
       App.resetTo("orderConfirmed", { id: order.id });
     }, function (res) { App.nav("paymentFailed", { retry: "checkoutMarket", amount: tot, reason: res.reason }); });

@@ -25,15 +25,15 @@
         name: "Alassane", fullName: "Alassane Koffi", phone: "+229 97 00 00 00", email: "alassane@example.com",
         city: "Cotonou", country: "Bénin", countryCode: "BJ", dial: "+229", avatar: IMG + "avatars/avatar-alassane.jpg", verified: true, since: "2025"
       },
-      prefs: { theme: "light", paymentMethod: "wallet", notif: { transport: true, orders: true, delivery: true, events: true, wallet: true, promos: false, rewards: true } },
+      prefs: { theme: "light", paymentMethod: "wallet", pin: "0000", biometric: false, notif: { transport: true, orders: true, delivery: true, events: true, wallet: true, promos: false, rewards: true } },
       wallet: {
-        balance: 248500, currency: "FCFA",
+        balance: 238500, currency: "FCFA",
         transactions: [
-          { id: "txn_seed1", label: "Rechargement du Wallet", amount: 25000, type: "credit", status: "success", date: "Hier à 09:12", ref: "YC-TX-84120", service: "wallet" },
-          { id: "txn_seed2", label: "Course vers Haie Vive", amount: -2500, type: "debit", status: "success", date: "Hier à 14:20", ref: "YC-TX-84133", service: "transport" },
-          { id: "txn_seed3", label: "Commande Chez Maman Bénin", amount: -8400, type: "debit", status: "success", date: "Hier à 20:15", ref: "YC-TX-84151", service: "restaurant" },
-          { id: "txn_seed4", label: "Envoi à Fatou D.", amount: -10000, type: "debit", status: "pending", date: "Aujourd'hui à 08:40", ref: "YC-TX-84201", service: "wallet" },
-          { id: "txn_seed5", label: "Paiement QR · Stand 42 Dantokpa", amount: -3500, type: "debit", status: "failed", date: "Lundi à 11:05", ref: "YC-TX-83990", service: "wallet", reason: "Code PIN incorrect (3 essais)" }
+          { id: "txn_seed1", label: "Rechargement du Wallet", amount: 25000, type: "credit", status: "success", date: "Hier à 09:12", ref: "YC-TX-84120", service: "wallet", at: Date.now() - 86400000 },
+          { id: "txn_seed2", label: "Course vers Haie Vive", amount: -2500, type: "debit", status: "success", date: "Hier à 14:20", ref: "YC-TX-84133", service: "transport", at: Date.now() - 80000000 },
+          { id: "txn_seed3", label: "Commande Chez Maman Bénin", amount: -8400, type: "debit", status: "success", date: "Hier à 20:15", ref: "YC-TX-84151", service: "restaurant", at: Date.now() - 72000000 },
+          { id: "txn_seed4", label: "Envoi à Fatou D.", amount: -10000, type: "debit", status: "pending", date: "Aujourd'hui à 08:40", ref: "YC-TX-84201", service: "wallet", at: Date.now() - 3600000, balanceApplied: true },
+          { id: "txn_seed5", label: "Paiement QR · Stand 42 Dantokpa", amount: -3500, type: "debit", status: "failed", date: "Lundi à 11:05", ref: "YC-TX-83990", service: "wallet", reason: "Code PIN incorrect (3 essais)", at: Date.now() - 3 * 86400000 }
         ]
       },
       rewards: {
@@ -71,7 +71,7 @@
       cart: { restaurant: null, items: [], note: "", market: [] },
       orders: [],
       tickets: [
-        { id: "tkt_seed1", number: "YC-EV2-104872", eventId: "ev2", event: "Concert au Stade de l'Amitié", place: "Stade de l'Amitié, Kouhounou", city: "Cotonou", date: "2026-11-21", time: "20:00", category: "Tribune", qty: 1, total: 15000, holder: "Alassane Koffi", img: IMG + "services/svc-events.jpg", createdAt: Date.now() - 4 * 86400000 }
+        { id: "tkt_seed1", number: "YC-EV2-104872", eventId: "ev2", event: "Concert au Stade de l'Amitié", place: "Stade de l'Amitié, Kouhounou", city: "Cotonou", date: "2026-11-21", time: "20:00", category: "Tribune", qty: 1, total: 15000, holder: "Alassane Koffi", img: IMG + "services/svc-events.jpg", createdAt: Date.now() - 4 * 86400000, lat: 6.3815, lng: 2.4083 }
       ],
       saved: [],
       favorites: [],
@@ -111,9 +111,21 @@
         const parsed = JSON.parse(raw);
         if (parsed && parsed.version === 2) {
           const base = defaults();
-          /* Les données de référence (seed) priment pour les clés absentes */
-          Object.keys(base).forEach((k) => { if (parsed[k] === undefined) parsed[k] = base[k]; });
+          function fill(target, source) {
+            if (!source || typeof source !== "object" || Array.isArray(source)) return target == null ? source : target;
+            if (!target || typeof target !== "object" || Array.isArray(target)) return source;
+            Object.keys(source).forEach((k) => {
+              if (target[k] === undefined || target[k] === null) target[k] = source[k];
+              else if (source[k] && typeof source[k] === "object" && !Array.isArray(source[k])) fill(target[k], source[k]);
+            });
+            return target;
+          }
+          fill(parsed, base);
+          if (!parsed.session) parsed.session = base.session;
           parsed.session.remote = false;
+          if (!Array.isArray(parsed.wallet && parsed.wallet.transactions)) parsed.wallet = base.wallet;
+          if (!parsed.cart || !Array.isArray(parsed.cart.items)) parsed.cart = base.cart;
+          if (!Array.isArray(parsed.orders)) parsed.orders = [];
           return parsed;
         }
       }
@@ -126,7 +138,16 @@
   function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(State)); } catch (e) { /* quota / privé */ }
+      try {
+        if (State.session && State.session.ephemeral) {
+          const copy = JSON.parse(JSON.stringify(State));
+          copy.session.authenticated = false;
+          copy.session.ephemeral = false;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(copy));
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(State));
+        }
+      } catch (e) { /* quota / privé */ }
     }, 120);
   }
   function reset() {
@@ -149,7 +170,7 @@
 
   // Opérations transverses
   function addNotification(title, body, service, route) {
-    const prefs = State.prefs.notif;
+    const prefs = (State.prefs && State.prefs.notif) || {};
     const key = { transport: "transport", restaurant: "orders", market: "orders", livraison: "delivery", evenement: "events", wallet: "wallet", rewards: "rewards", promo: "promos" }[service];
     if (key && prefs[key] === false) return;
     State.notifications.unshift({ id: uid("ntf"), title, body, read: false, service, date: "À l'instant", route: route || null, at: Date.now() });
@@ -189,36 +210,51 @@
 
   // Paiement commun à tous les services.
   // opts: { amount, label, service, pointsEarned, method ('wallet'|'cash'|'mobile'), meta, activity:{...} }
+  let payLock = false;
   function pay(opts) {
     opts = opts || {};
-    const amount = Math.round(opts.amount || 0);
+    const amount = Math.round(Number(opts.amount) || 0);
     const method = opts.method || State.prefs.paymentMethod || "wallet";
     const pointsEarned = opts.pointsEarned || 0;
-    if (method === "wallet" && window.YCBackend && YCBackend.isLive()) return YCBackend.pay(opts);
+    if (!(amount > 0)) return { ok: false, reason: "invalid_amount" };
+    if (payLock) return { ok: false, reason: "busy" };
+    if (method === "wallet" && window.YCBackend && YCBackend.isLive()) {
+      payLock = true;
+      return Promise.resolve(YCBackend.pay(opts)).finally(function () { payLock = false; });
+    }
     if (typeof navigator !== "undefined" && navigator.onLine === false && method !== "cash") {
       return { ok: false, reason: "offline" };
     }
-    if (method === "wallet") {
-      if (amount > State.wallet.balance) return { ok: false, reason: "insufficient_balance" };
-      State.wallet.balance -= amount;
-      addTransaction({ label: opts.label, amount: -amount, type: "debit", service: opts.service, meta: opts.meta || null });
-      addNotification("Paiement confirmé", opts.label + " réglé via Youss Wallet (" + fmtFCFA(amount) + ").", "wallet", "wallet");
-    } else if (method === "mobile") {
-      addTransaction({ label: opts.label + " (paiement mobile)", amount: -amount, type: "debit", service: opts.service, status: "success", external: true });
+    payLock = true;
+    try {
+      if (method === "wallet") {
+        if (amount > State.wallet.balance) return { ok: false, reason: "insufficient_balance" };
+        State.wallet.balance -= amount;
+        addTransaction({ label: opts.label, amount: -amount, type: "debit", service: opts.service, meta: opts.meta || null });
+        addNotification("Paiement confirmé", opts.label + " réglé via Youss Wallet (" + fmtFCFA(amount) + ").", "wallet", "wallet");
+      } else if (method === "mobile") {
+        addTransaction({ label: opts.label + " (paiement mobile)", amount: -amount, type: "debit", service: opts.service, status: "success", external: true });
+      }
+      let activityId = null;
+      if (opts.activity !== false) {
+        const act = addActivity(Object.assign({ service: opts.service, title: opts.label, amount, status: "Terminé", icon: iconForService(opts.service), method }, opts.activity || {}));
+        activityId = act.id;
+      }
+      if (pointsEarned > 0) {
+        addRewardPoints(pointsEarned, opts.label);
+        addNotification("Points Youss Bonus", "+" + pointsEarned + " points ajoutés à votre solde Youss Bonus.", "rewards", "rewards");
+      }
+      emit();
+      return { ok: true, method, activityId };
+    } finally {
+      payLock = false;
     }
-    if (opts.activity !== false) {
-      addActivity(Object.assign({ service: opts.service, title: opts.label, amount, status: "Terminé", icon: iconForService(opts.service), method }, opts.activity || {}));
-    }
-    if (pointsEarned > 0) {
-      addRewardPoints(pointsEarned, opts.label);
-      addNotification("Points Youss Bonus", "+" + pointsEarned + " points ajoutés à votre solde Youss Bonus.", "rewards", "rewards");
-    }
-    emit();
-    return { ok: true, method };
   }
   const payFromWallet = (opts) => pay(Object.assign({}, opts, { method: "wallet" }));
 
   function creditWallet(amount, label) {
+    amount = Math.round(Number(amount) || 0);
+    if (!(amount > 0)) return { ok: false, reason: "invalid_amount" };
     if (window.YCBackend && YCBackend.isLive()) return YCBackend.topup(amount, label);
     State.wallet.balance += amount;
     addTransaction({ label, amount, type: "credit", service: "wallet" });
@@ -242,6 +278,18 @@
       { id: "shipped", label: "Expédiée", icon: "local_shipping", after: 45 },
       { id: "delivering", label: "En livraison", icon: "near_me", after: 70 },
       { id: "delivered", label: "Livrée", icon: "home", after: 100 }
+    ],
+    restaurant_pickup: [
+      { id: "confirmed", label: "Commande confirmée", icon: "check_circle", after: 0 },
+      { id: "preparing", label: "En préparation", icon: "skillet", after: 25 },
+      { id: "ready", label: "Prête à emporter", icon: "shopping_bag", after: 70 },
+      { id: "collected", label: "Récupérée", icon: "done_all", after: 100 }
+    ],
+    market_pickup: [
+      { id: "confirmed", label: "Commande confirmée", icon: "check_circle", after: 0 },
+      { id: "preparing", label: "Préparation par le vendeur", icon: "inventory_2", after: 30 },
+      { id: "ready", label: "Prête au retrait", icon: "store", after: 70 },
+      { id: "collected", label: "Récupérée", icon: "done_all", after: 100 }
     ]
   };
   function createOrder(o) {
@@ -256,7 +304,9 @@
     return Math.min(100, Math.round((elapsed / (order.durationSec || 120)) * 100));
   }
   function orderStep(order) {
-    const steps = ORDER_STEPS[order.type] || ORDER_STEPS.restaurant;
+    const pickup = order && (order.fulfillment === "pickup" || order.shipping === "pickup");
+    const key = pickup ? (order.type + "_pickup") : (order && order.type);
+    const steps = ORDER_STEPS[key] || ORDER_STEPS[order && order.type] || ORDER_STEPS.restaurant;
     const p = orderProgress(order);
     let idx = 0;
     steps.forEach((s, i) => { if (p >= s.after) idx = i; });
@@ -269,9 +319,9 @@
     addNotification, addActivity, addRewardPoints, addTransaction, iconForService,
     pay, payFromWallet, creditWallet, whenPaid,
     createOrder, orderProgress, orderStep, ORDER_STEPS,
-    unread: () => State.notifications.filter((n) => !n.read).length,
-    cartCount: () => State.cart.items.reduce((s, i) => s + i.qty, 0),
-    marketCount: () => State.cart.market.reduce((s, i) => s + i.qty, 0),
+    unread: () => (State.notifications || []).filter((n) => !n.read).length,
+    cartCount: () => ((State.cart && State.cart.items) || []).reduce((s, i) => s + i.qty, 0),
+    marketCount: () => ((State.cart && State.cart.market) || []).reduce((s, i) => s + i.qty, 0),
     city: () => YCData.cityOf(State.user.city),
     setCity: (name) => {
       const c = YCData.CITIES[name]; if (!c) return;

@@ -16,6 +16,7 @@
 
   Screens.events = function (container, params) {
     if (params && params.cat) f.cat = params.cat;
+    if (params && params.city) f.city = params.city;
     const items = list();
     const featured = items[0];
     const body = `
@@ -43,7 +44,11 @@
 
   // Fiche
   Screens.eventDetail = function (container, params) {
-    const e = YCData.event(params.id) || YCData.EVENTS[0];
+    const e = YCData.event(params.id);
+    if (!e) {
+      Shell.render(container, { title: "Événement", back: true, body: UI.emptyState({ icon: "confirmation_number", title: "Événement introuvable", body: "Cet événement n'est plus disponible.", actionLabel: "Voir les événements", actionOnclick: "App.resetTo('events')" }), nav: false, showNav: true });
+      return;
+    }
     if (!sel.ticket || !e.tickets.find((t) => t.id === sel.ticket)) { sel.ticket = e.tickets[0].id; sel.qty = 1; }
     const t = e.tickets.find((x) => x.id === sel.ticket);
     const total = t.price * sel.qty;
@@ -59,7 +64,7 @@
       </div>`;
     const body = `
       <section class="relative rounded-3xl overflow-hidden h-64 lg:h-[420px] bg-card-high">${UI.img(e.img, e.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white"><span class="badge bg-white/95 text-ink mb-2">${e.cat}</span><h2 class="t-h1 lg:t-display max-w-[760px]">${e.name}</h2></div>
+        <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white"><span class="badge bg-white/95 text-[#0A0A0A] mb-2">${e.cat}</span><h2 class="t-h1 lg:t-display max-w-[760px]">${e.name}</h2></div>
         <button type="button" onclick="Screens._shareEvent('${e.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Partager">${icon("share")}</button>
       </section>
       <div class="grid lg:grid-cols-[1fr_400px] gap-6 items-start">
@@ -81,9 +86,15 @@
     Shell.render(container, { title: e.name, subtitle: YCData.fmtDate(e.date) + " · " + e.city, back: true, body, nav: false, showNav: true, onMount: () => { const m = YCMap.create("ev-map", { interactive: false, zoomControl: false, lat: e.lat, lng: e.lng, zoom: 14 }); if (m) m.addPoi([e.lat, e.lng], "confirmation_number", "<b>" + esc(e.place) + "</b>"); } });
   };
   Screens._pickTicket = (id, eid) => { sel.ticket = id; App.replace("eventDetail", { id: eid }); };
-  Screens._ticketQty = (d, eid) => { sel.qty = Math.min(10, Math.max(1, sel.qty + d)); App.replace("eventDetail", { id: eid }); };
+  Screens._ticketQty = (d, eid) => {
+    const e = YCData.event(eid);
+    const t = e && e.tickets.find((x) => x.id === sel.ticket);
+    const max = t ? Math.min(10, Math.max(1, t.left)) : 1;
+    sel.qty = Math.min(max, Math.max(1, sel.qty + d));
+    App.replace("eventDetail", { id: eid });
+  };
   Screens._ticketPreset = (eid, tid, qty) => { sel.ticket = tid; sel.qty = qty || 1; };
-  Screens._shareEvent = (id) => { const e = YCData.event(id); const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + ". Vu sur YOUSS CONNECT."; if (navigator.share) navigator.share({ title: e.name, text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien copié.", "success")); };
+  Screens._shareEvent = (id) => { const e = YCData.event(id); if (!e) return; const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + ". Vu sur YOUSS CONNECT."; if (navigator.share) navigator.share({ title: e.name, text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien copié.", "success")).catch(() => UI.toast(text, "info")); else UI.toast(text, "info"); };
 
   // Achat
   Screens.eventCheckout = function (container, params) {
@@ -109,7 +120,9 @@
     return tk;
   }
   Screens._payEvent = function (eid, total) {
-    const e = YCData.event(eid), t = e.tickets.find((x) => x.id === sel.ticket);
+    const e = YCData.event(eid), t = e && e.tickets.find((x) => x.id === sel.ticket);
+    if (!e || !t) { UI.toast("Billet introuvable.", "error"); return; }
+    if (sel.qty > t.left) { UI.toast("Plus assez de places disponibles.", "error"); return; }
     const holder = (document.getElementById("tk-holder") || {}).value || ACState.user.fullName;
     ACStore.whenPaid(ACStore.pay({ amount: total, label: "Billet · " + e.name, service: "evenement", pointsEarned: Math.round(total / 100), method: sel.method, activity: { detail: { ticket: t.label + " × " + sel.qty, place: e.place, date: e.date } } }), function () {
       const tk = makeTicket(e, t, sel.qty, holder);
@@ -126,7 +139,7 @@
 
   // Confirmation
   Screens.ticketConfirmed = function (container, params) {
-    const tk = ACState.tickets.find((x) => x.id === params.id) || ACState.tickets[0];
+    const tk = ACState.tickets.find((x) => x.id === params.id);
     if (!tk) { App.resetTo("events"); return; }
     const e = YCData.event(tk.eventId) || {};
     const city = tk.city === "Ouidah" ? "Cotonou" : tk.city;
@@ -162,7 +175,8 @@
 
   // Mes billets
   Screens.myTickets = function (container, params) {
-    const today = new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    const today = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
     const up = ACState.tickets.filter((t) => t.date >= today).sort((a, b) => a.date.localeCompare(b.date)), past = ACState.tickets.filter((t) => t.date < today);
     const row = (t) => `<button type="button" onclick="${go("ticketDetail", { id: t.id })}" class="card card-press overflow-hidden text-left flex">
       <span class="w-28 flex-shrink-0 bg-card-high relative">${UI.img(t.img, t.event)}</span>
@@ -177,7 +191,7 @@
   };
 
   Screens.ticketDetail = function (container, params) {
-    const tk = ACState.tickets.find((x) => x.id === params.id) || ACState.tickets[0];
+    const tk = ACState.tickets.find((x) => x.id === params.id);
     if (!tk) { App.resetTo("myTickets"); return; }
     const payload = "youss:ticket:" + tk.number;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -202,5 +216,5 @@
     </div>`;
     Shell.render(container, { title: "Billet numérique", back: true, body, nav: false, hideSearch: true, onMount: () => YCScanner.render("tk-qr", payload, { size: 204, cell: 6 }) });
   };
-  Screens._shareTicket = (id) => { const tk = ACState.tickets.find((x) => x.id === id); const text = "Mon billet YOUSS CONNECT · " + tk.event + " · " + tk.number; if (navigator.share) navigator.share({ title: "Billet", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Billet copié.", "success")); };
+  Screens._shareTicket = (id) => { const tk = ACState.tickets.find((x) => x.id === id); if (!tk) return; const text = "Mon billet YOUSS CONNECT · " + tk.event + " · " + tk.number; if (navigator.share) navigator.share({ title: "Billet", text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Billet copié.", "success")).catch(() => UI.toast(text, "info")); else UI.toast(text, "info"); };
 })();

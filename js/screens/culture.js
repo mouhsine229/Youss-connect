@@ -19,7 +19,7 @@
         ${UI.img(YCData.IMG + "places/site-ouidah-porte.jpg", "", "img-cover opacity-70", { eager: true })}<div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent"></div>
         <div class="relative p-5 lg:p-8 w-full flex flex-col lg:flex-row lg:items-end gap-4">
           <div class="flex-1"><p class="t-caption text-gold">Culture & tourisme</p><h2 class="t-h1 lg:t-display">Lieux à visiter</h2><p class="t-body text-white/80 mt-1 max-w-[560px]">Monuments, musées et sites à Cotonou, Dakar, Lomé et Accra.</p></div>
-          <button type="button" onclick="App.nav('culturalScanner')" class="card-dark !bg-white/10 hover:!bg-white/15 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px]"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
+          <button type="button" onclick="App.nav('culturalScanner')" class="rounded-2xl bg-black/40 hover:bg-black/45 border border-white/15 p-4 flex items-center gap-3 text-left lg:w-[320px] text-white"><span class="w-12 h-12 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pulse-ring">${icon("qr_code_scanner", "text-[26px]")}</span><span><span class="block t-title">Scanner un monument</span><span class="block t-small text-white/70">Histoire, audio-guide, lieux à proximité</span></span></button>
         </div>
       </section>
       <section>${UI.sectionTitle("Villes")}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div></section>
@@ -29,12 +29,13 @@
           <div class="hscroll flex-1">${UI.chip("Tous", "Screens._cuType('all')", f.type === "all")}${YCData.SITE_TYPES.map((t) => UI.chip(t.label, `Screens._cuType('${t.id}')`, f.type === t.id, { icon: t.icon })).join("")}</div>
           <select class="select lg:w-52" onchange="Screens._cuCity(this.value)" aria-label="Ville"><option value="all" ${f.city === "all" ? "selected" : ""}>Toutes les villes</option>${YCData.DESTINATIONS.map((c) => `<option value="${c}" ${f.city === c ? "selected" : ""}>${c}</option>`).join("")}</select>
         </div>
-        ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuType('all');" })}
+        ${sites.length ? `<div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">${sites.map((s) => UI.siteCard(s)).join("")}</div>` : UI.emptyState({ icon: "museum", title: I18N.t("empty_results"), body: "Aucun lieu de ce type dans cette ville.", actionLabel: "Tout afficher", actionOnclick: "Screens._cuReset()" })}
       </section>`;
     Shell.render(container, { title: "Culture & tourisme", subtitle: esc(city), back: "App.nav('home')", body, nav: false, showNav: true });
   };
   Screens._cuType = (t) => { f.type = t; App.replace("culture"); };
   Screens._cuCity = (c) => { f.city = c; App.replace("culture"); };
+  Screens._cuReset = () => { f.type = "all"; f.city = "all"; App.replace("culture"); };
 
   // Page destination
   Screens.destination = function (container, params) {
@@ -44,7 +45,7 @@
     const body = `
       <section class="relative rounded-3xl overflow-hidden h-64 lg:h-[400px] bg-card-high">${UI.img(c.hero, c.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
         <div class="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8 text-white"><p class="t-caption text-gold">${c.country} · Destination</p><h2 class="t-display">${c.name}</h2><p class="t-body text-white/85 mt-1 max-w-[600px]">${c.tagline}</p></div>
-        ${!isHome ? `<button type="button" onclick="Shell.pickCity('${c.name}')" class="absolute top-4 right-4 btn btn-sm bg-white/95 text-ink">${icon("swap_horiz", "text-[18px]")}Utiliser ${c.name} comme ville</button>` : `<span class="absolute top-4 right-4 badge badge-gold">Votre ville</span>`}
+        ${!isHome ? `<button type="button" onclick="Shell.pickCity('${c.name}')" class="absolute top-4 right-4 btn btn-sm bg-white/95 text-[#0A0A0A]">${icon("swap_horiz", "text-[18px] text-[#0A0A0A]")}Utiliser ${c.name} comme ville</button>` : `<span class="absolute top-4 right-4 badge badge-gold">Votre ville</span>`}
       </section>
       <div class="grid lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
         <div class="space-y-8 min-w-0">
@@ -69,13 +70,17 @@
     } });
   };
   Screens._cityRestaurants = (c) => { Shell.pickCity(c); App.nav("restaurants"); };
-  Screens._cityEvents = (c) => { App.nav("events"); };
+  Screens._cityEvents = (c) => { App.nav("events", { city: c }); };
 
   // Fiche site (Aperçu / Histoire / Visite / Infos)
   const st = { tab: "overview" };
   const TABS = [["overview", "Aperçu"], ["history", "Histoire"], ["visit", "Visite"], ["info", "Infos"]];
   Screens.cultureDetail = function (container, params) {
-    const s = YCData.site(params.id) || YCData.SITES[0];
+    const s = YCData.site(params.id);
+    if (!s) {
+      Shell.render(container, { title: "Lieu", back: true, body: UI.emptyState({ icon: "museum", title: "Lieu introuvable", body: "Ce site n'est plus disponible.", actionLabel: "Voir les lieux", actionOnclick: "App.resetTo('culture')" }), nav: false, showNav: true });
+      return;
+    }
     if (params.tab) st.tab = params.tab;
     const type = YCData.siteType(s.type);
     const scanned = !!params.scanned;
@@ -101,7 +106,7 @@
       ${scanned ? `<div class="card-dark p-4 flex items-center gap-3 animate-screen-in"><span class="w-11 h-11 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pop">${icon("center_focus_strong", "text-[24px]")}</span><div class="flex-1"><p class="t-caption text-gold">Résultat du scan</p><p class="t-title">Monument reconnu · correspondance ${params.score || 97} %</p></div><button type="button" onclick="App.nav('culturalScanner')" class="btn btn-sm bg-white/10 text-white">Rescanner</button></div>` : ""}
       <section class="grid lg:grid-cols-[1.4fr_1fr] gap-3">
         <div class="relative rounded-3xl overflow-hidden h-64 lg:h-[420px] bg-card-high">${UI.img(gallery[0], s.name, "img-cover", { eager: true })}<div class="absolute inset-0 gradient-up"></div>
-          <div class="absolute bottom-5 left-5 right-5 text-white"><div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${type.label}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div><h2 class="t-h1 lg:t-display">${s.name}</h2><p class="t-body text-white/85 mt-1">${icon("location_on", "text-[16px]")} ${s.place}</p></div>
+          <div class="absolute bottom-5 left-5 right-5 text-white"><div class="flex flex-wrap gap-2 mb-2"><span class="badge bg-white/95 text-[#0A0A0A]">${icon(type.icon, "text-[14px] text-[#0A0A0A]")}${type.label}</span>${s.unesco ? `<span class="badge badge-gold">Patrimoine mondial UNESCO</span>` : ""}</div><h2 class="t-h1 lg:t-display">${s.name}</h2><p class="t-body text-white/85 mt-1">${icon("location_on", "text-[16px]")} ${s.place}</p></div>
           <button type="button" onclick="Screens._toggleSaveSite('${s.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Sauvegarder">${icon("bookmark", saved ? "text-gold" : "", saved)}</button>
         </div>
         <div class="hidden lg:grid grid-rows-2 gap-3 h-[420px]">${gallery.slice(1, 3).map((g, i) => `<div class="relative rounded-3xl overflow-hidden bg-card-high min-h-0"><img src="${g}" alt="" class="absolute inset-0 w-full h-full object-cover img-fade" loading="lazy"/>${i === 1 ? `<button type="button" onclick="Screens._videoPreview('${s.id}')" class="absolute inset-0 flex items-center justify-center bg-black/30 text-white"><span class="w-14 h-14 rounded-full bg-white/90 text-ink flex items-center justify-center">${icon("play_arrow", "text-[32px]", true)}</span></button>` : ""}</div>`).join("")}</div>

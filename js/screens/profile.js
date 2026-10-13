@@ -41,7 +41,7 @@
   };
   Screens._toggleTheme = () => { UI.setTheme(ACState.prefs.theme === "dark" ? "light" : "dark"); };
   Screens._logout = () => UI.confirm({ title: "Se déconnecter ?", body: "Les données de démo restent sur cet appareil.", okLabel: I18N.t("logout"), danger: true, icon: "logout", onOk: "Screens._confirmLogout()" });
-  Screens._confirmLogout = () => { const done = () => { ACState.session.authenticated = false; ACStore.emit(); App.resetTo("login"); }; if (window.YCBackend) YCBackend.signOut().then(done, done); else done(); };
+  Screens._confirmLogout = () => { const done = () => { ACState.session.authenticated = false; ACState.session.ephemeral = false; try { sessionStorage.removeItem("yc-otp-pending"); sessionStorage.removeItem("yc-ops-pending"); sessionStorage.removeItem("yc-stay"); } catch (e) { /* no-op */ } if (window.YCGate) { if (YCGate.setOps) YCGate.setOps(false); if (YCGate.setPro) YCGate.setPro(false); } ACStore.emit(); App.resetTo("login"); }; if (window.YCBackend) YCBackend.signOut().then(done, done); else done(); };
 
   // Édition
   Screens.editProfile = function (container) {
@@ -57,7 +57,7 @@
     Shell.render(container, { title: "Modifier mon profil", back: true, body, nav: false, showNav: true });
   };
   Screens._epCities = () => { const c = YCData.countryOf(document.getElementById("ep-country").value); document.getElementById("ep-city").innerHTML = c.cities.map((x) => `<option>${x}</option>`).join(""); };
-  Screens._avatarFile = (input) => { const f = input.files && input.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { ACState.user.avatar = r.result; ACStore.emit(); UI.toast("Photo mise à jour.", "success"); }; r.readAsDataURL(f); };
+  Screens._avatarFile = (input) => { const f = input.files && input.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { ACState.user.avatar = r.result; ACState._forceShow = true; if (input && input.blur) input.blur(); ACStore.emit(); UI.toast("Photo mise à jour.", "success"); }; r.readAsDataURL(f); };
   Screens._saveProfile = function () {
     const g = (id) => (document.getElementById(id) || {}).value || "";
     const first = g("ep-first").trim(), last = g("ep-last").trim(), email = g("ep-email").trim();
@@ -124,11 +124,11 @@
   // Sécurité
   Screens.security = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">Élevé</p><p class="t-small text-white/70">Compte vérifié, PIN actif, biométrie ${ACState.prefs.biometric === false ? "désactivée" : "activée"}</p></div></div>
+      <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">Élevé</p><p class="t-small text-white/70">Compte vérifié, PIN actif, biométrie ${ACState.prefs.biometric ? "activée" : "désactivée"}</p></div></div>
       <div class="space-y-2.5">
         ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: ACState.user.verified ? "Identité vérifiée" : "Vérification requise", right: UI.badge(ACState.user.verified ? "Vérifié" : "À faire", ACState.user.verified ? "success" : "warn") })}
         ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: "Modifier le code à 4 chiffres" })}
-        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: "Empreinte ou visage pour les paiements", right: UI.toggle(ACState.prefs.biometric !== false, "Screens._toggleBio()", "Biométrie") })}
+        ${menuRow("fingerprint", "Biométrie", "Screens._toggleBio()", { sub: "Empreinte ou visage pour les paiements", right: UI.toggle(!!ACState.prefs.biometric, "Screens._toggleBio()", "Biométrie") })}
         ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "3 appareils" })}
         ${menuRow("history", "Historique des connexions", "App.nav('loginHistory')", { sub: "Dernière : aujourd'hui, " + esc(ACState.user.city) })}
         ${menuRow("report", "Signalement", "App.nav('report')", { sub: "Signaler un chauffeur, un vendeur, un incident" })}
@@ -137,7 +137,7 @@
       </div></div>`;
     Shell.render(container, { title: I18N.t("security"), subtitle: "PIN, biométrie, appareils", back: true, body, nav: false, showNav: true });
   };
-  Screens._toggleBio = () => { ACState.prefs.biometric = ACState.prefs.biometric === false; ACStore.emit(); UI.toast("Biométrie " + (ACState.prefs.biometric === false ? "désactivée" : "activée") + ".", "success"); };
+  Screens._toggleBio = () => { ACState.prefs.biometric = !ACState.prefs.biometric; ACStore.emit(); UI.toast("Biométrie " + (ACState.prefs.biometric ? "activée" : "désactivée") + ".", "success"); };
   Screens.verifyAccount = function (container) {
     const steps = [{ label: "Numéro de téléphone vérifié", icon: "call" }, { label: "E-mail confirmé", icon: "mail" }, { label: "Pièce d'identité", icon: "badge" }, { label: "Selfie de vérification", icon: "face" }];
     const done = ACState.user.verified ? 4 : 2;
@@ -147,10 +147,13 @@
   };
   Screens._verifyDone = () => { ACState.user.verified = true; ACStore.addNotification("Compte vérifié", "Votre identité a été validée. Plafonds Wallet étendus.", "wallet", "security"); ACStore.emit(); UI.toast("Documents reçus · compte vérifié (démo).", "success"); };
   Screens.devices = function (container) {
-    const list = [{ name: "Ce téléphone", sub: navigator.platform || "Mobile", icon: "smartphone", current: true, when: "Actif maintenant" }, { name: "Ordinateur portable", sub: "Chrome · " + ACState.user.city, icon: "laptop", when: "Hier, 21:14" }, { name: "Tablette", sub: "Safari · " + ACState.user.city, icon: "tablet", when: "Il y a 6 jours" }];
-    const body = `<div class="max-w-narrow mx-auto w-full space-y-3">${list.map((d, i) => `<div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon(d.icon)}</span><div class="flex-1 min-w-0"><p class="t-title flex items-center gap-2">${d.name}${d.current ? UI.badge("Cet appareil", "gold") : ""}</p><p class="t-small text-ink-2">${d.sub} · ${d.when}</p></div>${!d.current ? `<button type="button" onclick="this.closest('.card').remove();UI.toast('Appareil déconnecté.','success')" class="btn btn-sm btn-outline">Déconnecter</button>` : ""}</div>`).join("")}${UI.secondaryButton("Déconnecter tous les autres appareils", "UI.toast('Tous les autres appareils ont été déconnectés.','success')", { icon: "logout" })}</div>`;
+    const revoked = ACState.prefs.revokedDevices || [];
+    const list = [{ id: "this", name: "Ce téléphone", sub: navigator.platform || "Mobile", icon: "smartphone", current: true, when: "Actif maintenant" }, { id: "laptop", name: "Ordinateur portable", sub: "Chrome · " + ACState.user.city, icon: "laptop", when: "Hier, 21:14" }, { id: "tablet", name: "Tablette", sub: "Safari · " + ACState.user.city, icon: "tablet", when: "Il y a 6 jours" }].filter((d) => !revoked.includes(d.id));
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-3">${list.map((d) => `<div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon(d.icon)}</span><div class="flex-1 min-w-0"><p class="t-title flex items-center gap-2">${d.name}${d.current ? UI.badge("Cet appareil", "gold") : ""}</p><p class="t-small text-ink-2">${d.sub} · ${d.when}</p></div>${!d.current ? `<button type="button" onclick="Screens._revokeDevice('${d.id}')" class="btn btn-sm btn-outline">Déconnecter</button>` : ""}</div>`).join("")}${list.length > 1 ? UI.secondaryButton("Déconnecter tous les autres appareils", "Screens._revokeOthers()", { icon: "logout" }) : ""}</div>`;
     Shell.render(container, { title: "Appareils connectés", back: true, body, nav: false, showNav: true });
   };
+  Screens._revokeDevice = (id) => { ACState.prefs.revokedDevices = (ACState.prefs.revokedDevices || []).concat([id]); ACStore.emit(); UI.toast("Appareil déconnecté.", "success"); };
+  Screens._revokeOthers = () => { ACState.prefs.revokedDevices = ["laptop", "tablet"]; ACStore.emit(); UI.toast("Tous les autres appareils ont été déconnectés.", "success"); };
   Screens.loginHistory = function (container) {
     const rows = [["Aujourd'hui 09:12", ACState.user.city, "Ce téléphone", true], ["Hier 21:14", ACState.user.city, "Chrome · ordinateur", true], ["Lundi 08:40", ACState.user.city, "Ce téléphone", true], ["Samedi 19:02", "Lagos, Nigeria", "Appareil inconnu", false]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-3"><div class="card divide-y divide-line">${rows.map((r) => `<div class="p-4 flex items-center gap-3"><span class="menu-icon ${r[3] ? "" : "!bg-danger-soft !text-danger"}">${icon(r[3] ? "check" : "warning")}</span><div class="flex-1 min-w-0"><p class="t-title">${r[0]}</p><p class="t-small text-ink-2">${r[1]} · ${r[2]}</p></div>${r[3] ? "" : `<button type="button" onclick="App.nav('report')" class="btn btn-sm btn-outline">Ce n'est pas moi</button>`}</div>`).join("")}</div><p class="t-small text-ink-3">Une connexion inhabituelle déclenche une vérification par code OTP.</p></div>`;

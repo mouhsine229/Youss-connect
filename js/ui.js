@@ -79,11 +79,11 @@
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[240px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(r.img, r.name)}
         <span class="absolute top-2.5 left-2.5 badge badge-dark">${r.time}</span>
-        <span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${r.rating}</span>
+        <span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">${icon("star", "text-gold text-[14px]", true)}${r.rating}</span>
       </div>
       <div class="p-3.5">
-        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${r.name}</h3><span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span></div>
-        <p class="t-small text-ink-2 truncate mt-0.5">${r.cat} · ${r.area}, ${r.city} · ~${ACStore.fmtFCFA(r.avg)}</p>
+        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${esc(r.name)}</h3><span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span></div>
+        <p class="t-small text-ink-2 truncate mt-0.5">${esc(r.cat)} · ${esc(r.area)}, ${esc(r.city)} · ~${ACStore.fmtFCFA(r.avg)}</p>
       </div>
     </button>`;
   }
@@ -96,7 +96,7 @@
         ${out ? `<span class="absolute inset-0 bg-black/45 flex items-center justify-center"><span class="badge badge-dark">Rupture</span></span>` : ""}
       </button>
       <div class="p-3 flex-1 flex flex-col">
-        <button type="button" onclick="${go("productDetail", { id: p.id })}" class="text-left"><h3 class="t-title line-clamp-2 leading-snug">${p.name}</h3></button>
+        <button type="button" onclick="${go("productDetail", { id: p.id })}" class="text-left"><h3 class="t-title line-clamp-2 leading-snug">${esc(p.name)}</h3></button>
         <p class="t-small text-ink-2 truncate mt-0.5">${seller.name}</p>
         <div class="mt-auto pt-2 flex items-center justify-between gap-2">
           <div><span class="t-title font-extrabold">${ACStore.fmtFCFA(p.price)}</span>${p.old ? `<span class="t-small text-ink-3 line-through ml-1.5">${ACStore.fmtFCFA(p.old)}</span>` : ""}<div>${rating(p.rating, p.reviews)}</div></div>
@@ -109,14 +109,14 @@
     return `<button type="button" onclick="${go("eventDetail", { id: e.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[260px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-36" : "ratio-16-10"} bg-card-high overflow-hidden">${img(e.img, e.name)}
         <div class="absolute inset-0 gradient-up"></div>
-        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-ink">${e.cat}</span>
+        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-[#0A0A0A]">${esc(e.cat)}</span>
         <div class="absolute bottom-2.5 left-3 right-3 text-white">
-          <p class="t-caption text-gold">${YCData.fmtDate(e.date)} · ${e.time}</p>
-          <h3 class="t-title leading-snug line-clamp-2">${e.name}</h3>
+          <p class="t-caption text-gold">${YCData.fmtDate(e.date)} · ${esc(e.time)}</p>
+          <h3 class="t-title leading-snug line-clamp-2">${esc(e.name)}</h3>
         </div>
       </div>
       <div class="p-3 flex items-center justify-between gap-2">
-        <p class="t-small text-ink-2 truncate flex items-center gap-1">${icon("location_on", "text-[15px]")}${e.place}</p>
+        <p class="t-small text-ink-2 truncate flex items-center gap-1">${icon("location_on", "text-[15px]")}${esc(e.place)}</p>
         <span class="t-small font-bold whitespace-nowrap">dès ${ACStore.fmtFCFA(YCData.minPrice(e))}</span>
       </div>
     </button>`;
@@ -125,10 +125,10 @@
     const type = YCData.siteType(s.type);
     return `<button type="button" onclick="${go("cultureDetail", { id: s.id })}" class="card card-press overflow-hidden text-left w-full ${compact ? "min-w-[220px] lg:min-w-0" : ""}">
       <div class="relative ${compact ? "h-32" : "ratio-16-10"} bg-card-high overflow-hidden">${img(s.img, s.name)}
-        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-ink">${icon(type.icon, "text-[14px]")}${type.label}</span>
+        <span class="absolute top-2.5 left-2.5 badge bg-white/95 text-[#0A0A0A]">${icon(type.icon, "text-[14px] text-[#0A0A0A]")}${type.label}</span>
         ${s.unesco ? `<span class="absolute top-2.5 right-2.5 badge badge-gold">UNESCO</span>` : ""}
       </div>
-      <div class="p-3.5"><h3 class="t-title line-clamp-2 leading-snug">${s.name}</h3><p class="t-small text-ink-2 truncate mt-0.5">${s.place}</p></div>
+      <div class="p-3.5"><h3 class="t-title line-clamp-2 leading-snug">${esc(s.name)}</h3><p class="t-small text-ink-2 truncate mt-0.5">${esc(s.place)}</p></div>
     </button>`;
   }
   function destinationCard(name, tall) {
@@ -232,8 +232,8 @@
   function successHero(o) {
     return `<div class="flex flex-col items-center text-center pt-4 pb-2">
       <div class="w-20 h-20 rounded-full ${o.tone === "danger" ? "bg-danger-soft text-danger" : o.tone === "warn" ? "bg-warn-soft text-warn" : "bg-gold-soft text-gold-deep"} flex items-center justify-center animate-pop">${icon(o.icon || "check_circle", "text-[44px]", true)}</div>
-      <h2 class="t-h1 mt-4">${o.title}</h2>
-      ${o.body ? `<p class="t-body text-ink-2 mt-1.5 max-w-[420px] text-balance">${o.body}</p>` : ""}
+      <h2 class="t-h1 mt-4">${esc(o.title)}</h2>
+      ${o.body ? `<p class="t-body text-ink-2 mt-1.5 max-w-[420px] text-balance">${esc(o.body)}</p>` : ""}
     </div>`;
   }
 
@@ -275,7 +275,7 @@
   function confirm(o) {
     openSheet(`<div class="text-center lg:text-left">
       ${o.icon ? `<div class="w-14 h-14 rounded-full ${o.danger ? "bg-danger-soft text-danger" : "bg-gold-soft text-gold-deep"} flex items-center justify-center mx-auto lg:mx-0 mb-3">${icon(o.icon, "text-[28px]")}</div>` : ""}
-      <h3 class="t-h3 mb-1.5">${o.title}</h3><p class="t-body text-ink-2 mb-5">${o.body || ""}</p>
+      <h3 class="t-h3 mb-1.5">${esc(o.title)}</h3><p class="t-body text-ink-2 mb-5">${esc(o.body || "")}</p>
       <div class="flex flex-col sm:flex-row gap-2.5">
         ${button(o.cancelLabel || t("cancel"), "UI.closeSheet()", { variant: "outline" })}
         ${button(o.okLabel || t("confirm"), "UI.closeSheet();" + o.onOk, { variant: o.danger ? "danger" : "primary" })}
@@ -313,8 +313,20 @@
   // Langue
   function setLang(id) {
     if (!I18N.set(id)) return;
+    const active = document.activeElement;
+    if (active && active.blur) active.blur();
+    ACState._forceShow = true;
     toast(I18N.t("lang_done"), "success");
     ACStore.emit();
+  }
+
+  function copyText(text, okMsg) {
+    const s = String(text == null ? "" : text);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(s).then(function () { if (okMsg) toast(okMsg, "success"); }).catch(function () { toast(s, "info"); });
+    }
+    toast(okMsg || s, "info");
+    return Promise.resolve();
   }
 
   /* Format court d'une heure ISO/epoch */
@@ -335,7 +347,7 @@
     restaurantCard, productCard, eventCard, siteCard, destinationCard, nextSteps,
     stepper, timeline, field, togglePassword, select, error, showError, toggle, qtyControl, row,
     emptyState, skeletonList, spinner, successHero,
-    toast, openSheet, closeSheet, confirm, initOfflineBanner, applyTheme, setTheme, setLang, timeAgo,
+    toast, openSheet, closeSheet, confirm, initOfflineBanner, applyTheme, setTheme, setLang, timeAgo, copy: copyText,
     lang: () => I18N.lang, langNames: () => I18N.LANGS
   };
 })();

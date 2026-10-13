@@ -33,7 +33,7 @@
         <div class="flex-1 min-w-0 min-h-dvh flex flex-col bg-surface text-ink">
           <header class="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-line">
             <div class="px-4 lg:px-8 h-14 flex items-center justify-between gap-3">
-              <div class="min-w-0"><h1 class="t-h3 truncate">${title}</h1><p class="t-caption">Session nominative · 2FA actif (démo)</p></div>
+              <div class="min-w-0"><h1 class="t-h3 truncate">${title}</h1><p class="t-caption">Session nominative · accès démo</p></div>
               <button type="button" onclick="Screens._opsOut()" class="lg:hidden t-small font-semibold">Quitter</button>
             </div>
             <nav class="lg:hidden flex gap-1 overflow-x-auto no-scrollbar px-3 pb-2">${NAV.map((n) => `<button type="button" onclick="App.nav('${n.id}')" class="chip ${active === n.id ? "on" : ""} whitespace-nowrap">${n.label}</button>`).join("")}</nav>
@@ -56,13 +56,16 @@
           ${UI.error("ops-err")}
           <button type="submit" class="btn btn-lg btn-primary btn-block">Continuer</button>
         </form>
-        <p class="t-small text-white/40 mt-6">Démo : n'importe quel mot de passe, puis code 1234.</p>
+        <p class="t-small text-white/40 mt-6">Démo : mot de passe kya-ops, puis code 1234.</p>
       </div>
     </div>`;
   };
   Screens._opsLogin = function () {
     const mail = (document.getElementById("ops-mail") || {}).value || "";
+    const pass = (document.getElementById("ops-pass") || {}).value || "";
     if (!mail.includes("@")) { UI.showError("ops-err", "E-mail professionnel requis."); return; }
+    if (pass !== "kya-ops") { UI.showError("ops-err", "Mot de passe incorrect (démo : kya-ops)."); return; }
+    try { sessionStorage.setItem("yc-ops-pending", "1"); } catch (e) { /* no-op */ }
     App.nav("opsOtp", { mail });
   };
   Screens.opsOtp = function (container, params) {
@@ -79,6 +82,7 @@
   Screens._opsOtpOk = function () {
     const c = (document.getElementById("ops-otp") || {}).value || "";
     if (c !== "1234") { UI.showError("ops-otp-err", "Code incorrect."); return; }
+    try { sessionStorage.removeItem("yc-ops-pending"); } catch (e) { /* no-op */ }
     gateSet(true);
     App.resetTo("opsHome");
   };
@@ -215,7 +219,7 @@
     layout("opsMerchants", "Prestataires", `
       ${addBar("Ajouter un prestataire", "Screens._opsMerchantForm()")}
       <div class="card p-5"><p class="t-title">Lien d'invitation restaurant</p><p class="t-small text-ink-2 mt-1">À envoyer au gérant. Jeton : YC-PRO-MAMAN</p>
-        <div class="mt-3 flex flex-col sm:flex-row gap-2"><input class="input" readonly value="${esc(invite)}"/><button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(${UI.js(invite)});UI.toast('Lien copié.','success')" class="btn btn-dark sm:w-auto">Copier</button></div>
+        <div class="mt-3 flex flex-col sm:flex-row gap-2"><input class="input" readonly value="${esc(invite)}"/><button type="button" onclick="UI.copy(${UI.js(invite)},'Lien copié.')" class="btn btn-dark sm:w-auto">Copier</button></div>
       </div>
       <div class="card divide-y divide-line">${list.length ? list.map((m) => `<div class="p-4 flex items-center justify-between gap-3"><div class="min-w-0"><p class="t-title">${esc(m.name)}</p><p class="t-small text-ink-2">${esc(m.kind)}</p></div><div class="flex items-center gap-3">${UI.badge(m.status, m.status === "Actif" ? "success" : "warn")}${delBtn("merchants", m.id)}</div></div>`).join("") : emptyRow("Aucun prestataire.")}</div>`);
   };

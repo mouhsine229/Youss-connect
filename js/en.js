@@ -441,7 +441,7 @@
   }
   function apply(root) {
     if (!root || I18N.lang !== "en") return;
-    const skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1 };
+    const skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1, OPTION: 1 };
     const attrs = ["placeholder", "aria-label", "title", "alt"];
     function walk(node) {
       if (node.nodeType === 3) {

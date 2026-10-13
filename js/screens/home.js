@@ -18,7 +18,7 @@
     return `<button type="button" onclick="App.nav('${s.id}')" class="relative rounded-2xl overflow-hidden text-left h-28 sm:h-32 lg:h-40 card-press group">
       ${UI.img(s.img, "", "img-cover transition-transform duration-500 group-hover:scale-105")}
       <div class="absolute inset-0 gradient-up"></div>
-      <span class="absolute top-2.5 left-2.5 w-9 h-9 rounded-full bg-white/95 text-ink flex items-center justify-center">${icon(s.icon, "text-[20px]")}</span>
+      <span class="absolute top-2.5 left-2.5 w-9 h-9 rounded-full bg-white/95 text-[#0A0A0A] flex items-center justify-center">${icon(s.icon, "text-[20px] text-[#0A0A0A]")}</span>
       <div class="absolute bottom-2.5 left-3 right-3 text-white"><h3 class="t-title lg:t-h3 leading-tight">${I18N.t(s.label)}</h3><p class="t-small text-white/75 hidden sm:block">${s.sub}</p></div>
     </button>`;
   }
@@ -43,7 +43,9 @@
       .concat(YCData.restaurantsIn(city).slice(0, 2).map((r) => ({ img: r.img, title: r.name, meta: "Restaurant · " + r.km + " km · " + r.rating + " ★", onclick: go("restaurantDetail", { id: r.id }) })))
       .concat(YCData.sitesIn(city).slice(0, 1).map((s) => ({ img: s.img, title: s.name, meta: YCData.siteType(s.type).label + " · " + s.place, onclick: go("cultureDetail", { id: s.id }) })))
       .concat(YCData.eventsIn(city).slice(0, 1).map((e) => ({ img: e.img, title: e.name, meta: "Événement · " + YCData.fmtDateShort(e.date), onclick: go("eventDetail", { id: e.id }) })));
-    const events = YCData.allEvents().slice().sort((a, b) => a.date.localeCompare(b.date)).filter((e) => e.date >= "2026-10-07").slice(0, 4);
+    const now = new Date();
+    const today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+    const events = YCData.allEvents().slice().sort((a, b) => a.date.localeCompare(b.date)).filter((e) => e.date >= today).slice(0, 4);
     const recos = recommendations();
     const active = ACState.orders.filter((o) => !ACStore.orderStep(o).done)[0];
 
@@ -74,7 +76,7 @@
 
           <div>${UI.sectionTitle(I18N.t("recos"))}
             <div class="hscroll lg:grid lg:grid-cols-2 xl:grid-cols-4 gap-3">${recos.map((r) => `<button type="button" onclick="${r.onclick}" class="card card-press overflow-hidden text-left w-[230px] lg:w-auto">
-              <span class="block h-24 lg:h-28 bg-card-high relative">${UI.img(r.img, "")}<span class="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/95 text-ink flex items-center justify-center">${icon(r.icon, "text-[18px]")}</span></span>
+              <span class="block h-24 lg:h-28 bg-card-high relative">${UI.img(r.img, "")}<span class="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/95 text-[#0A0A0A] flex items-center justify-center">${icon(r.icon, "text-[18px] text-[#0A0A0A]")}</span></span>
               <span class="block p-3"><span class="block t-title truncate">${r.title}</span><span class="block t-small text-ink-2 truncate">${r.sub}</span></span>
             </button>`).join("")}</div>
           </div>

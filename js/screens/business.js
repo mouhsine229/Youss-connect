@@ -68,7 +68,7 @@
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5 space-y-3">${UI.field("np-name", "Nom du produit", { placeholder: "Ex. Sac en raphia" })}<div class="grid grid-cols-2 gap-3">${UI.field("np-price", "Prix (FCFA)", { type: "number", placeholder: "0" })}${UI.field("np-stock", "Stock initial", { type: "number", placeholder: "0" })}</div>${UI.select("np-cat", "Catégorie", YCData.PRODUCT_CATS, "Mode")}<label class="block"><span class="label">Description</span><textarea id="np-desc" class="textarea" placeholder="Matière, dimensions, origine…"></textarea></label><div class="rounded-xl border border-dashed border-line p-6 text-center text-ink-2 t-small">${icon("add_photo_alternate", "text-[28px] text-ink-3")}<p class="mt-1">Photos du produit (jusqu'à 5)</p></div></div>${UI.primaryButton("Publier sur Youss Market", "Screens._bizAddProduct()", { size: "lg", icon: "publish" })}</div>`;
     Shell.render(container, { title: "Nouveau produit", back: true, body, nav: false, showNav: true });
   };
-  Screens._bizAddProduct = () => { const name = document.getElementById("np-name").value.trim(), price = parseInt(document.getElementById("np-price").value, 10), stock = parseInt(document.getElementById("np-stock").value, 10) || 0; if (!name || !price) { UI.toast("Nom et prix requis.", "error"); return; } B().products.push({ id: ACStore.uid("bp"), name, price, stock }); ACStore.emit(); UI.toast("Produit publié.", "success"); App.nav("businessCatalogue"); };
+  Screens._bizAddProduct = () => { const name = document.getElementById("np-name").value.trim(), price = parseInt(document.getElementById("np-price").value, 10), stock = parseInt(document.getElementById("np-stock").value, 10) || 0; if (!name || !(price > 0)) { UI.toast("Nom et prix (supérieur à 0) requis.", "error"); return; } B().products.push({ id: ACStore.uid("bp"), name, price, stock: Math.max(0, stock) }); ACStore.emit(); UI.toast("Produit publié.", "success"); App.nav("businessCatalogue"); };
 
   Screens.businessServices = function (container) {
     const b = B();
@@ -76,7 +76,7 @@
       <div class="card p-5 space-y-3"><p class="t-caption text-ink-3">Ajouter un service</p>${UI.field("ns-name", "Intitulé", { placeholder: "Ex. Livraison express" })}<div class="grid grid-cols-2 gap-3">${UI.field("ns-price", "Prix (FCFA)", { type: "number", placeholder: "0" })}${UI.field("ns-dur", "Délai", { placeholder: "Ex. 48 h" })}</div>${UI.primaryButton("Ajouter", "Screens._bizAddService()", { icon: "add" })}</div></div>`;
     Shell.render(container, { title: "Services", subtitle: "Prestations proposées", back: true, body, nav: false, showNav: true });
   };
-  Screens._bizAddService = () => { const name = document.getElementById("ns-name").value.trim(), price = parseInt(document.getElementById("ns-price").value, 10), duration = document.getElementById("ns-dur").value.trim() || "Sur devis"; if (!name || !price) { UI.toast("Intitulé et prix requis.", "error"); return; } B().services.push({ id: ACStore.uid("bs"), name, price, duration }); ACStore.emit(); UI.toast("Service ajouté.", "success"); };
+  Screens._bizAddService = () => { const name = document.getElementById("ns-name").value.trim(), price = parseInt(document.getElementById("ns-price").value, 10), duration = document.getElementById("ns-dur").value.trim() || "Sur devis"; if (!name || !(price > 0)) { UI.toast("Intitulé et prix (supérieur à 0) requis.", "error"); return; } B().services.push({ id: ACStore.uid("bs"), name, price, duration }); ACStore.emit(); UI.toast("Service ajouté.", "success"); };
 
   Screens.businessOrders = function (container, params) {
     const b = B(); const f = params.f || "Toutes";
@@ -95,7 +95,7 @@
       <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Contacter le client", "UI.toast('Message envoyé au client.','success')", { icon: "chat" })}${idx < 3 ? UI.primaryButton("Passer à « " + STAGES[idx + 1] + " »", `Screens._advanceOrder('${o.id}')`, { icon: "arrow_forward" }) : UI.badge("Commande terminée", "success")}</div></div>`;
     Shell.render(container, { title: "Commande", subtitle: esc(o.item), back: true, body, nav: false, showNav: true });
   };
-  Screens._advanceOrder = (id) => { const o = B().orders.find((x) => x.id === id); const i = STAGES.indexOf(o.status); o.status = STAGES[Math.min(3, i + 1)]; ACStore.emit(); UI.toast("Statut : " + o.status, "success"); };
+  Screens._advanceOrder = (id) => { const o = B().orders.find((x) => x.id === id); if (!o) return; const i = STAGES.indexOf(o.status); if (i < 0 || i >= 3) return; o.status = STAGES[i + 1]; ACStore.emit(); UI.toast("Statut : " + o.status, "success"); };
 
   Screens.businessBookings = function (container) {
     const b = B();

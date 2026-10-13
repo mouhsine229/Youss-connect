@@ -24,9 +24,14 @@
     /* Formats QR / liens profonds : culture/<id>, site=<id> */
     let m = h.match(/^culture\/([a-z0-9_-]+)$/i);
     if (m) return { id: "cultureDetail", params: { id: m[1] } };
+    m = h.match(/^site=([a-z0-9_-]+)$/i);
+    if (m) return { id: "cultureDetail", params: { id: m[1] } };
     const [path, query] = h.split("?");
     const params = {};
     new URLSearchParams(query || "").forEach((v, k) => { params[k] = v; });
+    if (params.site && (path === "" || path === "culture" || path === "site")) {
+      return { id: "cultureDetail", params: { id: params.site } };
+    }
     if (path === "kya-ops" || path === "ops") return { id: (window.YCGate && YCGate.ops && YCGate.ops()) ? "opsHome" : "opsLogin", params };
     if (path === "pro/rejoindre") return { id: "proJoin", params };
     if (path === "pro") return { id: (window.YCGate && YCGate.pro && YCGate.pro()) ? "proHome" : "proLogin", params };
@@ -42,28 +47,38 @@
     });
     return (id || "") + "?" + parts.join("&");
   }
+  function flag(key) {
+    try { return sessionStorage.getItem(key) === "1"; } catch (e) { return false; }
+  }
   function show(id, params) {
     params = params || {};
     const prevKey = current ? viewKey(current.id, current.params) : "";
     const prevId = current && current.id;
     const scroller = document.getElementById("main");
     const savedTop = scroller ? scroller.scrollTop : 0;
-    const fn = window.Screens && window.Screens[id];
-    if (!fn) {
-      console.error("Unknown screen:", id);
-      container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(id)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
-      return;
-    }
+    const requested = id;
     const opsScreen = isOpsScreen(id);
     const proScreen = isKitchenScreen(id);
-    if (opsScreen && id !== "opsLogin" && id !== "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops())) {
+    if (id === "otp" && !ACState.session.authenticated && !flag("yc-otp-pending")) {
+      id = "login"; params = {};
+    } else if (id === "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops()) && !flag("yc-ops-pending")) {
+      id = "opsLogin"; params = {};
+    } else if (opsScreen && id !== "opsLogin" && id !== "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops())) {
       id = "opsLogin"; params = {};
     } else if (proScreen && id !== "proJoin" && id !== "proLogin" && !(window.YCGate && YCGate.pro && YCGate.pro())) {
       id = "proLogin"; params = {};
     } else if (!opsScreen && !proScreen && !AUTH_FREE[id] && !ACState.session.authenticated) {
-      sessionStorage.setItem("yc-after-login", encode(id, params));
+      sessionStorage.setItem("yc-after-login", encode(requested, params));
       id = ACState.session.onboardingSeen ? "login" : "onboarding"; params = {};
     }
+    const fn = window.Screens && window.Screens[id];
+    if (!fn) {
+      console.error("Unknown screen:", requested);
+      current = { id: "notFound", params: { id: requested } };
+      container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(requested)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
+      return;
+    }
+    if (id !== requested) setHash(encode(id, params), true);
     if (prevId && prevId !== id) {
       if (window.UI && UI.closeSheet) UI.closeSheet();
       if (window.YCScanner && YCScanner.stop && (prevId === "walletQrPay" || prevId === "culturalScanner")) YCScanner.stop();
@@ -103,6 +118,7 @@
 
   function nav(id, params) {
     const hash = encode(id, params);
+    if (current && encode(current.id, current.params) === hash) { show(id, params); return; }
     if (current) stack.push(encode(current.id, current.params));
     if (location.hash === hash) { show(id, params); return; }
     ignoreNextHash = true;
@@ -155,7 +171,9 @@
   const NO_RERENDER = { splash: 1, transportInRide: 1, deliveryTracking: 1, culturalScanner: 1, scannerAnalyzing: 1, walletQrPay: 1, transport: 1 };
   ACStore.subscribe(function () {
     if (!current || NO_RERENDER[current.id]) return;
-    if (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    const active = document.activeElement;
+    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && active.type !== "file" && !ACState._forceShow) return;
+    ACState._forceShow = false;
     show(current.id, current.params);
   });
 
