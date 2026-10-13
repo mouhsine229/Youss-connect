@@ -9,6 +9,7 @@
   const STATUS = { success: ["Réussi", "success"], pending: ["En attente", "warn"], failed: ["Échoué", "danger"] };
 
   function accountLive() { return !!(window.YCBackend && YCBackend.isLive()); }
+  var replacingPin = "";
   function hashPin(pin) {
     return crypto.subtle.digest("SHA-256", new TextEncoder().encode("youss-pin-v1:" + pin)).then(function (buf) {
       return Array.from(new Uint8Array(buf)).map(function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
@@ -235,9 +236,11 @@
   Screens.securityPin = function (container, params) {
     params = params || {}; const action = params.action || "confirm";
     const titles = { walletSendConfirm: "Confirmer l'envoi", changePin: "Nouveau code PIN", walletQrPayConfirm: "Confirmer le paiement", withdraw: "Confirmer le retrait", purchase: "Confirmer le paiement", confirm: "Confirmation sécurisée" };
-    const known = !!(ACState.prefs && ACState.prefs.pinHash);
+    const known = !!(ACState.prefs && (ACState.prefs.pinSet || ACState.prefs.pinHash));
+    const replacing = params.step === "next" && replacingPin.length === 4;
+    if (!replacing) replacingPin = "";
     const safeAction = ["walletSendConfirm", "changePin", "walletQrPayConfirm", "withdraw", "purchase", "confirm"].indexOf(action) >= 0 ? action : "confirm";
-    const hint = safeAction === "changePin" || !known ? "Choisissez un code PIN à 4 chiffres. Il confirmera vos paiements." : "Saisissez votre code PIN.";
+    const hint = replacing ? "Choisissez le nouveau code PIN." : (safeAction === "changePin" && known ? "Saisissez d'abord le code actuel." : (safeAction === "changePin" || !known ? "Choisissez un code PIN à 4 chiffres. Il confirmera vos paiements." : "Saisissez votre code PIN."));
     const sensor = window.YCBiometric && YCBiometric.sensor();
     const bioBtn = accountLive() && ACState.user.biometricEnrolled && sensor && safeAction !== "changePin"
       ? `<button type="button" onclick="Screens._biometric('${safeAction}')" class="btn btn-lg btn-primary btn-block">${icon(sensor.icon, "text-[20px]")}${esc(sensor.confirm)}</button><p class="t-small text-ink-3">Ou le code PIN, en secours.</p>`
@@ -274,35 +277,41 @@
     if (wait) return UI.showError("pin-error", YCGuard.waitMsg(wait));
     const pin = [0, 1, 2, 3].map((i) => (document.getElementById("pin-" + i) || {}).value || "").join("");
     if (pin.length < 4) return UI.showError("pin-error", "Saisissez les 4 chiffres du code.");
+    const known = !!(ACState.prefs && (ACState.prefs.pinSet || ACState.prefs.pinHash));
+    const live = accountLive() && window.YCBackend && YCBackend.applyPin;
+    if (live) {
+      if (action === "changePin" && known && replacingPin.length !== 4) {
+        YCBackend.applyPin(pin, null, false).then(function (res) {
+          if (!res || res.ok === false) return UI.showError("pin-error", (res && res.message) || "Code PIN incorrect.");
+          replacingPin = pin;
+          App.replace("securityPin", { action: "changePin", step: "next" });
+        });
+        return;
+      }
+      const current = action === "changePin" && replacingPin.length === 4 ? replacingPin : pin;
+      const next = action === "changePin" && replacingPin.length === 4 ? pin : null;
+      if (next && next === current) return UI.showError("pin-error", "Choisissez un code différent.");
+      YCBackend.applyPin(current, next, action !== "changePin").then(function (res) {
+        if (!res || res.ok === false) return UI.showError("pin-error", (res && res.message) || "Code PIN incorrect.");
+        replacingPin = "";
+        if (window.YCGuard) YCGuard.ok("pin");
+        if (action === "changePin") { UI.toast("Code PIN enregistré.", "success"); App.resetTo("security"); return; }
+        Screens._pinDone(action);
+      });
+      return;
+    }
     hashPin(pin).then(function (hash) {
-      const known = (ACState.prefs && ACState.prefs.pinHash) || "";
-      const setting = action === "changePin" || !known;
-      if (!setting && hash !== known) {
+      const local = (ACState.prefs && ACState.prefs.pinHash) || "";
+      const setting = action === "changePin" || !local;
+      if (!setting && hash !== local) {
         const left = window.YCGuard ? YCGuard.fail("pin") : 0;
         UI.showError("pin-error", left ? YCGuard.waitMsg(left) : "Code PIN incorrect.");
         return;
       }
       if (window.YCGuard) YCGuard.ok("pin");
-      if (setting) {
-        ACState.prefs.pinHash = hash;
-        ACStore.emit();
-      }
-      const live = accountLive() && window.YCBackend;
-      const save = setting && live
-        ? YCBackend.saveProfile({ fullName: ACState.user.fullName, email: ACState.user.email, city: ACState.user.city, country: ACState.user.country, phone: ACState.user.phone, pinHash: hash })
-        : Promise.resolve({ ok: true });
-      save.then(function (saved) {
-        if (saved && saved.ok === false) return UI.showError("pin-error", saved.message || "Enregistrement impossible.");
-        if (action === "changePin") { UI.toast("Code PIN enregistré.", "success"); App.resetTo("security"); return; }
-        if (live && ACState.user.biometricEnrolled && window.YCBiometric) {
-          YCBiometric.grantPin(pin).then(function (res) {
-            if (!res || res.ok === false) return UI.showError("pin-error", (res && res.message) || "Confirmation impossible.");
-            Screens._pinDone(action);
-          });
-          return;
-        }
-        Screens._pinDone(action);
-      });
+      if (setting) ACState.prefs.pinHash = hash;
+      if (action === "changePin") { UI.toast("Code PIN enregistré.", "success"); App.resetTo("security"); return; }
+      Screens._pinDone(action);
     });
   };
   Screens._pinDone = function (action) {

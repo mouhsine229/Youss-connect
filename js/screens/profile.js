@@ -147,7 +147,7 @@
       <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">${ACState.session.remote ? "Compte ouvert" : "Élevé"}</p><p class="t-small opacity-80">${ACState.session.remote ? "E-mail, mot de passe et code PIN." : "Compte vérifié, PIN actif, biométrie " + (ACState.prefs.biometric === false || ACState.user.biometricEnrolled === false ? "désactivée" : "activée")}</p></div></div>
       <div class="space-y-2.5">
         ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: identitySub(), right: UI.badge(identityBadge()[0], identityBadge()[1]) })}
-        ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: ACState.prefs.pinHash ? "Modifier le code à 4 chiffres" : "Choisir le code à 4 chiffres" })}
+        ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: (ACState.prefs.pinSet || ACState.prefs.pinHash) ? "Modifier le code à 4 chiffres" : "Choisir le code à 4 chiffres" })}
         ${menuRow("key", "Mot de passe", "App.nav('accountPassword')", { sub: "Changer le mot de passe du compte" })}
         ${menuRow(bioIcon(), "Biométrie", "Screens._toggleBio()", { sub: bioSub(), right: UI.toggle(!!(ACState.user.biometricEnrolled && ACState.prefs.biometric !== false), "Screens._toggleBio()", "Biométrie") })}
         ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "Cet appareil" })}
@@ -322,6 +322,7 @@
       paintHelp(threadId);
       if (helpPoll) clearInterval(helpPoll);
       helpPoll = setInterval(function () {
+        if (document.hidden) return;
         if (!App.current || App.current.id !== "helpChat") { clearInterval(helpPoll); helpPoll = null; return; }
         paintHelp(threadId);
       }, 4000);

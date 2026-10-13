@@ -86,6 +86,7 @@
   function startWatch(o) {
     if (o.partnerOrderId && window.YCBackend && YCBackend.api && YCBackend.api()) {
       const tickPartner = function () {
+        if (document.hidden) return;
         if (!App.current || App.current.id !== "orderTracking") { clearInterval(timer); return; }
         const api = YCBackend.api();
         if (!api) return;
@@ -100,6 +101,7 @@
     }
     let shownMap = false, lastIdx = -1;
     const tick = () => {
+      if (document.hidden) return;
       if (!App.current || App.current.id !== "orderTracking") { clearInterval(timer); return; }
       const st = ACStore.orderStep(o);
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };

@@ -337,12 +337,7 @@ begin
   if exists (select 1 from public.staff where user_id = auth.uid()) then
     return 'member';
   end if;
-  perform pg_advisory_xact_lock(2041301);
-  if exists (select 1 from public.staff) then
-    return 'denied';
-  end if;
-  insert into public.staff (user_id, role) values (auth.uid(), 'admin');
-  return 'created';
+  return 'denied';
 end;
 $$;
 

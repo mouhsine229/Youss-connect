@@ -560,7 +560,6 @@
     seller: (id) => SELLERS[id], driverFor: (city, vehicle) => DRIVERS.find((d) => d.city === city && d.vehicle === vehicle) || DRIVERS.find((d) => d.city === city) || DRIVERS[0],
     courierFor: (city) => COURIERS.find((c) => c.city === city) || COURIERS[0],
     restaurantsIn: (city) => RESTAURANTS.filter((r) => r.city === city), eventsIn: (city) => { const code = countryCodeOfCity(city); const country = code ? countryOf(code).name : ""; return allEvents().filter((e) => e.city === city || (country && e.country === country)); },
-    /* Un lieu n'est une destination de la ville que s'il est vraiment dedans (10 km du centre). */
     sitesIn: (city) => { const c = CITIES[city]; if (!c) return []; return SITES.filter((s) => distanceKm(s.lat, s.lng, c.lat, c.lng) <= 10); }, productsBy: (sellerId) => PRODUCTS.filter((p) => p.seller === sellerId),
     tierFor: (points) => { let t = TIERS[0]; TIERS.forEach((x) => { if (points >= x.min) t = x; }); return t; },
     nextTier: (points) => TIERS.find((x) => x.min > points) || null

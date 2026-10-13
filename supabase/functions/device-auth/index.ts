@@ -12,11 +12,21 @@ const ORIGINS = [
   "http://localhost:4174",
 ];
 const RP_IDS = ["mouhsine229.github.io", "127.0.0.1", "localhost"];
-const cors = {
-  "Access-Control-Allow-Origin": "*",
+let cors: Record<string, string> = {
+  "Access-Control-Allow-Origin": "https://mouhsine229.github.io",
+  Vary: "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+function useCors(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  cors = {
+    "Access-Control-Allow-Origin": ORIGINS.indexOf(origin) >= 0 ? origin : "https://mouhsine229.github.io",
+    Vary: "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -40,18 +50,13 @@ function randomChallenge() {
 function utf8b64url(text: string) {
   return bytesToB64(new TextEncoder().encode(text)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
-function same(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let n = 0;
-  for (let i = 0; i < a.length; i++) n |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return n === 0;
-}
 function rpOf(origin: string) {
   if (!ORIGINS.includes(origin)) return "";
   try { return new URL(origin).hostname; } catch { return ""; }
 }
 
 Deno.serve(async (req) => {
+  useCors(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ ok: false, message: "Méthode refusée." }, 405);
   const raw = await req.text();
@@ -92,7 +97,7 @@ Deno.serve(async (req) => {
   async function grant() {
     const ins = await admin.from("auth_confirmations").insert({
       user_id: user.id,
-      expires_at: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 90 * 1000).toISOString(),
     });
     return !ins.error;
   }
@@ -174,21 +179,15 @@ Deno.serve(async (req) => {
     if (action === "pin") {
       const pin = String(body.pin || "");
       if (!/^\d{4}$/.test(pin)) return json({ ok: false, message: "Saisissez les 4 chiffres du code." }, 400);
-      const attempt = await admin.from("pin_attempts").select("failures,locked_until").eq("user_id", user.id).maybeSingle();
-      if (attempt.data && attempt.data.locked_until && new Date(attempt.data.locked_until).getTime() > Date.now()) {
-        return json({ ok: false, message: "Trop de codes incorrects. Réessayez dans une heure." }, 429);
-      }
-      const profile = await admin.from("profiles").select("pin_hash").eq("id", user.id).maybeSingle();
-      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("youss-pin-v1:" + pin));
-      const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-      if (!profile.data || !profile.data.pin_hash || !same(hex, String(profile.data.pin_hash))) {
-        const failures = ((attempt.data && attempt.data.failures) || 0) + 1;
-        const locked = failures >= 5 ? new Date(Date.now() + 60 * 60 * 1000).toISOString() : null;
-        await admin.from("pin_attempts").upsert({ user_id: user.id, failures: locked ? 0 : failures, locked_until: locked });
-        return json({ ok: false, message: locked ? "Trop de codes incorrects. Réessayez dans une heure." : "Code PIN incorrect." }, 400);
-      }
-      await admin.from("pin_attempts").upsert({ user_id: user.id, failures: 0, locked_until: null });
-      if (!(await grant())) return json({ ok: false, message: "Confirmation impossible." }, 500);
+      const anon = Deno.env.get("SUPABASE_ANON_KEY") || "";
+      if (!anon) return json({ ok: false, message: "Confirmation impossible." }, 500);
+      const userClient = createClient(url, anon, {
+        global: { headers: { Authorization: "Bearer " + jwt } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const checked = await userClient.rpc("apply_pin", { p_pin: pin, p_next: null, p_grant: true });
+      const data = (checked.data || {}) as { ok?: boolean; message?: string };
+      if (checked.error || !data.ok) return json({ ok: false, message: data.message || "Code PIN incorrect." }, 400);
       return json({ ok: true });
     }
 

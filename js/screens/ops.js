@@ -61,7 +61,7 @@
     });
   }
   function claimMessage(status) {
-    if (status === "denied") return "La console a déjà un accès. Entrez avec ce compte-là.";
+    if (status === "denied") return "Ce compte n'ouvre pas la console. Utilisez le compte de KYA CORPORATION.";
     return "Accès console impossible pour le moment.";
   }
   function afterClaim(res) {
@@ -108,16 +108,22 @@
       Promise.all([
         api.from("profiles").select("id", { count: "exact", head: true }),
         api.from("identity_documents").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        api.from("support_threads").select("id", { count: "exact", head: true }).eq("status", "open")
+        api.from("support_threads").select("id", { count: "exact", head: true }).eq("status", "open"),
+        api.from("staff_events").select("action,subject,created_at").order("created_at", { ascending: false }).limit(8)
       ]).then(function (rows) {
         if (!still("opsHome")) return;
-        const n = rows.map(function (r) { return r && typeof r.count === "number" ? r.count : 0; });
+        const n = rows.slice(0, 3).map(function (r) { return r && typeof r.count === "number" ? r.count : 0; });
+        const labels = { identity_approved: "Pièce acceptée", identity_rejected: "Pièce refusée", restaurant_created: "Restaurant créé", restaurant_reset: "Mot de passe cuisine renouvelé" };
+        const journal = ((rows[3] && rows[3].data) || []).map(function (ev) {
+          return `<div class="p-4"><p class="t-title">${esc(labels[ev.action] || "Action")}</p><p class="t-small text-ink-2">${esc(ev.subject || "")}</p><p class="t-small text-ink-3">${esc(when(ev.created_at))}</p></div>`;
+        }).join("");
         layout("opsHome", "Vue d'ensemble", `<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <button type="button" onclick="App.nav('opsUsers')" class="card p-5 text-left"><p class="t-caption text-ink-3">Comptes</p><p class="t-h2 mt-1">${n[0]}</p></button>
           <button type="button" onclick="App.nav('opsIdentity')" class="card p-5 text-left"><p class="t-caption text-ink-3">Pièces en revue</p><p class="t-h2 mt-1">${n[1]}</p></button>
           <button type="button" onclick="App.nav('opsSupport')" class="card p-5 text-left"><p class="t-caption text-ink-3">Assistances ouvertes</p><p class="t-h2 mt-1">${n[2]}</p></button>
           <button type="button" onclick="App.nav('opsRestaurants')" class="card p-5 text-left"><p class="t-caption text-ink-3">Restaurants</p><p class="t-title mt-2">Créer un compte cuisine</p></button>
-        </div><div class="card p-5"><p class="t-body text-ink-2">Les restaurants se créent ici. Chaque compte reçoit un identifiant et un mot de passe, à remettre en PDF. Les événements, chauffeurs et prix restent des exemples.</p></div>`);
+        </div><div class="card p-5"><p class="t-body text-ink-2">Les restaurants se créent ici. Chaque compte reçoit un identifiant et un mot de passe, à remettre en PDF. Les événements, chauffeurs et prix restent des exemples.</p></div>
+        <section><h2 class="t-h3 mb-3">Journal de la console</h2>${journal ? `<div class="card divide-y divide-line">${journal}</div>` : `<div class="card p-5"><p class="t-body text-ink-2">Aucune action enregistrée.</p></div>`}</section>`);
       });
     });
   };
@@ -173,6 +179,7 @@
     const note = ((document.getElementById("ops-note-" + id) || {}).value || "").trim().slice(0, 300);
     api.from("identity_documents").update({ status: status, note: note, reviewed_at: new Date().toISOString() }).eq("id", id).then(function (res) {
       if (res.error) { UI.toast("Mise à jour impossible.", "error"); return; }
+      if (window.YCBackend && YCBackend.staffNote) YCBackend.staffNote(status === "approved" ? "identity_approved" : "identity_rejected", id);
       UI.toast(status === "approved" ? "Document accepté." : "Document refusé.", "success");
       App.replace("opsIdentity");
     });
@@ -207,6 +214,7 @@
           paintThread(api, openThread);
           if (opsPoll) clearInterval(opsPoll);
           opsPoll = setInterval(function () {
+            if (document.hidden) return;
             if (!App.current || App.current.id !== "opsSupport" || !openThread) { clearInterval(opsPoll); opsPoll = null; return; }
             const live = db();
             if (live) paintThread(live, openThread);
@@ -311,6 +319,7 @@
     YCBackend.callFunction("partner-account", body).then(function (res) {
       if (!res || !res.ok) { UI.showError("opr-err", (res && res.message) || "Création impossible."); return; }
       issued = { placeId: res.placeId, loginId: res.loginId, password: res.password, name: res.name, city: res.city, area: res.area || "" };
+      if (window.YCBackend && YCBackend.staffNote) YCBackend.staffNote("restaurant_created", res.name || res.loginId || "");
       if (window.YCKitchen) YCKitchen.loadCatalog();
       UI.toast("Compte créé. Téléchargez la fiche avant de quitter.", "success");
       App.replace("opsRestaurants");
@@ -321,6 +330,7 @@
     YCBackend.callFunction("partner-account", { action: "reset", placeId: placeId }).then(function (res) {
       if (!res || !res.ok) { UI.toast((res && res.message) || "Nouveau mot de passe impossible.", "error"); return; }
       issued = { placeId: res.placeId, loginId: res.loginId, password: res.password, name: res.name, city: res.city, area: res.area || "" };
+      if (window.YCBackend && YCBackend.staffNote) YCBackend.staffNote("restaurant_reset", res.name || res.loginId || "");
       UI.toast("Nouveau mot de passe créé. Téléchargez la fiche.", "success");
       App.replace("opsRestaurants");
     });
