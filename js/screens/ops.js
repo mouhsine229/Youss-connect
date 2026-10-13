@@ -71,14 +71,12 @@
   }
 
   Screens.opsLogin = function (container) {
-    const live = window.YCBackend && YCBackend.isLive();
     container.innerHTML = `<div class="min-h-dvh bg-[#0F1115] text-white flex items-center justify-center px-5 py-10">
       <div class="w-full max-w-[400px]">
         <p class="t-caption text-gold">Accès réservé</p>
         <h1 class="t-h1 mt-2">Console KYA</h1>
         <p class="t-small text-white/55 mt-2">Connectez-vous avec le compte YOUSS CONNECT qui doit tenir la console. Le premier compte qui entre devient l'accès.</p>
         <form class="card p-5 mt-8 space-y-3 text-ink" onsubmit="event.preventDefault();Screens._opsLogin()">
-          ${live ? `<button type="button" onclick="Screens._opsUseCurrent()" class="btn btn-lg btn-secondary btn-block">Continuer avec ce compte</button>` : ""}
           ${UI.field("ops-mail", "E-mail du compte", { type: "email", autocomplete: "username" })}
           ${UI.field("ops-pass", "Mot de passe", { type: "password", placeholder: "••••••••", autocomplete: "current-password" })}
           ${UI.error("ops-err")}
@@ -88,10 +86,6 @@
     </div>`;
   };
   Screens.opsOtp = function () { App.replace("opsLogin"); };
-  Screens._opsUseCurrent = function () {
-    if (!window.YCBackend) return;
-    YCBackend.claimConsole().then(afterClaim);
-  };
   Screens._opsLogin = function () {
     const mail = ((document.getElementById("ops-mail") || {}).value || "").trim();
     const pass = (document.getElementById("ops-pass") || {}).value || "";
