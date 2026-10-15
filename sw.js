@@ -1,14 +1,14 @@
 // Service worker. Le shell (HTML, JS, CSS, vendors, icônes) est précaché pour démarrer hors ligne.
 // La page et le service worker passent par le réseau. Les scripts déjà en cache s'affichent tout de suite.
 // les images locales en cache-first, les polices Google et les tuiles de carte en stale-while-revalidate.
-const VERSION = "youss-connect-v34";
+const VERSION = "youss-connect-v36";
 const SHELL = VERSION + "-shell";
 const IMAGES = VERSION + "-images";
 const RUNTIME = VERSION + "-runtime";
 const SHELL_ASSETS = [
   "./", "./index.html", "./manifest.webmanifest", "./css/app.css",
   "./vendor/leaflet/leaflet.js", "./vendor/leaflet/leaflet.css", "./vendor/jsQR.js", "./vendor/qrcode.js",
-  "./js/config.js", "./js/i18n.js", "./js/i18n-en.js", "./js/data.js", "./js/guard.js", "./js/state.js", "./js/backend.js", "./js/kitchen.js", "./js/sheet.js", "./js/providers.js", "./js/biometric.js", "./js/ui.js", "./js/receipt.js", "./js/scanner.js", "./js/map.js", "./js/demo.js", "./js/shell.js", "./js/router.js",
+  "./js/config.js", "./js/i18n.js", "./js/i18n-en.js", "./js/data.js", "./js/guard.js", "./js/state.js", "./js/backend.js", "./js/kitchen.js", "./js/sheet.js", "./js/providers.js", "./js/biometric.js", "./js/ui.js", "./js/pwa-install.js", "./js/receipt.js", "./js/scanner.js", "./js/map.js", "./js/demo.js", "./js/shell.js", "./js/router.js",
   "./js/screens/auth.js", "./js/screens/home.js", "./js/screens/explorer.js", "./js/screens/transport.js", "./js/screens/delivery.js", "./js/screens/restaurants.js", "./js/screens/orders.js", "./js/screens/events.js", "./js/screens/market.js", "./js/screens/culture.js", "./js/screens/wallet.js", "./js/screens/rewards.js", "./js/screens/business.js", "./js/screens/activities.js", "./js/screens/notifications.js", "./js/screens/profile.js", "./js/screens/ops.js", "./js/screens/pro.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./assets/youss-logo-full.png", "./assets/youss-logo-transparent.png", "./assets/youss-logo-on-dark.png", "./assets/img/brand/placeholder.svg"
 ];

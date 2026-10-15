@@ -22,6 +22,11 @@
     // Divers
     lang_title: "Langue", lang_done: "Langue : Français", settings: "Paramètres", notifications: "Notifications", security: "Sécurité", help: "Aide", logout: "Déconnexion",
     theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démo", next_steps: "Et ensuite",
+    pwa_install_title: "Installer YOUSS CONNECT", pwa_install_body: "Installez l'application officielle sur votre appareil : lancement plein écran, icône YOUSS CONNECT et accès même avec une connexion limitée.",
+    pwa_install_ios_body: "Sur iPhone ou iPad : touchez Partager, puis « Sur l'écran d'accueil ». YOUSS CONNECT s'ouvrira comme une application, sans barre du navigateur.",
+    pwa_install_action: "Installer", pwa_install_later: "Plus tard", pwa_install_ios_ok: "J'ai compris",
+    pwa_install_progress: "YOUSS CONNECT est en cours d'installation.", pwa_install_done: "YOUSS CONNECT est installée.",
+    pwa_install_unavailable: "L'installation n'est pas proposée par ce navigateur pour le moment.", pwa_install_menu: "Installer l'application",
     empty_results: "Aucun résultat", empty_results_body: "Changez le mot-clé ou la catégorie.",
     conceptual: ""
   };
@@ -38,6 +43,11 @@
     wallet: "Youss Wallet", balance: "Available balance", send: "Send", receive: "Receive", topup: "Top up", withdraw: "Withdraw", qrpay: "QR Pay", recent: "Recent transactions",
     lang_title: "Language", lang_done: "Language: English", settings: "Settings", notifications: "Notifications", security: "Security", help: "Help", logout: "Log out",
     theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo walkthroughs", next_steps: "What's next",
+    pwa_install_title: "Install YOUSS CONNECT", pwa_install_body: "Install the official app on your device: full-screen launch, YOUSS CONNECT icon, and access even with a limited connection.",
+    pwa_install_ios_body: "On iPhone or iPad: tap Share, then \"Add to Home Screen\". YOUSS CONNECT opens as an app without the browser bar.",
+    pwa_install_action: "Install", pwa_install_later: "Not now", pwa_install_ios_ok: "Got it",
+    pwa_install_progress: "YOUSS CONNECT is installing.", pwa_install_done: "YOUSS CONNECT is installed.",
+    pwa_install_unavailable: "Install is not available in this browser right now.", pwa_install_menu: "Install the app",
     empty_results: "No results", empty_results_body: "Try another keyword or category.",
     conceptual: ""
   };

@@ -259,19 +259,56 @@
       return hydrate(res.data.session).then(function () { return res; });
     });
   }
-  function signUp(fields) {
-    fields = fields || {};
+  function postEmailOtp(body) {
+    if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) return Promise.resolve({ ok: false, message: "Compte indisponible." });
     var root = (cfg.supabaseUrl || "").replace(/\/$/, "");
-    return fetch(root + "/functions/v1/create-account", {
+    return fetch(root + "/functions/v1/email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: cfg.supabaseAnonKey, Authorization: "Bearer " + cfg.supabaseAnonKey },
-      body: JSON.stringify({ email: fields.email, password: fields.password, fullName: fields.fullName, phone: fields.phone, city: fields.city, country: fields.country })
+      body: JSON.stringify(body || {})
     }).then(function (r) {
-      return r.json().then(function (body) { return { ok: r.ok && body && body.ok === true, message: body && body.message }; }, function () { return { ok: false, message: "Création du compte impossible." }; });
-    }).then(function (res) {
-      if (!res.ok) return { error: { message: res.message || "Création du compte impossible." } };
-      return signIn(fields.email, fields.password);
-    }).catch(function () { return { error: { message: "Création du compte impossible. Vérifiez la connexion." } }; });
+      return r.json().then(function (data) {
+        data = data || {};
+        if (!r.ok) data.ok = false;
+        if (!data.message && data.ok === false) data.message = "Action impossible.";
+        return data;
+      }, function () { return { ok: false, message: "Réponse invalide." }; });
+    }).catch(function () { return { ok: false, message: "Connexion impossible." }; });
+  }
+  function adoptSession(access, refresh) {
+    if (!client) return Promise.resolve({ error: { message: "Compte indisponible." } });
+    return client.auth.setSession({ access_token: access, refresh_token: refresh }).then(function (res) {
+      if (res.error || !res.data.session) return { error: res.error || { message: "Connexion impossible." } };
+      return hydrate(res.data.session).then(function () { return { ok: true }; });
+    });
+  }
+  function requestSignup(fields) {
+    fields = fields || {};
+    return postEmailOtp({
+      action: "send-signup",
+      email: fields.email,
+      password: fields.password,
+      fullName: fields.fullName,
+      phone: fields.phone,
+      city: fields.city,
+      country: fields.country
+    });
+  }
+  function confirmSignup(email, code) {
+    return postEmailOtp({ action: "verify-signup", email: email, code: code }).then(function (res) {
+      if (!res.ok) return res;
+      if (res.access_token && res.refresh_token) return adoptSession(res.access_token, res.refresh_token);
+      return { ok: true, signedIn: false };
+    });
+  }
+  function requestReset(email) {
+    return postEmailOtp({ action: "send-reset", email: email });
+  }
+  function confirmReset(email, code, password) {
+    return postEmailOtp({ action: "verify-reset", email: email, code: code, password: password });
+  }
+  function resendEmailOtp(email, mode) {
+    return postEmailOtp({ action: mode === "reset" ? "resend-reset" : "resend-signup", email: email });
   }
   function updatePassword(next) {
     if (!client) return Promise.resolve({ ok: false, message: "Compte indisponible." });
@@ -542,5 +579,5 @@
     });
   }
 
-  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, applyPin: applyPin, staffNote: staffNote, explain: explain, api: function () { return isLive() ? client : null; }, reader: reader, callFunction: callFunction, deviceAuth: deviceAuth, claimConsole: claimConsole, uploadIdentity: uploadIdentity, removeBiometric: removeBiometric, openSupport: openSupport, loadMessages: loadMessages, sendSupport: sendSupport, loadEvents: loadPublicEvents };
+  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, requestSignup: requestSignup, confirmSignup: confirmSignup, requestReset: requestReset, confirmReset: confirmReset, resendEmailOtp: resendEmailOtp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, applyPin: applyPin, staffNote: staffNote, explain: explain, api: function () { return isLive() ? client : null; }, reader: reader, callFunction: callFunction, deviceAuth: deviceAuth, claimConsole: claimConsole, uploadIdentity: uploadIdentity, removeBiometric: removeBiometric, openSupport: openSupport, loadMessages: loadMessages, sendSupport: sendSupport, loadEvents: loadPublicEvents };
 })();

@@ -164,18 +164,36 @@
 
   // Mot de passe oublié
   Screens.forgotPassword = function (container) {
-    const form = `${brand(I18N.t("forgot"), "Une fois connecté, le mot de passe se change dans Sécurité.")}
-      <div class="space-y-4">
-        ${UI.primaryButton("Retour à la connexion", "App.nav('login')", { size: "lg", icon: "arrow_back" })}
-      </div>`;
+    const form = `${brand(I18N.t("forgot"), "Un code à 6 chiffres est envoyé à l'e-mail du compte.")}
+      <form onsubmit="event.preventDefault();Screens._doForgot()" class="space-y-4" novalidate>
+        ${UI.field("fp-email", "E-mail", { type: "email", placeholder: "vous@exemple.com", autocomplete: "username" })}
+        ${UI.error("fp-error")}
+        <button type="submit" class="btn btn-lg btn-primary btn-block">Recevoir le code${icon("arrow_forward", "text-[20px]")}</button>
+        <button type="button" onclick="App.nav('login')" class="w-full t-small text-center text-ink-2">Retour à la <span class="font-bold text-gold-deep dark:text-gold">${I18N.t("login")}</span></button>
+      </form>`;
     container.innerHTML = authFrame(form, { back: "App.back()" });
+  };
+  Screens._doForgot = function () {
+    const email = document.getElementById("fp-email").value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return UI.showError("fp-error", "Indiquez l'e-mail du compte.");
+    if (!window.YCBackend || !YCBackend.configured() || !YCBackend.isReady()) return UI.showError("fp-error", "Le compte est momentanément indisponible. Réessayez.");
+    const btn = document.querySelector("form .btn-primary");
+    if (btn) btn.disabled = true;
+    YCBackend.requestReset(email).then(function (res) {
+      if (btn) btn.disabled = false;
+      if (!res || res.ok === false) return UI.showError("fp-error", (res && res.message) || "Envoi impossible.");
+      sessionStorage.setItem("yc-otp-pending", "1");
+      sessionStorage.setItem("yc-otp-mode", "reset");
+      sessionStorage.setItem("yc-otp-email", email.toLowerCase());
+      App.nav("otp");
+    });
   };
 
   // Inscription
   Screens.signup = function (container, params) {
     const code = (params && params.country) || ACState.user.countryCode || "BJ";
     const c = YCData.countryOf(code);
-    const form = `${brand(I18N.t("signup"), "Un compte unique pour tous les services, dans 4 pays.")}
+    const form = `${brand(I18N.t("signup"), "Un code de confirmation est envoyé à votre e-mail avant l'ouverture du compte.")}
       <form onsubmit="event.preventDefault();Screens._doSignup()" class="space-y-4" novalidate>
         <div class="flex items-center gap-4">
           <span id="su-avatar" class="w-16 h-16 rounded-full bg-surface-low text-ink-3 flex items-center justify-center overflow-hidden shrink-0">${icon("person", "text-[28px]")}</span>
@@ -253,21 +271,93 @@
     const c = YCData.countryOf(document.getElementById("su-country").value);
     const btn = document.querySelector("#su-error") ? document.querySelector("form .btn-primary") : null;
     if (btn) btn.disabled = true;
-    YCBackend.signUp({ email: email, password: pass, fullName: first + " " + last, phone: p.phone, city: document.getElementById("su-city").value, country: c.name }).then(function (res) {
+    YCBackend.requestSignup({ email: email, password: pass, fullName: first + " " + last, phone: p.phone, city: document.getElementById("su-city").value, country: c.name }).then(function (res) {
       if (btn) btn.disabled = false;
-      if (res && res.error) return UI.showError("su-error", YCBackend.explain(res.error));
+      if (!res || res.ok === false) return UI.showError("su-error", (res && res.message) || "Envoi impossible.");
       const photo = signupPhoto;
       signupPhoto = "";
-      ACState.user.avatar = photo || "";
-      if (photo && window.YCBackend && YCBackend.isLive()) YCBackend.saveProfile(ACState.user);
-      finishAuth("home", "signup");
+      try { sessionStorage.setItem("yc-signup-photo", photo || ""); } catch (e) {}
+      sessionStorage.setItem("yc-otp-pending", "1");
+      sessionStorage.setItem("yc-otp-mode", "signup");
+      sessionStorage.setItem("yc-otp-email", email.toLowerCase());
+      App.nav("otp");
     });
   };
 
   Screens.otp = function (container) {
-    const form = `${brand(I18N.t("otp"), "Le compte s'ouvre avec l'e-mail et le mot de passe.")}
-      ${UI.primaryButton("Aller à la connexion", "App.resetTo('login')", { size: "lg", iconRight: "arrow_forward" })}`;
+    let mode = "signup";
+    let email = "";
+    try {
+      mode = sessionStorage.getItem("yc-otp-mode") || "signup";
+      email = sessionStorage.getItem("yc-otp-email") || "";
+    } catch (e) {}
+    if (!email) {
+      container.innerHTML = authFrame(`${brand(I18N.t("otp"), "Aucun code en attente.")}${UI.primaryButton("Retour à la connexion", "App.resetTo('login')", { size: "lg" })}`, { back: "App.back()" });
+      return;
+    }
+    const resetFields = mode === "reset" ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.field("otp-pass", "Nouveau mot de passe", { type: "password", placeholder: "10 caractères min.", autocomplete: "new-password" })}${UI.field("otp-pass2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}</div>` : "";
+    const form = `${brand(I18N.t("otp"), mode === "reset" ? "Saisissez le code reçu et choisissez un nouveau mot de passe." : "Saisissez le code à 6 chiffres envoyé à " + esc(email) + ".")}
+      <form onsubmit="event.preventDefault();Screens._doOtp()" class="space-y-4" novalidate>
+        <label class="block"><span class="label">Code</span><input id="otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" class="input text-center tracking-[0.3em] text-2xl font-bold" placeholder="000000"/></label>
+        ${resetFields}
+        ${UI.error("otp-error")}
+        <button type="submit" class="btn btn-lg btn-primary btn-block">Confirmer${icon("arrow_forward", "text-[20px]")}</button>
+        <button type="button" onclick="Screens._resendOtp()" class="w-full t-small text-center text-ink-2">Renvoyer le code</button>
+      </form>`;
     container.innerHTML = authFrame(form, { back: "App.back()" });
+  };
+  function clearOtpPending() {
+    try {
+      sessionStorage.removeItem("yc-otp-pending");
+      sessionStorage.removeItem("yc-otp-mode");
+      sessionStorage.removeItem("yc-otp-email");
+    } catch (e) {}
+  }
+  Screens._doOtp = function () {
+    const email = sessionStorage.getItem("yc-otp-email") || "";
+    const mode = sessionStorage.getItem("yc-otp-mode") || "signup";
+    const code = (document.getElementById("otp-code").value || "").replace(/\s/g, "");
+    if (!/^\d{6}$/.test(code)) return UI.showError("otp-error", "Indiquez le code à 6 chiffres.");
+    if (!window.YCBackend || !YCBackend.isReady()) return UI.showError("otp-error", "Vérification impossible. Réessayez.");
+    const btn = document.querySelector("form .btn-primary");
+    if (btn) btn.disabled = true;
+    const doneBtn = function () { if (btn) btn.disabled = false; };
+    if (mode === "reset") {
+      const pass = document.getElementById("otp-pass").value;
+      const pass2 = document.getElementById("otp-pass2").value;
+      if (pass.length < 10 || !/[A-Za-z]/.test(pass) || !/\d/.test(pass)) { doneBtn(); return UI.showError("otp-error", "Le mot de passe doit contenir au moins 10 caractères, avec une lettre et un chiffre."); }
+      if (pass !== pass2) { doneBtn(); return UI.showError("otp-error", "Les mots de passe ne correspondent pas."); }
+      YCBackend.confirmReset(email, code, pass).then(function (res) {
+        doneBtn();
+        if (!res || res.ok === false) return UI.showError("otp-error", (res && res.message) || "Code incorrect.");
+        clearOtpPending();
+        UI.toast("Mot de passe mis à jour.", "success");
+        App.resetTo("login");
+      });
+      return;
+    }
+    YCBackend.confirmSignup(email, code).then(function (res) {
+      doneBtn();
+      if (!res || (res.ok === false && res.error)) return UI.showError("otp-error", (res && (res.message || (res.error && res.error.message))) || "Code incorrect.");
+      if (res.error) return UI.showError("otp-error", YCBackend.explain(res.error));
+      if (res.ok === false) return UI.showError("otp-error", res.message || "Code incorrect.");
+      let photo = "";
+      try { photo = sessionStorage.getItem("yc-signup-photo") || ""; sessionStorage.removeItem("yc-signup-photo"); } catch (e) {}
+      clearOtpPending();
+      ACState.user.avatar = photo || "";
+      if (photo && window.YCBackend && YCBackend.isLive()) YCBackend.saveProfile(ACState.user);
+      if (res.signedIn === false) { UI.toast("Compte créé. Connectez-vous.", "success"); App.resetTo("login"); return; }
+      finishAuth("home", "signup");
+    });
+  };
+  Screens._resendOtp = function () {
+    const email = sessionStorage.getItem("yc-otp-email") || "";
+    const mode = sessionStorage.getItem("yc-otp-mode") || "signup";
+    if (!email || !window.YCBackend) return;
+    YCBackend.resendEmailOtp(email, mode).then(function (res) {
+      if (!res || res.ok === false) return UI.showError("otp-error", (res && res.message) || "Renvoi impossible.");
+      UI.toast(mode === "reset" ? "Si le compte existe, un nouveau code a été envoyé." : "Un nouveau code a été envoyé.", "success");
+    });
   };
   function finishAuth(next, mode) {
     if (mode === "signup" && !ACState.user.avatar) ACState.user.avatar = "";

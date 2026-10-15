@@ -715,3 +715,177 @@ create or replace view public.catalog_event_flags
   select id, hidden from public.catalog_events;
 
 grant select on public.catalog_event_flags to anon, authenticated;
+
+-- Codes e-mail (inscription et mot de passe). Appelés uniquement par la fonction serveur.
+create table if not exists private.email_otps (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  purpose text not null check (purpose in ('signup', 'reset')),
+  code_hash text not null,
+  payload text,
+  attempts integer not null default 0,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists email_otps_lookup on private.email_otps (email, purpose, created_at desc);
+revoke all on table private.email_otps from public, anon, authenticated;
+
+create table if not exists private.email_otp_buckets (
+  bucket text primary key,
+  hits integer not null,
+  window_start timestamptz not null
+);
+revoke all on table private.email_otp_buckets from public, anon, authenticated;
+
+create or replace function public.email_otp_allow(p_key text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n integer;
+  started timestamptz;
+  slot text := left(coalesce(p_key, ''), 120);
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    return false;
+  end if;
+  if slot = '' then
+    return false;
+  end if;
+  select hits, window_start into n, started
+  from private.email_otp_buckets where bucket = slot for update;
+  if started is null or started < now() - interval '1 hour' then
+    insert into private.email_otp_buckets (bucket, hits, window_start)
+    values (slot, 1, now())
+    on conflict (bucket) do update set hits = 1, window_start = now();
+    return true;
+  end if;
+  if n >= 8 then
+    return false;
+  end if;
+  update private.email_otp_buckets set hits = hits + 1 where bucket = slot;
+  return true;
+end;
+$$;
+
+revoke all on function public.email_otp_allow(text) from public, anon, authenticated;
+grant execute on function public.email_otp_allow(text) to service_role;
+
+create or replace function public.auth_user_id_by_email(p_email text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  uid uuid;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    return null;
+  end if;
+  select id into uid from auth.users
+  where lower(email) = lower(left(trim(coalesce(p_email, '')), 120))
+  limit 1;
+  return uid;
+end;
+$$;
+
+revoke all on function public.auth_user_id_by_email(text) from public, anon, authenticated;
+grant execute on function public.auth_user_id_by_email(text) to service_role;
+
+create or replace function public.email_otp_save(
+  p_email text, p_purpose text, p_code_hash text, p_payload text, p_minutes integer
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    return;
+  end if;
+  if p_purpose not in ('signup', 'reset') then
+    return;
+  end if;
+  delete from private.email_otps
+  where email = lower(trim(p_email)) and purpose = p_purpose;
+  delete from private.email_otps where expires_at < now() - interval '1 day';
+  insert into private.email_otps (email, purpose, code_hash, payload, expires_at)
+  values (
+    lower(trim(p_email)),
+    p_purpose,
+    left(p_code_hash, 128),
+    p_payload,
+    now() + make_interval(mins => least(greatest(coalesce(p_minutes, 10), 1), 30))
+  );
+end;
+$$;
+
+revoke all on function public.email_otp_save(text, text, text, text, integer) from public, anon, authenticated;
+grant execute on function public.email_otp_save(text, text, text, text, integer) to service_role;
+
+create or replace function public.email_otp_peek(p_email text, p_purpose text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  sealed text;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    return null;
+  end if;
+  select payload into sealed from private.email_otps
+  where email = lower(trim(p_email)) and purpose = p_purpose and expires_at > now()
+  order by created_at desc
+  limit 1;
+  return sealed;
+end;
+$$;
+
+revoke all on function public.email_otp_peek(text, text) from public, anon, authenticated;
+grant execute on function public.email_otp_peek(text, text) to service_role;
+
+create or replace function public.email_otp_take(p_email text, p_purpose text, p_code_hash text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  row_id uuid;
+  hashed text;
+  sealed text;
+  tries integer;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    return jsonb_build_object('ok', false, 'reason', 'forbidden');
+  end if;
+  select id, code_hash, payload, attempts into row_id, hashed, sealed, tries
+  from private.email_otps
+  where email = lower(trim(p_email)) and purpose = p_purpose and expires_at > now()
+  order by created_at desc
+  limit 1
+  for update;
+  if row_id is null then
+    return jsonb_build_object('ok', false, 'reason', 'missing');
+  end if;
+  if tries >= 5 then
+    delete from private.email_otps where id = row_id;
+    return jsonb_build_object('ok', false, 'reason', 'locked');
+  end if;
+  if hashed is distinct from p_code_hash then
+    update private.email_otps set attempts = attempts + 1 where id = row_id;
+    return jsonb_build_object('ok', false, 'reason', 'bad');
+  end if;
+  delete from private.email_otps where id = row_id;
+  return jsonb_build_object('ok', true, 'payload', sealed);
+end;
+$$;
+
+revoke all on function public.email_otp_take(text, text, text) from public, anon, authenticated;
+grant execute on function public.email_otp_take(text, text, text) to service_role;
