@@ -50,7 +50,7 @@
     const city = ACState.user.city;
     const nearbyList = []
       .concat(cityPartners(city).slice(0, 2).map((r) => ({ img: r.img, title: r.name, meta: "Compte restaurant · " + r.area, onclick: go("restaurantDetail", { id: r.id }) })))
-      .concat(YCData.restaurantsIn(city).slice(0, 2).map((r) => ({ img: r.img, title: r.name, meta: "Restaurant · " + r.km + " km · " + r.rating + " ★", onclick: go("restaurantDetail", { id: r.id }) })))
+      .concat(YCData.restaurantsIn(city).slice().sort((a, b) => (YCData.liveKm(a) || 99) - (YCData.liveKm(b) || 99)).slice(0, 3).map((r) => ({ img: r.img, title: r.name, meta: "Restaurant · " + YCData.fmtKm(YCData.liveKm(r)) + " · " + r.rating + " ★", onclick: go("restaurantDetail", { id: r.id }) })))
       .concat(YCData.sitesIn(city).slice(0, 1).map((s) => ({ img: s.img, title: s.name, meta: YCData.siteType(s.type).label + " · " + s.place, onclick: go("cultureDetail", { id: s.id }) })))
       .concat(YCData.eventsIn(city).slice(0, 1).map((e) => ({ img: e.img, title: e.name, meta: "Événement · " + YCData.fmtDateShort(e.date), onclick: go("eventDetail", { id: e.id }) })));
     const events = YCData.eventsIn(city).slice().sort((a, b) => a.date.localeCompare(b.date)).filter((e) => e.date >= todayISO()).slice(0, 4);
@@ -110,12 +110,14 @@
             <span class="w-11 h-11 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("workspace_premium", "text-[24px]", true)}</span>
             <span class="min-w-0 flex-1"><span class="block t-title">${ACState.rewards.points.toLocaleString("fr-FR")} points Youss Bonus</span><span class="block t-small text-ink-2">Niveau ${YCData.tierFor(ACState.rewards.points).id}${YCData.nextTier(ACState.rewards.points) ? " · " + (YCData.nextTier(ACState.rewards.points).min - ACState.rewards.points).toLocaleString("fr-FR") + " pts avant " + YCData.nextTier(ACState.rewards.points).id : ""}</span></span>${icon("chevron_right", "text-ink-3")}
           </button>
-          ${ACState.session.remote ? "" : `<button type="button" onclick="Demo.openMenu()" class="flex w-full card p-4 text-left items-center gap-3 border-dashed">
-            <span class="w-11 h-11 rounded-full bg-surface-low text-ink flex items-center justify-center">${icon("play_circle", "text-[24px]")}</span>
-            <span class="min-w-0 flex-1"><span class="block t-title">${I18N.t("demo_tour")}</span><span class="block t-small text-ink-2">Transport, restaurant, événement, commerce, culture</span></span>
-          </button>`}
         </aside>
       </section>`;
-    Shell.render(container, { homeHeader: true, body, nav: "home" });
+    Shell.render(container, { homeHeader: true, body, nav: "home", onMount: function () {
+      if (window.YCHere && YCHere.settled) return;
+      if (!window.YCMap || !YCMap.rememberHere) return;
+      YCMap.rememberHere(function (pos) {
+        if (pos && pos.ok && window.App && App.current && App.current.id === "home") Screens.home(container);
+      });
+    } });
   };
 })();

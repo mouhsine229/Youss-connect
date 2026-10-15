@@ -85,7 +85,7 @@
         ${r.partnerId ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">${icon("star", "text-gold text-[14px]", true)}${esc(String(r.rating))}</span>`}
       </div>
       <div class="p-3.5">
-        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${esc(r.name)}</h3>${r.partnerId ? "" : `<span class="t-small text-ink-2 whitespace-nowrap">${r.km} km</span>`}</div>
+        <div class="flex items-start justify-between gap-2"><h3 class="t-title truncate">${esc(r.name)}</h3>${r.partnerId ? "" : `<span class="t-small text-ink-2 whitespace-nowrap">${YCData.fmtKm(YCData.liveKm(r))}</span>`}</div>
         <p class="t-small text-ink-2 truncate mt-0.5">${esc(r.cat)} · ${esc(r.area)}, ${esc(r.city)} · ~${ACStore.fmtFCFA(r.avg)}</p>
       </div>
     </button>`;

@@ -661,3 +661,57 @@ comment on view public.users is
   'Alias RLS de public.profiles. Les comptes Auth sont dans auth.users.';
 grant select on public.users to authenticated;
 revoke all on public.users from anon, public;
+
+alter table public.profiles add column if not exists avatar_url text;
+
+create table if not exists public.catalog_events (
+  id text primary key check (id ~ '^[A-Za-z0-9_-]{2,40}$'),
+  name text not null check (char_length(name) >= 2 and char_length(name) <= 120),
+  city text not null check (char_length(city) >= 2 and char_length(city) <= 80),
+  country text not null default '',
+  place text not null default '',
+  cat text not null default 'Festivals',
+  starts_on date not null,
+  starts_at text not null default '18:00',
+  body text not null default '',
+  organizer text not null default '',
+  image_url text not null default '',
+  lat double precision,
+  lng double precision,
+  tickets jsonb not null default '[]'::jsonb,
+  program jsonb not null default '[]'::jsonb,
+  hidden boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.catalog_events enable row level security;
+
+drop policy if exists "events anon read" on public.catalog_events;
+create policy "events anon read" on public.catalog_events for select to anon
+  using (hidden = false);
+
+drop policy if exists "events auth read" on public.catalog_events;
+create policy "events auth read" on public.catalog_events for select to authenticated
+  using (hidden = false or (select private.is_staff()));
+
+drop policy if exists "events staff insert" on public.catalog_events;
+create policy "events staff insert" on public.catalog_events for insert to authenticated
+  with check ((select private.is_staff()));
+
+drop policy if exists "events staff update" on public.catalog_events;
+create policy "events staff update" on public.catalog_events for update to authenticated
+  using ((select private.is_staff()))
+  with check ((select private.is_staff()));
+
+drop policy if exists "events staff delete" on public.catalog_events;
+create policy "events staff delete" on public.catalog_events for delete to authenticated
+  using ((select private.is_staff()));
+
+grant select on public.catalog_events to anon, authenticated;
+grant insert, update, delete on public.catalog_events to authenticated;
+
+create or replace view public.catalog_event_flags
+  with (security_invoker = false) as
+  select id, hidden from public.catalog_events;
+
+grant select on public.catalog_event_flags to anon, authenticated;

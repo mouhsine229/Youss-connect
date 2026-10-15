@@ -82,7 +82,7 @@
       hero: IMG + "places/city-accra.jpg",
       tagline: "Créative, océane, en mouvement.",
       intro: "Accra vibre entre Jamestown et ses fresques, la Place de l'Indépendance, le mausolée de Kwame Nkrumah, le marché de Makola et la plage de Labadi. Scène afrobeats, mode kente et cuisine de rue en font une étape incontournable.",
-      practical: { langue: "Anglais, twi, ga", monnaie: "Cedi (GHS), prix affichés en FCFA pour la démo", indicatif: "+233", periode: "Novembre à mars", fuseau: "GMT", transport: "Taxis, VTC, tro-tros" },
+      practical: { langue: "Anglais, twi, ga", monnaie: "Cedi (GHS), prix affichés en FCFA", indicatif: "+233", periode: "Novembre à mars", fuseau: "GMT", transport: "Taxis, VTC, tro-tros" },
       poi: [
         { name: "Osu (Oxford Street)", lat: 5.5560, lng: -0.1830, kind: "quartier" },
         { name: "Black Star Square", lat: 5.5478, lng: -0.1920, kind: "monument" },
@@ -432,7 +432,7 @@
   const REWARDS = [
     { id: "r1", label: "Course offerte", sub: "Jusqu'à 2 000 FCFA sur votre prochaine course", cost: 500, icon: "directions_car", service: "transport" },
     { id: "r2", label: "-10 % Youss Market", sub: "Sur une commande de votre choix", cost: 300, icon: "storefront", service: "market" },
-    { id: "r3", label: "Boisson offerte", sub: "Dans un restaurant partenaire de la maquette", cost: 150, icon: "local_cafe", service: "restaurant" },
+    { id: "r3", label: "Boisson offerte", sub: "Dans un restaurant YOUSS CONNECT", cost: 150, icon: "local_cafe", service: "restaurant" },
     { id: "r4", label: "Billet -20 %", sub: "Sur un événement de la billetterie", cost: 700, icon: "confirmation_number", service: "evenement" },
     { id: "r5", label: "Livraison gratuite", sub: "Une livraison standard offerte", cost: 250, icon: "local_shipping", service: "livraison" },
     { id: "r6", label: "Visite guidée offerte", sub: "Un site culturel au choix", cost: 900, icon: "museum", service: "culture" }
@@ -456,7 +456,29 @@
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const extraEvents = () => (window.ACState && ACState.content && ACState.content.events) || [];
   const hiddenEvents = () => (window.ACState && ACState.content && ACState.content.ops && ACState.content.ops.hiddenEvents) || [];
-  const allEvents = () => extraEvents().concat(EVENTS.filter((e) => hiddenEvents().indexOf(e.id) < 0));
+  const allEvents = () => {
+    const extra = extraEvents().filter((e) => e && e.id && !e.hidden);
+    const hidden = hiddenEvents();
+    const seen = {};
+    const out = [];
+    extra.forEach((e) => { seen[e.id] = 1; out.push(e); });
+    EVENTS.forEach((e) => { if (!seen[e.id] && hidden.indexOf(e.id) < 0) out.push(e); });
+    return out;
+  };
+  function hereOrigin() {
+    if (window.YCHere && YCHere.ok && YCHere.lat != null) return YCHere;
+    const city = (window.ACState && ACState.user && ACState.user.city) || "Cotonou";
+    return cityOf(city);
+  }
+  function liveKm(item) {
+    if (!item || item.lat == null || item.lng == null) return item && item.km != null ? item.km : null;
+    const o = hereOrigin();
+    return distanceKm(o.lat, o.lng, item.lat, item.lng);
+  }
+  function fmtKm(km) {
+    if (km == null || !isFinite(km)) return "";
+    return (Math.round(km * 10) / 10).toFixed(1).replace(".", ",") + " km";
+  }
   const extraDishes = (restId) => {
     const k = window.ACState && ACState.kitchen;
     return k && k.restId === restId ? (k.dishes || []) : [];
@@ -552,7 +574,7 @@
   window.YCData = {
     IMG, COUNTRIES, CITIES, DESTINATIONS, RESTAURANTS, RESTAURANT_CATS, SELLERS, PRODUCTS, PRODUCT_CATS,
     EVENTS, EVENT_CATS, SITE_TYPES, SITES, DRIVERS, COURIERS, REWARDS, TIERS,
-    distanceKm, nearby, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, countryCodeOfCity, countryCodeAt, inCountry, siteType, search,
+    distanceKm, nearby, liveKm, fmtKm, norm, byId, fmtDate, fmtDateShort, minPrice, cityOf, countryOf, countryCodeOfCity, countryCodeAt, inCountry, siteType, search,
     restaurant: (id) => {
       if (window.YCKitchen && YCKitchen.card) { const live = YCKitchen.card(id); if (live) return live; }
       const r = byId(RESTAURANTS, id); if (!r) return r; const extra = extraDishes(r.id); return extra.length ? Object.assign({}, r, { menu: r.menu.concat(extra) }) : r;

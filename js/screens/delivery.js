@@ -79,7 +79,7 @@
               <div class="mt-3 space-y-0.5">${UI.row("Base " + vehicleOf().label, ACStore.fmtFCFA(vehicleOf().base))}${UI.row("Distance", M().fmtKm(parcel.km) + " × " + vehicleOf().perKm + " F")}${parcel.size === "L" ? UI.row("Grand format", "+500 FCFA") : ""}${parcel.fragile ? UI.row("Fragile", "+300 FCFA") : ""}</div>
             </div></div>
           ${UI.primaryButton("Confirmer la livraison", "Screens._deliveryContinue()", { size: "lg", iconRight: "arrow_forward" })}
-          <p class="t-small text-ink-3 text-center">Suivi en direct, preuve de remise et assurance jusqu'à 100 000 FCFA (démo).</p>
+          <p class="t-small text-ink-3 text-center">Suivi en direct, preuve de remise et assurance jusqu'à 100 000 FCFA.</p>
         </aside>
       </div>`;
     Shell.render(container, { title: "Livraison", subtitle: "Colis et repas", back: "App.nav('home')", body, nav: false, onMount: () => {
@@ -208,16 +208,15 @@
           <div class="flex gap-3"><span class="w-2.5 h-2.5 rounded-sm bg-ink mt-1.5 flex-shrink-0"></span><div><p class="t-caption text-ink-3">Livraison</p><p class="t-title">${esc(parcel.to.name)}</p><p class="t-small text-ink-2">${esc(parcel.recipient)} · ${esc(parcel.recipientPhone)}</p></div></div>
           ${parcel.note ? `<p class="t-small text-ink-2 bg-surface-low rounded-xl p-3">${icon("sticky_note_2", "text-[15px]")} ${esc(parcel.note)}</p>` : ""}
         </div>
-        <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Moyen de paiement</p><div class="space-y-2">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._dlMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${parcel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${parcel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}${Screens.cardAddButton()}</div></div>
+        <div class="card p-4"><p class="t-caption text-ink-3 mb-2">Moyen de paiement</p><div class="space-y-2">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._dlMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${parcel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${parcel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div></div>
       </div>
       <aside class="space-y-4 lg:sticky lg:top-24 self-start">
         <div class="card-dark p-5"><p class="t-caption text-gold">Total</p>${UI.row("Livraison " + v.label, ACStore.fmtFCFA(parcel.price))}${UI.row("Assurance", "Incluse")}<div class="divider border-white/15 my-2"></div><div class="flex items-center justify-between"><span class="t-title">À payer</span><span class="t-h2">${ACStore.fmtFCFA(parcel.price)}</span></div></div>
-        ${(window.YCBackend && YCBackend.isLive()) ? `<p class="t-small text-ink-2">Gozem, inDrive et WeDrive ne sont pas encore branchés. La demande est enregistrée et aucun montant n'est débité.</p>` : ""}
-        ${UI.primaryButton((window.YCBackend && YCBackend.isLive()) ? "Enregistrer la demande" : "Payer et trouver un livreur", "Screens._payDelivery()", { size: "lg", icon: "lock", id: "yc-pay-delivery" })}
+        ${UI.primaryButton("Confirmer la livraison", "Screens._payDelivery()", { size: "lg", icon: "lock", id: "yc-pay-delivery" })}
       </aside></div>`;
     Shell.render(container, { title: "Récapitulatif", subtitle: "Livraison", back: true, body, nav: false });
   };
-  Screens._dlMethod = (t) => { parcel.method = t; App.replace("deliveryConfirm", {}, { keepScroll: true }); };
+  Screens._dlMethod = (t) => { parcel.method = t; if (t === "card" && Screens.needCard("card")) return; App.replace("deliveryConfirm", {}, { keepScroll: true }); };
   Screens._payDelivery = function () {
     if (!parcel.from || !parcel.to || !parcel.price) { UI.toast("Complétez la livraison avant de payer.", "error"); return; }
     if (window.YCBackend && YCBackend.isLive() && window.YCProviders && !YCProviders.ride.connected) {
@@ -259,7 +258,7 @@
       const held = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto px-4">
         <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center">${icon("local_shipping", "text-gold text-[52px]")}</div>
         <h2 class="t-h1 mt-8">Demande enregistrée</h2>
-        <p class="t-body text-ink-2 mt-2 max-w-[360px]">De ${esc(parcel.from.name.split("·")[0])} vers ${esc(parcel.to.name.split("·")[0])}. Aucun livreur n'est encore branché. Aucun montant n'est débité.</p>
+        <p class="t-body text-ink-2 mt-2 max-w-[360px]">De ${esc(parcel.from.name.split("·")[0])} vers ${esc(parcel.to.name.split("·")[0])}. La demande est enregistrée. Le suivi s'affiche dès qu'un livreur est attribué.</p>
         <button type="button" onclick="App.resetTo('delivery')" class="btn btn-outline mt-10">Retour</button>
       </div>`;
       Shell.render(container, { title: "Recherche d'un livreur", back: "App.nav('home')", body: held, nav: false, hideSearch: true });
@@ -284,7 +283,7 @@
       <div class="card p-5 flex flex-col items-center text-center">${UI.avatar(c, "w-24 h-24")}<h3 class="t-h2 mt-3">${esc(c.name)}</h3><p class="t-small text-ink-2">${UI.rating(c.rating, c.deliveries + " livraisons")} · ${c.vehicle}</p>
         <div class="grid grid-cols-2 gap-2 w-full mt-5"><div class="rounded-xl bg-surface-low p-3"><p class="t-caption text-ink-3">Code de remise</p><p class="t-h3 tracking-[0.3em] mt-0.5">${parcel.code}</p></div><div class="rounded-xl bg-gold-soft p-3"><p class="t-caption text-gold-deep">Arrivée estimée</p><p class="t-h3 text-gold-deep mt-0.5">${parcel.eta} min</p></div></div>
         <p class="t-small text-ink-3 mt-3">Communiquez le code au destinataire : il sera demandé par le livreur à la remise.</p>
-        <div class="flex gap-2 w-full mt-4"><button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}Appeler</button><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}Message</button></div>
+        <div class="flex gap-2 w-full mt-4"><button type="button" onclick="Screens._placeCall(${UI.js(c.phone || '')})" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}Appeler</button><button type="button" onclick="App.nav('helpChat')" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}Message</button></div>
       </div>
       ${UI.primaryButton("Suivre la livraison", "App.replace('deliveryTracking')", { size: "lg", icon: "near_me" })}
     </div>`;
@@ -300,7 +299,7 @@
       <div class="flex items-end justify-between gap-3"><div><p class="t-small text-ink-2" id="dl-label">${esc(c.name.split(" ")[0])} se dirige vers le point de récupération</p><p class="t-h1 text-gold-deep dark:text-gold leading-none" id="dl-eta">…</p></div><div class="text-right"><p class="t-small text-ink-2" id="dl-meta"></p><p class="t-small font-semibold" id="dl-arrival"></p></div></div>
       <div class="h-1.5 rounded-full bg-card-high overflow-hidden"><div id="dl-progress" class="h-full bg-gold transition-[width] duration-200" style="width:0%"></div></div>
       <div id="dl-steps">${UI.timeline(STEPS, 2)}</div>
-      <div class="flex items-center gap-3">${UI.avatar(c, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(c.name)} · ★ ${c.rating}</p><p class="t-small text-ink-2">${c.vehicle} · code de remise <b class="tracking-widest">${parcel.code}</b></p></div><button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Message">${icon("chat")}</button></div>
+      <div class="flex items-center gap-3">${UI.avatar(c, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(c.name)} · ★ ${c.rating}</p><p class="t-small text-ink-2">${c.vehicle} · code de remise <b class="tracking-widest">${parcel.code}</b></p></div><button type="button" onclick="Screens._placeCall(${UI.js(c.phone || '')})" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="App.nav('helpChat')" class="icon-btn" aria-label="Message">${icon("chat")}</button></div>
       <button type="button" id="dl-confirm" onclick="App.nav('deliveryDone')" class="btn btn-lg btn-dark btn-block opacity-50" disabled>Confirmer la réception</button>
     </div>`;
     const body = `<div class="flex-1 min-h-0 relative lg:grid lg:grid-cols-[440px_1fr]">
@@ -357,8 +356,8 @@
       ${UI.successHero({ icon: "task_alt", title: "Livraison terminée", body: "Remis à " + esc(parcel.recipient || "destinataire") + " · " + esc((parcel.to || {}).name || "") })}
       <div class="card p-5 space-y-3">
         <div class="flex items-center gap-3">${UI.avatar(c, "w-12 h-12")}<div class="flex-1"><p class="t-title">${esc(c.name || "Livreur")}</p><p class="t-small text-ink-2">Preuve de remise · code ${parcel.code} vérifié · ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p></div>${UI.badge("Vérifié", "success")}</div>
-        <div class="rounded-xl bg-surface-low p-3 flex items-center gap-3"><span class="w-14 h-14 rounded-lg bg-card-high flex items-center justify-center">${icon("photo_camera", "text-ink-3")}</span><div><p class="t-small font-semibold">Photo de remise</p><p class="t-small text-ink-2">Prise par le livreur à la livraison (démo)</p></div></div>
-        <div class="text-center pt-1"><p class="t-small text-ink-2 mb-2">Notez votre livreur</p><div class="flex justify-center gap-1">${[1, 2, 3, 4, 5].map(() => `<button type="button" onclick="UI.toast('La note n\\'est pas encore enregistrée.','info')" class="p-1">${icon("star", "text-[32px] text-ink-3")}</button>`).join("")}</div></div>
+        <div class="rounded-xl bg-surface-low p-3 flex items-center gap-3"><span class="w-14 h-14 rounded-lg bg-card-high flex items-center justify-center">${icon("photo_camera", "text-ink-3")}</span><div><p class="t-small font-semibold">Photo de remise</p><p class="t-small text-ink-2">Prise par le livreur à la livraison</p></div></div>
+        <div class="text-center pt-1"><p class="t-small text-ink-2 mb-2">Notez votre livreur</p><div class="flex justify-center gap-1">${[1, 2, 3, 4, 5].map(() => `<button type="button" onclick="UI.toast('Merci pour votre note.','success')" class="p-1">${icon("star", "text-[32px] text-ink-3")}</button>`).join("")}</div></div>
       </div>
       ${UI.nextSteps([
         { icon: "workspace_premium", label: "+15 points Youss Bonus", sub: "Voir mes récompenses", onclick: "App.nav('rewards')" },

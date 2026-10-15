@@ -73,7 +73,7 @@
       <div class="w-full max-w-[440px]">
         <p class="t-caption">Espace restaurant</p>
         <h1 class="t-h1 mt-1">La cuisine s'ouvre avec un compte</h1>
-        <p class="t-body text-ink-2 mt-3">KYA crée le compte dans la console, puis remet l'identifiant et le mot de passe au restaurant. Il n'y a pas de code public.</p>
+        <p class="t-body text-ink-2 mt-3">KYA CORPORATION crée le compte, puis remet l'identifiant et le mot de passe au restaurant.</p>
         <button type="button" onclick="App.nav('proLogin')" class="btn btn-lg btn-primary btn-block mt-6">J'ai mes identifiants</button>
       </div>
     </div>`;
@@ -266,7 +266,7 @@
           });
           layout("proPayouts", "Paiements", `
             <div class="card p-5"><p class="t-caption">Encaissé enregistré</p><p class="t-h1 mt-1">${ACStore.fmtFCFA(cash + wallet)}</p><p class="t-small text-ink-2 mt-2">${n} commande${n > 1 ? "s" : ""} livrée${n > 1 ? "s" : ""} · espèces ${ACStore.fmtFCFA(cash)} · wallet ${ACStore.fmtFCFA(wallet)}</p></div>
-            <div class="card p-5"><p class="t-body text-ink-2">Le versement vers le restaurant s'ouvrira avec le prestataire de paiement. Rien n'est transféré pour le moment.</p></div>`);
+            <div class="card p-5"><p class="t-body text-ink-2">Les montants des commandes livrées sont enregistrés ici.</p></div>`);
           named(p);
         });
       });

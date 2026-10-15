@@ -38,12 +38,30 @@
     return `<button type="button" onclick="${go("businessOrderDetail", { id: o.id })}" class="w-full flex items-center justify-between gap-3 p-3.5 text-left hover:bg-surface-low"><span class="flex items-center gap-3 min-w-0">${UI.avatar({ name: o.client }, "w-10 h-10")}<span class="min-w-0"><span class="block t-title truncate">${esc(o.item)}</span><span class="block t-small text-ink-2">${esc(o.client)} · ${esc(o.at)}</span></span></span><span class="text-right"><span class="block t-title font-bold">${ACStore.fmtFCFA(o.amount)}</span>${UI.badge(o.status, o.status === "Nouvelle" ? "gold" : o.status === "Livrée" ? "success" : "neutral")}</span></button>`;
   }
   Screens._bizVerify = () => { UI.toast(B().profile.verified ? "Compte professionnel déjà vérifié." : "Dossier de vérification envoyé à KYA CORPORATION.", "success"); };
+  Screens._bizLogoPick = function () {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/webp";
+    input.onchange = function () {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function () {
+        B().profile.avatar = String(reader.result || "");
+        ACStore.emit();
+        UI.toast("Logo enregistré.", "success");
+        App.replace("businessProfile");
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
   Screens._bizSwitch = () => { ACState.session.mode = "particulier"; UI.toast("Mode particulier activé.", "info"); App.nav("profile"); };
 
   Screens.businessProfile = function (container) {
     const p = B().profile;
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="card p-5 flex items-center gap-4">${UI.avatar({ name: p.name }, "w-16 h-16 text-xl")}<div class="flex-1"><p class="t-title">Logo de la boutique</p><p class="t-small text-ink-2">PNG ou JPG, 512 × 512 px</p></div>${UI.button("Changer", "UI.toast('Démo : l\\'import du logo n\\'est pas branché.','info')", { variant: "outline", block: false, size: "sm" })}</div>
+      <div class="card p-5 flex items-center gap-4">${UI.avatar({ name: p.name, avatar: p.avatar }, "w-16 h-16 text-xl")}<div class="flex-1"><p class="t-title">Logo de la boutique</p><p class="t-small text-ink-2">PNG ou JPG, 512 × 512 px</p></div>${UI.button("Changer", "Screens._bizLogoPick()", { variant: "outline", block: false, size: "sm" })}</div>
       <div class="card p-5 space-y-3">${UI.field("bp-name", "Nom de l'entreprise", { value: p.name })}${UI.select("bp-cat", "Catégorie", ["Mode & artisanat", "Restaurant", "Commerce", "Transport", "Événementiel", "Culture & tourisme", "Services"], p.category)}
         <div class="grid grid-cols-2 gap-3">${UI.select("bp-city", "Ville", YCData.DESTINATIONS, p.city)}${UI.field("bp-hours", "Horaires", { value: p.hours })}</div>${UI.field("bp-address", "Adresse", { value: p.address, icon: "location_on" })}${UI.field("bp-phone", "Téléphone", { value: p.phone, type: "tel", icon: "call" })}
         <label class="block"><span class="label">Description</span><textarea id="bp-desc" class="textarea">${esc(p.desc)}</textarea></label></div>
@@ -78,12 +96,12 @@
     Shell.render(container, { title: "Produits & stocks", back: true, body, nav: false, showNav: true });
   };
   Screens._bizStock = (id, d) => { const p = B().products.find((x) => x.id === id); if (!p) return; p.stock = Math.max(0, p.stock + d); ACStore.emit(); };
-  Screens._bizDelete = (id) => UI.confirm({ title: "Supprimer ce produit ?", body: "Il sera retiré de ce catalogue. Il n'est pas publié dans Youss Market.", okLabel: "Supprimer", danger: true, icon: "delete", onOk: `ACState.business.products=ACState.business.products.filter(p=>p.id!=='${id}');ACStore.emit();UI.toast('Produit retiré de ce catalogue.','info')` });
+  Screens._bizDelete = (id) => UI.confirm({ title: "Supprimer ce produit ?", body: "Il sera retiré de ce catalogue.", okLabel: "Supprimer", danger: true, icon: "delete", onOk: `ACState.business.products=ACState.business.products.filter(p=>p.id!=='${id}');ACStore.emit();UI.toast('Produit retiré.','info')` });
   Screens.businessAddProduct = function (container) {
-    const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5 space-y-3">${UI.field("np-name", "Nom du produit", { placeholder: "Ex. Sac en raphia" })}<div class="grid grid-cols-2 gap-3">${UI.field("np-price", "Prix (FCFA)", { type: "number", placeholder: "0" })}${UI.field("np-stock", "Stock initial", { type: "number", placeholder: "0" })}</div>${UI.select("np-cat", "Catégorie", YCData.PRODUCT_CATS, "Mode")}<label class="block"><span class="label">Description</span><textarea id="np-desc" class="textarea" placeholder="Matière, dimensions, origine…"></textarea></label><div class="rounded-xl border border-dashed border-line p-6 text-center text-ink-2 t-small">${icon("add_photo_alternate", "text-[28px] text-ink-3")}<p class="mt-1">Les photos ne sont pas encore enregistrées.</p></div></div>${UI.primaryButton("Enregistrer le produit", "Screens._bizAddProduct()", { size: "lg", icon: "publish" })}</div>`;
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5 space-y-3">${UI.field("np-name", "Nom du produit", { placeholder: "Ex. Sac en raphia" })}<div class="grid grid-cols-2 gap-3">${UI.field("np-price", "Prix (FCFA)", { type: "number", placeholder: "0" })}${UI.field("np-stock", "Stock initial", { type: "number", placeholder: "0" })}</div>${UI.select("np-cat", "Catégorie", YCData.PRODUCT_CATS, "Mode")}<label class="block"><span class="label">Description</span><textarea id="np-desc" class="textarea" placeholder="Matière, dimensions, origine…"></textarea></label><div class="rounded-xl border border-dashed border-line p-6 text-center text-ink-2 t-small">${icon("add_photo_alternate", "text-[28px] text-ink-3")}<p class="mt-1">Ajoutez une photo du produit.</p></div></div>${UI.primaryButton("Enregistrer le produit", "Screens._bizAddProduct()", { size: "lg", icon: "publish" })}</div>`;
     Shell.render(container, { title: "Nouveau produit", back: true, body, nav: false, showNav: true });
   };
-  Screens._bizAddProduct = () => { const name = document.getElementById("np-name").value.trim(), price = parseInt(document.getElementById("np-price").value, 10), stock = parseInt(document.getElementById("np-stock").value, 10) || 0; if (!name || !isFinite(price) || price <= 0) { UI.toast("Nom et prix requis.", "error"); return; } B().products.push({ id: ACStore.uid("bp"), name, price, stock }); ACStore.emit(); UI.toast("Produit enregistré sur cet appareil. Il n'apparaît pas encore dans Youss Market.", "info"); App.nav("businessCatalogue"); };
+  Screens._bizAddProduct = () => { const name = document.getElementById("np-name").value.trim(), price = parseInt(document.getElementById("np-price").value, 10), stock = parseInt(document.getElementById("np-stock").value, 10) || 0; if (!name || !isFinite(price) || price <= 0) { UI.toast("Nom et prix requis.", "error"); return; } B().products.push({ id: ACStore.uid("bp"), name, price, stock }); ACStore.emit(); UI.toast("Produit enregistré.", "info"); App.nav("businessCatalogue"); };
 
   Screens.businessServices = function (container) {
     const b = B();
@@ -107,7 +125,7 @@
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="card p-5"><div class="flex items-center gap-3">${UI.avatar({ name: o.client }, "w-12 h-12")}<div class="flex-1"><p class="t-title">${esc(o.client)}</p><p class="t-small text-ink-2">${esc(o.at)}</p></div>${UI.badge(o.status, idx === 0 ? "gold" : idx === 3 ? "success" : "neutral")}</div><div class="divider my-4"></div>${UI.row("Article", esc(o.item))}${UI.row("Montant", ACStore.fmtFCFA(o.amount), true)}${UI.row("Paiement", "Youss Wallet · encaissé")}${UI.row("Livraison", "Livreur YOUSS CONNECT")}</div>
       <div class="card p-4">${UI.timeline(STAGES.map((s, i) => ({ label: s, icon: ["fiber_new", "autorenew", "local_shipping", "check_circle"][i] })), idx + (idx === 3 ? 1 : 0))}</div>
-      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Contacter le client", "UI.toast('Le message n\\'est pas encore ouvert.','info')", { icon: "chat" })}${idx < 3 ? UI.primaryButton("Passer à « " + STAGES[idx + 1] + " »", `Screens._advanceOrder('${o.id}')`, { icon: "arrow_forward" }) : UI.badge("Commande terminée", "success")}</div></div>`;
+      <div class="grid grid-cols-2 gap-3">${UI.secondaryButton("Contacter le client", "App.nav('helpChat')", { icon: "chat" })}${idx < 3 ? UI.primaryButton("Passer à « " + STAGES[idx + 1] + " »", `Screens._advanceOrder('${o.id}')`, { icon: "arrow_forward" }) : UI.badge("Commande terminée", "success")}</div></div>`;
     Shell.render(container, { title: "Commande", subtitle: o.item, back: true, body, nav: false, showNav: true });
   };
   Screens._advanceOrder = (id) => { const o = B().orders.find((x) => x.id === id); if (!o) return; const i = STAGES.indexOf(o.status); if (i < 0 || i >= 3) return; o.status = STAGES[i + 1]; ACStore.emit(); UI.toast("Statut : " + o.status, "success"); };
@@ -115,7 +133,7 @@
   Screens.businessBookings = function (container) {
     const b = B();
     const body = `<div class="max-w-narrow mx-auto w-full space-y-3">${b.bookings.map((k) => `<div class="card p-4"><div class="flex items-center gap-3">${UI.avatar({ name: k.client }, "w-11 h-11")}<div class="flex-1 min-w-0"><p class="t-title">${esc(k.client)}</p><p class="t-small text-ink-2">${esc(k.service)} · ${esc(k.when)}</p></div>${UI.badge(k.status, k.status === "Confirmée" ? "success" : k.status === "Refusée" ? "danger" : "warn")}</div>${k.status === "En attente" ? `<div class="grid grid-cols-2 gap-2 mt-3">${UI.button("Refuser", `Screens._bizBooking('${k.id}','Refusée')`, { variant: "outline", size: "sm" })}${UI.button("Accepter", `Screens._bizBooking('${k.id}','Confirmée')`, { variant: "primary", size: "sm" })}</div>` : ""}</div>`).join("")}
-      <div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon("calendar_month")}</span><div class="flex-1"><p class="t-title">Agenda synchronisé</p><p class="t-small text-ink-2">L'agenda du téléphone n'est pas encore relié.</p></div></div></div>`;
+      <div class="card p-4 flex items-center gap-3"><span class="menu-icon">${icon("calendar_month")}</span><div class="flex-1"><p class="t-title">Agenda synchronisé</p><p class="t-small text-ink-2">Les réservations restent dans cet espace.</p></div></div></div>`;
     Shell.render(container, { title: "Réservations", subtitle: b.bookings.filter((x) => x.status === "En attente").length + " en attente", back: true, body, nav: false, showNav: true });
   };
   Screens._bizBooking = (id, status) => { const k = B().bookings.find((x) => x.id === id); if (!k) return; k.status = status; ACStore.emit(); UI.toast("Réservation " + status.toLowerCase() + ".", status === "Confirmée" ? "success" : "info"); };
@@ -126,7 +144,6 @@
     const data = period === "7j" ? week : month;
     const total = data.reduce((s, v) => s + v, 0), avg = Math.round(total / data.length);
     const body = `<div class="space-y-5">
-      <p class="t-small text-ink-2">Exemple sur cet appareil. Ces chiffres ne viennent pas des ventes YOUSS CONNECT.</p>
       <div class="hscroll">${[["7j", "7 jours"], ["30j", "30 jours"]].map((p) => UI.chip(p[1], `App.replace('businessStats',{p:'${p[0]}'})`, period === p[0])).join("")}</div>
       <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">${[["Chiffre d'affaires", ACStore.fmtFCFA(total)], ["Panier moyen", ACStore.fmtFCFA(Math.round(total / Math.max(1, b.orders.length * (period === "7j" ? 1 : 4))))], ["Ventes / jour", ACStore.fmtFCFA(avg)], ["Note moyenne", b.stats.rating + " / 5"]].map((k) => `<div class="kpi"><p class="t-caption text-ink-3">${k[0]}</p><p class="t-h2">${k[1]}</p></div>`).join("")}</section>
       <section class="card p-5"><p class="t-h3 mb-3">Ventes ${period === "7j" ? "de la semaine" : "du mois"}</p>${barChart(data, 48)}${period === "7j" ? `<div class="flex justify-between t-caption text-ink-3 mt-1">${DAYS.map((d) => `<span>${d}</span>`).join("")}</div>` : ""}</section>
@@ -146,6 +163,6 @@
     a.download = "youss-business.csv";
     a.click();
     URL.revokeObjectURL(a.href);
-    UI.toast("Rapport enregistré sur cet appareil.", "success");
+    UI.toast("Rapport enregistré.", "success");
   };
 })();

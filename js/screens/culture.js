@@ -117,7 +117,7 @@
       visit: `<div class="card divide-y divide-line">${[["schedule", "Horaires", s.visit.hours], ["payments", "Tarif", s.visit.price], ["timer", "Durée conseillée", s.visit.duration], ["tips_and_updates", "Conseil", s.visit.tips]].map((x) => `<div class="p-4 flex gap-3"><span class="menu-icon">${icon(x[0])}</span><div><p class="t-caption text-ink-3">${x[1]}</p><p class="t-body font-semibold">${x[2]}</p></div></div>`).join("")}</div>
         <div class="mt-4 grid sm:grid-cols-2 gap-3">${UI.button("Y aller en transport", `Screens._goRide(${UI.js(s.name)},${s.lat},${s.lng})`, { variant: "dark", icon: "directions_car" })}${UI.button("Réserver une visite guidée", `Screens._bookVisit('${s.id}')`, { variant: "primary", icon: "tour" })}</div>`,
       info: `<div class="card overflow-hidden"><div id="site-map" class="h-56 bg-surface-low"></div><div class="p-4">${UI.row("Adresse", s.place)}${UI.row("Coordonnées", s.lat.toFixed(4) + ", " + s.lng.toFixed(4))}${UI.row("Type", type.label)}${s.unesco ? UI.row("Patrimoine", "UNESCO") : ""}${UI.row("Langues du guide", "Français, English")}</div></div>
-        <button type="button" onclick="Screens._showSiteQr('${s.id}')" class="mt-3 w-full card p-4 flex items-center gap-3 text-left"><span class="menu-icon">${icon("qr_code_2")}</span><span class="flex-1"><span class="block t-title">QR Code du site</span><span class="block t-small text-ink-2">À afficher sur place pour tester le scanner</span></span>${icon("chevron_right", "text-ink-3")}</button>`
+        <button type="button" onclick="Screens._showSiteQr('${s.id}')" class="mt-3 w-full card p-4 flex items-center gap-3 text-left"><span class="menu-icon">${icon("qr_code_2")}</span><span class="flex-1"><span class="block t-title">QR Code du site</span><span class="block t-small text-ink-2">À afficher sur place</span></span>${icon("chevron_right", "text-ink-3")}</button>`
     };
     const body = `
       ${scanned ? `<div class="card-dark p-4 flex items-center gap-3 animate-screen-in"><span class="w-11 h-11 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center animate-pop">${icon("center_focus_strong", "text-[24px]")}</span><div class="flex-1"><p class="t-caption text-gold">Résultat du scan</p><p class="t-title">Monument reconnu · correspondance ${params.score || 97} %</p></div><button type="button" onclick="App.nav('culturalScanner')" class="btn btn-sm bg-white/10 text-white">Rescanner</button></div>` : ""}
@@ -189,7 +189,7 @@
   Screens._audioGuide = function (id) {
     const s = YCData.site(id);
     const btn = document.getElementById("audio-btn");
-    if (!("speechSynthesis" in window)) { UI.toast("Audio-guide indisponible sur ce navigateur (démo).", "info"); return; }
+    if (!("speechSynthesis" in window)) { UI.toast("Audio-guide indisponible sur ce navigateur.", "info"); return; }
     if (speaking) { speechSynthesis.cancel(); speaking = false; if (btn) btn.innerHTML = icon("play_arrow", "text-[26px]", true); return; }
     const u = new SpeechSynthesisUtterance(s.name + ". " + s.history + " " + s.importance);
     u.lang = I18N.lang === "en" ? "en-GB" : "fr-FR"; u.rate = 0.98;
@@ -204,8 +204,8 @@
   Screens._videoPreview = function (id) {
     const s = YCData.site(id);
     UI.openSheet(`<div class="relative rounded-2xl overflow-hidden bg-black aspect-video"><img src="${s.img}" alt="" class="w-full h-full object-cover animate-kenburns opacity-90"/><div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-      <div class="absolute bottom-4 left-4 right-4 text-white"><p class="t-caption text-gold">Aperçu vidéo · démonstration</p><p class="t-h3">${esc(s.name)}</p><div class="h-1 rounded-full bg-white/25 mt-2 overflow-hidden"><div class="h-full bg-gold" style="width:0%;transition:width 45s linear" id="vid-bar"></div></div></div></div>
-      <p class="t-small text-ink-2 mt-3">Démo : aucune vidéo n'est lue. L'aperçu montre la photo du lieu.</p>`, { wide: true });
+      <div class="absolute bottom-4 left-4 right-4 text-white"><p class="t-caption text-gold">Aperçu vidéonstration</p><p class="t-h3">${esc(s.name)}</p><div class="h-1 rounded-full bg-white/25 mt-2 overflow-hidden"><div class="h-full bg-gold" style="width:0%;transition:width 45s linear" id="vid-bar"></div></div></div></div>
+      <p class="t-small text-ink-2 mt-3">Aperçu du lieu.</p>`, { wide: true });
     requestAnimationFrame(() => { const b = document.getElementById("vid-bar"); if (b) b.style.width = "100%"; });
   };
   Screens._showSiteQr = function (id) {
@@ -216,7 +216,7 @@
   };
 
   // Scanner culturel
-  const SCAN_MESSAGES = { unsupported: "Ce navigateur ne permet pas d'accéder à la caméra.", insecure: "La caméra nécessite une connexion sécurisée (HTTPS).", denied: "Accès à la caméra refusé. Vous pouvez utiliser le mode démo.", nocamera: "Aucune caméra détectée. Utilisez le mode démo.", busy: "La caméra est utilisée par une autre application.", error: "Impossible de démarrer la caméra." };
+  const SCAN_MESSAGES = { unsupported: "Ce navigateur ne permet pas d'accéder à la caméra.", insecure: "La caméra nécessite une connexion sécurisée (HTTPS).", denied: "Accès à la caméra refusé. Choisissez un site dans la liste.", nocamera: "Aucune caméra détectée. Choisissez un site dans la liste.", busy: "La caméra est utilisée par une autre application.", error: "Impossible de démarrer la caméra." };
   function siteFromText(text) {
     const p = YCScanner.parse(text);
     if (p.type === "site" && YCData.site(p.id)) return YCData.site(p.id);
@@ -247,7 +247,7 @@
           </div>
         </div>
         <aside class="relative z-10 p-5 lg:p-6 space-y-3 bg-[#0A0A0A] lg:border-l lg:border-white/10 lg:overflow-y-auto">
-          <div class="hidden lg:block mb-2"><p class="t-caption text-gold">Scanner un monument</p><h1 class="t-h2">Pointez un monument, un musée ou un site</h1><p class="t-small text-white/60 mt-1">La reconnaissance d'image sera entraînée sur les sites partenaires. En maquette : reconnaissance simulée, lecture de QR Code réelle.</p></div>
+          <div class="hidden lg:block mb-2"><p class="t-caption text-gold">Scanner un monument</p><h1 class="t-h2">Pointez un monument, un musée ou un site</h1><p class="t-small text-white/60 mt-1">Scannez le QR du lieu, ou choisissez-le dans la liste.</p></div>
           <button type="button" id="yc-scan-recognize" onclick="Screens._recognize()" class="btn btn-lg btn-primary btn-block">${icon("center_focus_strong", "text-[22px]")}Reconnaître le monument</button>
           <div class="grid grid-cols-2 gap-2">
             <button type="button" id="yc-scan-retry" onclick="Screens._startCameraScan()" class="btn bg-white/10 text-white">${icon("photo_camera", "text-[20px]")}Caméra</button>
@@ -262,7 +262,7 @@
   function showCameraFallback(message) {
     const v = document.getElementById("yc-scan-video"), bg = document.getElementById("yc-scan-bg"), shade = document.getElementById("yc-scan-shade");
     if (v) v.classList.add("opacity-0"); if (bg) bg.classList.remove("hidden"); if (shade) shade.style.opacity = "1";
-    setScanStatus(message + " Le mode démo reconnaît les sites listés.", "error");
+    setScanStatus(message + " Choisissez un site dans la liste.", "error");
   }
   Screens._startCameraScan = function () {
     const v = document.getElementById("yc-scan-video"); if (!v) return;

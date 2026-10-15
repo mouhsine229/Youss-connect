@@ -1,7 +1,7 @@
 // Service worker. Le shell (HTML, JS, CSS, vendors, icônes) est précaché pour démarrer hors ligne.
 // La page et le service worker passent par le réseau. Les scripts déjà en cache s'affichent tout de suite.
 // les images locales en cache-first, les polices Google et les tuiles de carte en stale-while-revalidate.
-const VERSION = "youss-connect-v33";
+const VERSION = "youss-connect-v34";
 const SHELL = VERSION + "-shell";
 const IMAGES = VERSION + "-images";
 const RUNTIME = VERSION + "-runtime";

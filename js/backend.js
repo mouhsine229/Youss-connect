@@ -9,7 +9,7 @@
   var ready = false;
   var SDK_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js";
   var SDK_SRI = "sha384-rwykjmWNwVxboyFmvK9OXN0wj9hnMHA2aAHtits54DuACyCq0M2PrSNxhRb+hvXT";
-  var PROFILE_COLS = "id,phone,full_name,email,city,country,created_at";
+  var PROFILE_COLS = "id,phone,full_name,email,city,country,avatar_url,created_at";
   var listFingerprints = {};
   var listsReady = false;
   var listTimer = null;
@@ -36,10 +36,10 @@
   function explain(error) {
     var msg = (error && (error.message || error.error_description)) || "Erreur inconnue";
     if (/invalid login/i.test(msg)) return "E-mail ou mot de passe incorrect.";
-    if (/phone provider|unsupported phone|sms/i.test(msg)) return "Le code SMS n'est pas encore ouvert. Connectez-vous avec votre e-mail.";
+    if (/phone provider|unsupported phone|sms/i.test(msg)) return "Connectez-vous avec votre e-mail et votre mot de passe.";
     if (/expired|invalid.*(otp|token)/i.test(msg)) return "Code incorrect ou expiré. Demandez-en un nouveau.";
     if (/rate limit/i.test(msg)) return "Trop de tentatives. Réessayez dans quelques minutes.";
-    if (/schema|relation|PGRST|could not find/i.test(msg)) return "Exécutez supabase/schema.sql dans le SQL Editor Supabase.";
+    if (/schema|relation|PGRST|could not find/i.test(msg)) return "Le service est momentanément indisponible.";
     return msg;
   }
   function relDate(iso) {
@@ -90,6 +90,7 @@
       if (profile.email) user.email = profile.email;
       if (profile.city) user.city = profile.city;
       if (profile.country) user.country = profile.country;
+      user.avatar = profile.avatar_url || "";
     }
     if (ACState.prefs) delete ACState.prefs.pinHash;
     ACState.prefs.pinSet = !!pinSet;
@@ -142,7 +143,7 @@
     }
     (ACState.paymentMethods || []).forEach(function (m) {
       if (m.type === "wallet") m.sub = "Solde du compte";
-      if (m.type === "mobile") m.sub = "Pas encore ouvert";
+      if (m.type === "mobile") m.sub = "Sur votre numéro";
     });
     ACState.session.authenticated = true;
     ACState.session.remote = true;
@@ -150,6 +151,42 @@
     ACStore.emit();
   }
 
+  function mapEvent(row) {
+    var tickets = Array.isArray(row.tickets) ? row.tickets : [];
+    var program = Array.isArray(row.program) ? row.program : [];
+    return {
+      id: row.id,
+      name: row.name,
+      cat: row.cat || "Festivals",
+      city: row.city,
+      country: row.country || "",
+      place: row.place || "",
+      date: String(row.starts_on || "").slice(0, 10),
+      time: row.starts_at || "18:00",
+      img: row.image_url || (window.YCData ? YCData.IMG + "services/svc-events.jpg" : ""),
+      lat: row.lat,
+      lng: row.lng,
+      organizer: row.organizer || "",
+      body: row.body || "",
+      program: program,
+      tickets: tickets,
+      hidden: !!row.hidden
+    };
+  }
+  function loadPublicEvents() {
+    if (!client || !window.ACState) return Promise.resolve();
+    return Promise.all([
+      client.from("catalog_events").select("id,name,city,country,place,cat,starts_on,starts_at,body,organizer,image_url,lat,lng,tickets,program,hidden"),
+      client.from("catalog_event_flags").select("id,hidden")
+    ]).then(function (rows) {
+      var events = rows[0] && !rows[0].error ? (rows[0].data || []) : [];
+      var flags = rows[1] && !rows[1].error ? (rows[1].data || []) : [];
+      ACState.content = ACState.content || { events: [], ops: null };
+      ACState.content.events = events.filter(function (row) { return row && !row.hidden; }).map(mapEvent);
+      ACState.content.ops = ACState.content.ops || {};
+      ACState.content.ops.hiddenEvents = flags.filter(function (row) { return row && row.hidden; }).map(function (row) { return row.id; });
+    }, function () {});
+  }
   function hydrate(session) {
     var uid = session.user.id;
     return client.rpc("ensure_account").then(function (ens) {
@@ -205,8 +242,9 @@
       return client.auth.getSession();
     }).then(function (res) {
       var session = res && res.data && res.data.session;
-      if (!session) return true;
-      return hydrate(session).then(function () { return true; });
+      var readyEvents = loadPublicEvents();
+      if (!session) return readyEvents.then(function () { return true; });
+      return readyEvents.then(function () { return hydrate(session).then(function () { return true; }); });
     }).catch(function (err) {
       console.error("Supabase", err);
       if (window.UI) UI.toast(explain(err), "error");
@@ -357,7 +395,7 @@
     listTimer = setTimeout(flushLists, 1000);
   }
   function topup() {
-    return Promise.resolve({ ok: false, reason: "error", message: "La recharge en ligne attend le prestataire de paiement." });
+    return Promise.resolve({ ok: false, reason: "error", message: "Le rechargement n'a pas abouti." });
   }
   function saveProfile(fields) {
     if (!isLive() || !client) return Promise.resolve({ ok: true });
@@ -366,6 +404,7 @@
       if (!uid) return { ok: false };
       var patch = { full_name: fields.fullName, email: fields.email || "", city: fields.city || "", country: fields.country || "" };
       if (fields.phone) patch.phone = fields.phone;
+      if (typeof fields.avatar === "string" && fields.avatar.length < 180000) patch.avatar_url = fields.avatar;
       return client.from("profiles").update(patch).eq("id", uid)
         .then(function (upd) { return { ok: !upd.error, message: upd.error ? explain(upd.error) : "" }; });
     });
@@ -375,7 +414,7 @@
     if (!client || !/^[a-z0-9-]{3,40}$/.test(String(name || ""))) return Promise.resolve({ ok: false, message: "Action indisponible." });
     return client.auth.getSession().then(function (res) {
       var token = res.data.session && res.data.session.access_token;
-      if (!token) return { ok: false, message: "Connectez-vous à la console." };
+      if (!token) return { ok: false, message: "Connectez-vous pour continuer." };
       var root = (cfg.supabaseUrl || "").replace(/\/$/, "");
       return fetch(root + "/functions/v1/" + name, {
         method: "POST",
@@ -503,5 +542,5 @@
     });
   }
 
-  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, applyPin: applyPin, staffNote: staffNote, explain: explain, api: function () { return isLive() ? client : null; }, reader: reader, callFunction: callFunction, deviceAuth: deviceAuth, claimConsole: claimConsole, uploadIdentity: uploadIdentity, removeBiometric: removeBiometric, openSupport: openSupport, loadMessages: loadMessages, sendSupport: sendSupport };
+  window.YCBackend = { configured: configured, isReady: isReady, isLive: isLive, init: init, signIn: signIn, signUp: signUp, updatePassword: updatePassword, signOutOthers: signOutOthers, sendOtp: sendOtp, verifyOtp: verifyOtp, signOut: signOut, pay: pay, topup: topup, saveProfile: saveProfile, saveLists: saveLists, applyPin: applyPin, staffNote: staffNote, explain: explain, api: function () { return isLive() ? client : null; }, reader: reader, callFunction: callFunction, deviceAuth: deviceAuth, claimConsole: claimConsole, uploadIdentity: uploadIdentity, removeBiometric: removeBiometric, openSupport: openSupport, loadMessages: loadMessages, sendSupport: sendSupport, loadEvents: loadPublicEvents };
 })();

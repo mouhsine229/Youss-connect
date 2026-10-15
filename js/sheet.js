@@ -62,9 +62,9 @@
     stream += line("F1", 11, 48, 292, link);
     stream += "0.96 0.94 0.88 rg 48 168 499 78 re f\n";
     stream += "0.039 0.039 0.039 rg\n";
-    stream += line("F1", 11, 64, 214, "Connectez-vous, puis gérez les commandes, le menu");
-    stream += line("F1", 11, 64, 198, "et les horaires. Le paiement en ligne et les SMS");
-    stream += line("F1", 11, 64, 182, "s'ouvriront avec les prestataires.");
+    stream += line("F1", 11, 64, 214, "Connectez-vous, puis gérez les commandes,");
+    stream += line("F1", 11, 64, 198, "le menu et les horaires depuis");
+    stream += line("F1", 11, 64, 182, "l'espace cuisine.");
     stream += "0.039 0.039 0.039 rg 0 0 595 48 re f\n";
     stream += "0.788 0.635 0.153 rg\n";
     stream += line("F1", 10, 48, 20, "YOUSS CONNECT  ·  Quatre villes  ·  Cotonou, Dakar, Lomé, Accra");

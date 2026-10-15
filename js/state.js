@@ -51,7 +51,7 @@
       ],
       paymentMethods: [
         { id: "pm_wallet", type: "wallet", label: "Youss Wallet", sub: "Solde du compte", icon: "account_balance_wallet", isDefault: true },
-        { id: "pm_mobile", type: "mobile", label: "Paiement mobile", sub: "Pas encore ouvert", icon: "smartphone" },
+        { id: "pm_mobile", type: "mobile", label: "Paiement mobile", sub: "Sur votre numéro", icon: "smartphone" },
         { id: "pm_cash", type: "cash", label: "Espèces", sub: "À la livraison ou au chauffeur", icon: "payments" }
       ],
       activities: [

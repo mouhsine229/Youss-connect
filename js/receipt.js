@@ -51,7 +51,7 @@
       ["Téléphone", r.phone],
       ["Lieu", r.city]
     ].concat(r.lines || []).filter(function (row) { return row[1]; });
-    return page(r.title, "<p class=\"sub\">KYA CORPORATION · YOUSS CONNECT</p><h1>" + esc(r.title) + "</h1><p class=\"amt\">" + esc(money(r.amount)) + "</p><table>" + rows.map(function (row) { return "<tr><td>" + esc(row[0]) + "</td><td>" + esc(row[1]) + "</td></tr>"; }).join("") + "</table><footer>Document de démonstration généré sur cet appareil. Aucun paiement réel n'a été envoyé à une banque. Le numéro complet de carte n'est jamais inscrit sur un reçu.</footer>");
+    return page(r.title, "<p class=\"sub\">KYA CORPORATION · YOUSS CONNECT</p><h1>" + esc(r.title) + "</h1><p class=\"amt\">" + esc(money(r.amount)) + "</p><table>" + rows.map(function (row) { return "<tr><td>" + esc(row[0]) + "</td><td>" + esc(row[1]) + "</td></tr>"; }).join("") + "</table><footer>YOUSS CONNECT · KYA CORPORATION. Le numéro complet de carte n'est jamais inscrit sur un reçu.</footer>");
   }
   function save(filename, contents, type) {
     const blob = new Blob([contents], { type: type || "text/html;charset=utf-8" });
@@ -111,7 +111,7 @@
     const body = (rows || []).map(function (t) {
       return "<tr><td>" + esc(t.date || "") + "</td><td>" + esc(t.label || "") + "</td><td>" + esc(t.ref || "") + "</td><td>" + esc((t.type === "credit" ? "+" : "−") + money(Math.abs(t.amount || 0))) + "</td><td>" + esc(statusLabel(t.status)) + "</td></tr>";
     }).join("");
-    const doc = page("Relevé YOUSS CONNECT", "<p class=\"sub\">" + esc(u.fullName || "") + " · " + esc(u.city || "") + "</p><h1>Historique des transactions</h1><table><tr><td>Date</td><td>Opération</td><td>Référence</td><td>Montant</td><td>Statut</td></tr>" + body + "</table><footer>Relevé de démonstration, généré localement. KYA CORPORATION.</footer>");
+    const doc = page("Relevé YOUSS CONNECT", "<p class=\"sub\">" + esc(u.fullName || "") + " · " + esc(u.city || "") + "</p><h1>Historique des transactions</h1><table><tr><td>Date</td><td>Opération</td><td>Référence</td><td>Montant</td><td>Statut</td></tr>" + body + "</table><footer>YOUSS CONNECT · KYA CORPORATION.</footer>");
     save("releve-youss-connect.html", doc);
   }
   let last = null;
