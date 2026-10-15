@@ -4,3 +4,6 @@ Thumbs.db
 *.zip
 .env
 .env.*
+/_*.py
+/_*.txt
+/_*.json
