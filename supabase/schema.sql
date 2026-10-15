@@ -76,9 +76,7 @@ create index if not exists rides_user_created_idx
 
 create policy "own profile read" on public.profiles for select using ((select auth.uid()) = id);
 create policy "own profile update" on public.profiles for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
-revoke insert on table public.profiles from anon, authenticated;
-grant select, insert, update, delete on table public.profiles to service_role;
-grant select, insert, update, delete on table public.wallets to service_role;
+create policy "own profile insert" on public.profiles for insert with check ((select auth.uid()) = id);
 create policy "own wallet read" on public.wallets for select using ((select auth.uid()) = user_id);
 create policy "own tx read" on public.wallet_transactions for select using ((select auth.uid()) = user_id);
 create policy "own bookings read" on public.bookings for select using ((select auth.uid()) = user_id);
@@ -92,19 +90,11 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, phone, full_name, email)
-  values (
-    new.id,
-    new.phone,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
-    coalesce(new.email, '')
-  )
+  insert into public.profiles (id, phone, full_name)
+  values (new.id, new.phone, coalesce(new.raw_user_meta_data->>'full_name', ''))
   on conflict (id) do nothing;
   insert into public.wallets (user_id) values (new.id)
   on conflict (user_id) do nothing;
-  return new;
-exception when others then
-  raise warning 'handle_new_user: %', sqlerrm;
   return new;
 end;
 $$;
@@ -113,40 +103,6 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
-
-create or replace function public.ensure_account()
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  uid uuid := auth.uid();
-  p_phone text;
-  p_name text;
-  p_email text;
-begin
-  if uid is null then
-    return jsonb_build_object('ok', false, 'reason', 'unauthenticated');
-  end if;
-  select u.phone, coalesce(u.raw_user_meta_data->>'full_name', ''), coalesce(u.email, '')
-    into p_phone, p_name, p_email
-  from auth.users u
-  where u.id = uid;
-  if not found then
-    return jsonb_build_object('ok', false, 'reason', 'no_auth_user');
-  end if;
-  insert into public.profiles (id, phone, full_name, email)
-  values (uid, p_phone, p_name, p_email)
-  on conflict (id) do nothing;
-  insert into public.wallets (user_id) values (uid)
-  on conflict (user_id) do nothing;
-  return jsonb_build_object('ok', true);
-end;
-$$;
-
-revoke all on function public.ensure_account() from public, anon;
-grant execute on function public.ensure_account() to authenticated, service_role;
 
 -- Débit atomique. Le client ne peut pas écrire le solde.
 create or replace function public.wallet_pay(
@@ -245,16 +201,14 @@ revoke all on function public.handle_new_user() from public, anon, authenticated
 revoke all on function public.wallet_pay(integer, text, text, integer, jsonb) from public, anon, authenticated;
 revoke all on function public.wallet_topup(integer, text) from public, anon, authenticated;
 grant execute on function public.wallet_pay(integer, text, text, integer, jsonb) to authenticated;
-revoke update (pin_hash) on public.profiles from public, anon, authenticated;
 
 create table if not exists public.user_records (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  kind text not null check (kind in ('activity', 'ticket', 'order', 'notification', 'address', 'reward', 'favorite', 'saved')),
+  kind text not null check (kind in ('activity', 'ticket', 'order', 'notification', 'address')),
   local_id text not null check (char_length(local_id) between 1 and 80),
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
   unique (user_id, kind, local_id)
 );
 
@@ -273,9 +227,7 @@ create policy "own records insert" on public.user_records for insert with check 
 create policy "own records update" on public.user_records for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "own records delete" on public.user_records for delete using ((select auth.uid()) = user_id);
 
--- La version à deux arguments (listes + suppressions) est dans supabase/harden.sql.
--- Ce fichier garde la même signature pour une installation neuve.
-create or replace function public.save_records(p_rows jsonb, p_drop jsonb default '[]'::jsonb)
+create or replace function public.save_records(p_rows jsonb)
 returns void
 language plpgsql
 security definer
@@ -288,16 +240,10 @@ declare
   lid text;
   body jsonb;
 begin
-  if uid is null then
+  if uid is null or jsonb_typeof(p_rows) is distinct from 'array' then
     return;
   end if;
-  if p_rows is null or jsonb_typeof(p_rows) is distinct from 'array' then
-    p_rows := '[]'::jsonb;
-  end if;
-  if p_drop is null or jsonb_typeof(p_drop) is distinct from 'array' then
-    p_drop := '[]'::jsonb;
-  end if;
-  if jsonb_array_length(p_rows) > 80 or jsonb_array_length(p_drop) > 80 then
+  if jsonb_array_length(p_rows) > 80 then
     return;
   end if;
   for row in select value from jsonb_array_elements(p_rows)
@@ -305,34 +251,21 @@ begin
     k := row->>'kind';
     lid := left(coalesce(row->>'local_id', ''), 80);
     body := coalesce(row->'payload', '{}'::jsonb);
-    if k not in ('activity', 'ticket', 'order', 'notification', 'address', 'reward', 'favorite', 'saved') then
+    if k not in ('activity', 'ticket', 'order', 'notification', 'address') then
       continue;
     end if;
     if char_length(lid) < 1 or octet_length(body::text) > 12000 then
       continue;
     end if;
-    insert into public.user_records (user_id, kind, local_id, payload, updated_at)
-    values (uid, k, lid, body, now())
-    on conflict (user_id, kind, local_id) do update
-      set payload = excluded.payload, updated_at = now();
-  end loop;
-  for row in select value from jsonb_array_elements(p_drop)
-  loop
-    k := row->>'kind';
-    lid := left(coalesce(row->>'local_id', ''), 80);
-    if k not in ('activity', 'ticket', 'order', 'notification', 'address', 'reward', 'favorite', 'saved') then
-      continue;
-    end if;
-    if char_length(lid) < 1 then
-      continue;
-    end if;
-    delete from public.user_records where user_id = uid and kind = k and local_id = lid;
+    insert into public.user_records (user_id, kind, local_id, payload)
+    values (uid, k, lid, body)
+    on conflict (user_id, kind, local_id) do update set payload = excluded.payload;
   end loop;
 end;
 $$;
 
-revoke all on function public.save_records(jsonb, jsonb) from public, anon, authenticated;
-grant execute on function public.save_records(jsonb, jsonb) to authenticated;
+revoke all on function public.save_records(jsonb) from public, anon, authenticated;
+grant execute on function public.save_records(jsonb) to authenticated;
 
 -- Pièces d'identité, assistance, console et clé d'appareil.
 -- Aucune image d'empreinte ou de visage n'est stockée : seulement la clé publique WebAuthn.
@@ -342,7 +275,7 @@ revoke all on schema private from public;
 grant usage on schema private to authenticated;
 
 create table if not exists public.staff (
-  user_id uuid primary key references auth.users (id) on delete cascade,
+  user_id uuid primary key references public.profiles (id) on delete cascade,
   role text not null default 'admin' check (role in ('admin')),
   created_at timestamptz not null default now()
 );
@@ -445,7 +378,12 @@ begin
   if exists (select 1 from public.staff where user_id = auth.uid()) then
     return 'member';
   end if;
-  return 'denied';
+  perform pg_advisory_xact_lock(2041301);
+  if exists (select 1 from public.staff) then
+    return 'denied';
+  end if;
+  insert into public.staff (user_id, role) values (auth.uid(), 'admin');
+  return 'created';
 end;
 $$;
 
@@ -613,16 +551,18 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'insufficient_balance');
   end if;
 
-  select id into cid
-  from public.auth_confirmations
-  where user_id = uid and used = false and expires_at > now()
-  order by created_at desc
-  limit 1
-  for update;
-  if cid is null then
-    return jsonb_build_object('ok', false, 'reason', 'confirm');
+  if exists (select 1 from public.device_keys where user_id = uid) then
+    select id into cid
+    from public.auth_confirmations
+    where user_id = uid and used = false and expires_at > now()
+    order by created_at desc
+    limit 1
+    for update;
+    if cid is null then
+      return jsonb_build_object('ok', false, 'reason', 'confirm');
+    end if;
+    update public.auth_confirmations set used = true where id = cid;
   end if;
-  update public.auth_confirmations set used = true where id = cid;
 
   update public.wallets
     set balance = balance - p_amount,
@@ -651,241 +591,3 @@ begin
 end;
 $$;
 
-
-drop view if exists public.users;
-create view public.users
-with (security_invoker = true) as
-select id, email, full_name, phone, city, country, created_at
-from public.profiles;
-comment on view public.users is
-  'Alias RLS de public.profiles. Les comptes Auth sont dans auth.users.';
-grant select on public.users to authenticated;
-revoke all on public.users from anon, public;
-
-alter table public.profiles add column if not exists avatar_url text;
-
-create table if not exists public.catalog_events (
-  id text primary key check (id ~ '^[A-Za-z0-9_-]{2,40}$'),
-  name text not null check (char_length(name) >= 2 and char_length(name) <= 120),
-  city text not null check (char_length(city) >= 2 and char_length(city) <= 80),
-  country text not null default '',
-  place text not null default '',
-  cat text not null default 'Festivals',
-  starts_on date not null,
-  starts_at text not null default '18:00',
-  body text not null default '',
-  organizer text not null default '',
-  image_url text not null default '',
-  lat double precision,
-  lng double precision,
-  tickets jsonb not null default '[]'::jsonb,
-  program jsonb not null default '[]'::jsonb,
-  hidden boolean not null default false,
-  updated_at timestamptz not null default now()
-);
-
-alter table public.catalog_events enable row level security;
-
-drop policy if exists "events anon read" on public.catalog_events;
-create policy "events anon read" on public.catalog_events for select to anon
-  using (hidden = false);
-
-drop policy if exists "events auth read" on public.catalog_events;
-create policy "events auth read" on public.catalog_events for select to authenticated
-  using (hidden = false or (select private.is_staff()));
-
-drop policy if exists "events staff insert" on public.catalog_events;
-create policy "events staff insert" on public.catalog_events for insert to authenticated
-  with check ((select private.is_staff()));
-
-drop policy if exists "events staff update" on public.catalog_events;
-create policy "events staff update" on public.catalog_events for update to authenticated
-  using ((select private.is_staff()))
-  with check ((select private.is_staff()));
-
-drop policy if exists "events staff delete" on public.catalog_events;
-create policy "events staff delete" on public.catalog_events for delete to authenticated
-  using ((select private.is_staff()));
-
-grant select on public.catalog_events to anon, authenticated;
-grant insert, update, delete on public.catalog_events to authenticated;
-
-create or replace view public.catalog_event_flags
-  with (security_invoker = false) as
-  select id, hidden from public.catalog_events;
-
-grant select on public.catalog_event_flags to anon, authenticated;
-
--- Codes e-mail (inscription et mot de passe). Appelés uniquement par la fonction serveur.
-create table if not exists private.email_otps (
-  id uuid primary key default gen_random_uuid(),
-  email text not null,
-  purpose text not null check (purpose in ('signup', 'reset')),
-  code_hash text not null,
-  payload text,
-  attempts integer not null default 0,
-  expires_at timestamptz not null,
-  created_at timestamptz not null default now()
-);
-create index if not exists email_otps_lookup on private.email_otps (email, purpose, created_at desc);
-revoke all on table private.email_otps from public, anon, authenticated;
-
-create table if not exists private.email_otp_buckets (
-  bucket text primary key,
-  hits integer not null,
-  window_start timestamptz not null
-);
-revoke all on table private.email_otp_buckets from public, anon, authenticated;
-
-create or replace function public.email_otp_allow(p_key text)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  n integer;
-  started timestamptz;
-  slot text := left(coalesce(p_key, ''), 120);
-begin
-  if coalesce(auth.role(), '') <> 'service_role' then
-    return false;
-  end if;
-  if slot = '' then
-    return false;
-  end if;
-  select hits, window_start into n, started
-  from private.email_otp_buckets where bucket = slot for update;
-  if started is null or started < now() - interval '1 hour' then
-    insert into private.email_otp_buckets (bucket, hits, window_start)
-    values (slot, 1, now())
-    on conflict (bucket) do update set hits = 1, window_start = now();
-    return true;
-  end if;
-  if n >= 8 then
-    return false;
-  end if;
-  update private.email_otp_buckets set hits = hits + 1 where bucket = slot;
-  return true;
-end;
-$$;
-
-revoke all on function public.email_otp_allow(text) from public, anon, authenticated;
-grant execute on function public.email_otp_allow(text) to service_role;
-
-create or replace function public.auth_user_id_by_email(p_email text)
-returns uuid
-language plpgsql
-security definer
-set search_path = public, auth
-as $$
-declare
-  uid uuid;
-begin
-  if coalesce(auth.role(), '') <> 'service_role' then
-    return null;
-  end if;
-  select id into uid from auth.users
-  where lower(email) = lower(left(trim(coalesce(p_email, '')), 120))
-  limit 1;
-  return uid;
-end;
-$$;
-
-revoke all on function public.auth_user_id_by_email(text) from public, anon, authenticated;
-grant execute on function public.auth_user_id_by_email(text) to service_role;
-
-create or replace function public.email_otp_save(
-  p_email text, p_purpose text, p_code_hash text, p_payload text, p_minutes integer
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if coalesce(auth.role(), '') <> 'service_role' then
-    return;
-  end if;
-  if p_purpose not in ('signup', 'reset') then
-    return;
-  end if;
-  delete from private.email_otps
-  where email = lower(trim(p_email)) and purpose = p_purpose;
-  delete from private.email_otps where expires_at < now() - interval '1 day';
-  insert into private.email_otps (email, purpose, code_hash, payload, expires_at)
-  values (
-    lower(trim(p_email)),
-    p_purpose,
-    left(p_code_hash, 128),
-    p_payload,
-    now() + make_interval(mins => least(greatest(coalesce(p_minutes, 10), 1), 30))
-  );
-end;
-$$;
-
-revoke all on function public.email_otp_save(text, text, text, text, integer) from public, anon, authenticated;
-grant execute on function public.email_otp_save(text, text, text, text, integer) to service_role;
-
-create or replace function public.email_otp_peek(p_email text, p_purpose text)
-returns text
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  sealed text;
-begin
-  if coalesce(auth.role(), '') <> 'service_role' then
-    return null;
-  end if;
-  select payload into sealed from private.email_otps
-  where email = lower(trim(p_email)) and purpose = p_purpose and expires_at > now()
-  order by created_at desc
-  limit 1;
-  return sealed;
-end;
-$$;
-
-revoke all on function public.email_otp_peek(text, text) from public, anon, authenticated;
-grant execute on function public.email_otp_peek(text, text) to service_role;
-
-create or replace function public.email_otp_take(p_email text, p_purpose text, p_code_hash text)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  row_id uuid;
-  hashed text;
-  sealed text;
-  tries integer;
-begin
-  if coalesce(auth.role(), '') <> 'service_role' then
-    return jsonb_build_object('ok', false, 'reason', 'forbidden');
-  end if;
-  select id, code_hash, payload, attempts into row_id, hashed, sealed, tries
-  from private.email_otps
-  where email = lower(trim(p_email)) and purpose = p_purpose and expires_at > now()
-  order by created_at desc
-  limit 1
-  for update;
-  if row_id is null then
-    return jsonb_build_object('ok', false, 'reason', 'missing');
-  end if;
-  if tries >= 5 then
-    delete from private.email_otps where id = row_id;
-    return jsonb_build_object('ok', false, 'reason', 'locked');
-  end if;
-  if hashed is distinct from p_code_hash then
-    update private.email_otps set attempts = attempts + 1 where id = row_id;
-    return jsonb_build_object('ok', false, 'reason', 'bad');
-  end if;
-  delete from private.email_otps where id = row_id;
-  return jsonb_build_object('ok', true, 'payload', sealed);
-end;
-$$;
-
-revoke all on function public.email_otp_take(text, text, text) from public, anon, authenticated;
-grant execute on function public.email_otp_take(text, text, text) to service_role;

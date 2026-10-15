@@ -31,7 +31,7 @@
           <section><p class="t-caption text-ink-3 mb-2">Mon compte</p><div class="grid sm:grid-cols-2 gap-2.5">
             ${menuRow("person", "Modifier mon profil", "App.nav('editProfile')")}${menuRow("restaurant", "Mes commandes", go("activities", { f: "restaurant" }))}${menuRow("directions_car", "Mes courses", go("activities", { f: "transport" }))}${menuRow("qr_code_2", "Mes billets", "App.nav('myTickets')", { sub: ACState.tickets.length + " billet(s)" })}${menuRow("home_pin", "Mes adresses", "App.nav('addresses')", { sub: ACState.addresses.length + " adresse(s)" })}${menuRow("credit_card", "Moyens de paiement", "App.nav('paymentMethods')")}${menuRow("bookmark", "Lieux sauvegardés", "App.nav('savedPlaces')", { sub: ACState.saved.length + " lieu(x)" })}${menuRow("workspace_premium", "Youss Bonus", "App.nav('rewards')", { sub: pts.toLocaleString("fr-FR") + " points" })}</div></section>
           <section><p class="t-caption text-ink-3 mb-2">Réglages</p><div class="grid sm:grid-cols-2 gap-2.5">
-            ${menuRow("security", I18N.t("security"), "App.nav('security')")}${menuRow("language", "Langues", "App.nav('languages')", { sub: (I18N.LANGS.find((l) => l.id === I18N.lang) || {}).label })}${menuRow("notifications", "Notifications", "App.nav('notificationPrefs')")}${menuRow(ACState.prefs.theme === "dark" ? "dark_mode" : "light_mode", I18N.t("theme"), "Screens._toggleTheme()", { sub: ACState.prefs.theme === "dark" ? I18N.t("theme_dark") : I18N.t("theme_light"), right: UI.toggle(ACState.prefs.theme === "dark", "Screens._toggleTheme()", "Thème sombre") })}${(window.YCPwaInstall && YCPwaInstall.canInstall()) ? menuRow("download", I18N.t("pwa_install_menu"), "YCPwaInstall.show()", { sub: "Application plein écran" }) : ""}${menuRow("help", I18N.t("help"), "App.nav('help')")}${menuRow("settings", I18N.t("settings"), "App.nav('settings')")}${menuRow("gavel", "Conditions d'utilisation", "App.nav('terms')")}${menuRow("privacy_tip", "Politique de confidentialité", "App.nav('privacy')")}</div></section>
+            ${menuRow("security", I18N.t("security"), "App.nav('security')")}${menuRow("language", "Langues", "App.nav('languages')", { sub: (I18N.LANGS.find((l) => l.id === I18N.lang) || {}).label })}${menuRow("notifications", "Notifications", "App.nav('notificationPrefs')")}${menuRow(ACState.prefs.theme === "dark" ? "dark_mode" : "light_mode", I18N.t("theme"), "Screens._toggleTheme()", { sub: ACState.prefs.theme === "dark" ? I18N.t("theme_dark") : I18N.t("theme_light"), right: UI.toggle(ACState.prefs.theme === "dark", "Screens._toggleTheme()", "Thème sombre") })}${menuRow("help", I18N.t("help"), "App.nav('help')")}${menuRow("settings", I18N.t("settings"), "App.nav('settings')")}${menuRow("gavel", "Conditions d'utilisation", "App.nav('terms')")}${menuRow("privacy_tip", "Politique de confidentialité", "App.nav('privacy')")}</div></section>
           ${menuRow("logout", I18N.t("logout"), "Screens._logout()", { danger: true })}
           <p class="t-caption text-center">YOUSS CONNECT v2.0 · KYA CORPORATION</p>
         </div>
@@ -39,7 +39,7 @@
     Shell.render(container, { title: I18N.t("nav_profile"), subtitle: u.fullName, body, nav: "profile" });
   };
   Screens._toggleTheme = () => { UI.setTheme(ACState.prefs.theme === "dark" ? "light" : "dark"); };
-  Screens._logout = () => UI.confirm({ title: "Se déconnecter ?", body: "Vous pourrez vous reconnecter avec votre e-mail.", okLabel: I18N.t("logout"), danger: true, icon: "logout", onOk: "Screens._confirmLogout()" });
+  Screens._logout = () => UI.confirm({ title: "Se déconnecter ?", body: "Les données de démo restent sur cet appareil.", okLabel: I18N.t("logout"), danger: true, icon: "logout", onOk: "Screens._confirmLogout()" });
   Screens._confirmLogout = () => { const done = () => { ACState.session.authenticated = false; ACStore.emit(); App.resetTo("login"); }; if (window.YCBackend) YCBackend.signOut().then(done, done); else done(); };
 
   // Édition
@@ -117,38 +117,21 @@
 
   // Moyens de paiement
   Screens.paymentMethods = function (container) {
-    const cards = ACState.wallet.cards || [];
-    const selected = ACState.prefs.paymentMethod || "wallet";
-    const rows = [
-      { key: "wallet", type: "wallet", label: "Youss Wallet", sub: "Solde du compte · " + ACStore.fmtFCFA(ACState.wallet.balance), icon: "account_balance_wallet" },
-      { key: "mobile", type: "mobile", label: "Paiement mobile", sub: "Sur votre numéro", icon: "smartphone" },
-      { key: "cash", type: "cash", label: "Espèces", sub: "À la livraison ou au chauffeur", icon: "payments" }
-    ];
-    cards.forEach((c) => rows.push({ key: c.id, type: "card", cardId: c.id, label: c.brand + " · " + c.last4, sub: "Expire " + c.exp + " · " + c.holder, icon: "credit_card" }));
-    if (!cards.length) rows.push({ key: "card-new", type: "card", label: "Carte bancaire", sub: "Visa, Mastercard", icon: "credit_card" });
-    const on = (row) => selected === row.type && (row.type !== "card" || !row.cardId || row.cardId === ACState.prefs.cardId || cards.length === 1);
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="space-y-2.5">${rows.map((m) => `<button type="button" onclick="Screens._pickPay(${UI.js(m.type)},${UI.js(m.cardId || "")})" class="w-full card p-4 flex items-center gap-3 text-left ${on(m) ? "ring-2 ring-gold" : ""}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1 min-w-0"><span class="t-title flex items-center gap-2">${esc(m.label)}${on(m) ? UI.badge("Par défaut", "gold") : ""}</span><span class="block t-small text-ink-2">${esc(m.sub)}</span></span>${on(m) ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`).join("")}</div>
-      ${cards.length ? UI.secondaryButton("Ajouter une autre carte", "Screens._openAddCard()", { icon: "add_card" }) + UI.secondaryButton("Retirer la carte enregistrée", "Screens._removeCard()", { icon: "delete" }) : ""}
-      <p class="t-small text-ink-3 text-center">Le numéro complet et le cryptogramme ne sont pas enregistrés.</p></div>`;
+      <div class="space-y-2.5">${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._defaultMethod('${m.type}')" class="w-full card p-4 flex items-center gap-3 text-left ${ACState.prefs.paymentMethod === m.type ? "ring-2 ring-gold" : ""}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1 min-w-0"><span class="t-title flex items-center gap-2">${m.label}${ACState.prefs.paymentMethod === m.type ? UI.badge("Par défaut", "gold") : ""}</span><span class="block t-small text-ink-2">${m.sub}${m.type === "wallet" ? " · " + ACStore.fmtFCFA(ACState.wallet.balance) : ""}</span></span>${ACState.prefs.paymentMethod === m.type ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`).join("")}</div>
+      ${UI.primaryButton("Ajouter une carte bancaire", "Screens._openAddCard()", { icon: "add_card" })}
+      ${(ACState.wallet.cards || []).length ? UI.secondaryButton("Retirer la carte enregistrée", "Screens._removeCard()", { icon: "delete" }) : ""}
+      <p class="t-small text-ink-3 text-center">${I18N.t("conceptual")}</p></div>`;
     Shell.render(container, { title: "Moyens de paiement", back: true, body, nav: false, showNav: true });
   };
-  Screens._pickPay = function (type, cardId) {
-    if (type === "card" && !(ACState.wallet.cards || []).length) { Screens._openAddCard(); return; }
-    ACState.prefs.paymentMethod = type;
-    if (type === "card" && cardId) ACState.prefs.cardId = cardId;
-    ACStore.emit();
-    UI.toast(type === "wallet" ? "Youss Wallet est votre moyen par défaut." : type === "mobile" ? "Le paiement mobile est votre moyen par défaut." : type === "cash" ? "Les espèces sont votre moyen par défaut." : "La carte est votre moyen par défaut.", "success");
-    if (App.current && App.current.id === "paymentMethods") App.replace("paymentMethods");
-  };
-  Screens._defaultMethod = (t) => Screens._pickPay(t, "");
+  Screens._defaultMethod = (t) => { ACState.prefs.paymentMethod = t; ACStore.emit(); UI.toast("Moyen de paiement par défaut mis à jour.", "success"); };
   Screens._removeCard = function () {
     ACState.wallet.cards = [];
     ACState.prefs.cardId = "";
     if (ACState.prefs.paymentMethod === "card") ACState.prefs.paymentMethod = "wallet";
     if (Screens._syncCardMethods) Screens._syncCardMethods();
     ACStore.emit();
-    UI.toast("Carte retirée.", "info");
+    UI.toast("Carte retirée de cet appareil.", "info");
   };
 
   // Lieux sauvegardés
@@ -164,7 +147,7 @@
       <div class="card-dark p-5 flex items-center gap-4"><span class="w-14 h-14 rounded-full bg-gold text-[#0A0A0A] flex items-center justify-center">${icon("shield", "text-[30px]", true)}</span><div class="flex-1"><p class="t-caption text-gold">Niveau de protection</p><p class="t-h2">${ACState.session.remote ? "Compte ouvert" : "Élevé"}</p><p class="t-small opacity-80">${ACState.session.remote ? "E-mail, mot de passe et code PIN." : "Compte vérifié, PIN actif, biométrie " + (ACState.prefs.biometric === false || ACState.user.biometricEnrolled === false ? "désactivée" : "activée")}</p></div></div>
       <div class="space-y-2.5">
         ${menuRow("verified_user", "Vérification du compte", "App.nav('verifyAccount')", { sub: identitySub(), right: UI.badge(identityBadge()[0], identityBadge()[1]) })}
-        ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: (ACState.prefs.pinSet || ACState.prefs.pinHash) ? "Modifier le code à 4 chiffres" : "Choisir le code à 4 chiffres" })}
+        ${menuRow("password", "Code PIN", "App.nav('securityPin',{action:'changePin'})", { sub: ACState.prefs.pinHash ? "Modifier le code à 4 chiffres" : "Choisir le code à 4 chiffres" })}
         ${menuRow("key", "Mot de passe", "App.nav('accountPassword')", { sub: "Changer le mot de passe du compte" })}
         ${menuRow(bioIcon(), "Biométrie", "Screens._toggleBio()", { sub: bioSub(), right: UI.toggle(!!(ACState.user.biometricEnrolled && ACState.prefs.biometric !== false), "Screens._toggleBio()", "Biométrie") })}
         ${menuRow("devices", "Appareils connectés", "App.nav('devices')", { sub: "Cet appareil" })}
@@ -215,7 +198,7 @@
     const steps = [{ label: "E-mail du compte", icon: "mail" }, { label: "Numéro de téléphone", icon: "call" }, { label: "Pièce d'identité", icon: "badge" }];
     const st = ACState.user.identityStatus;
     const done = st === "approved" ? 3 : st ? 2 : ACState.session.remote ? 1 : 0;
-    const note = st === "pending" ? "Document reçu. KYA CORPORATION le vérifie." : st === "approved" ? "Pièce acceptée." : st === "rejected" ? "Le dernier document a été refusé. Vous pouvez en envoyer un autre." : "Photo ou PDF, 5 Mo maximum. Le document reste privé jusqu'à la vérification.";
+    const note = st === "pending" ? "Document reçu. La console KYA le relit. Le compte n'est pas encore marqué vérifié." : st === "approved" ? "Pièce acceptée." : st === "rejected" ? "Le dernier document a été refusé. Vous pouvez en envoyer un autre." : "Photo ou PDF, 5 Mo maximum. Le document reste privé jusqu'à la relecture.";
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5">${UI.timeline(steps, done)}</div>
       <form class="card p-5 space-y-3" onsubmit="event.preventDefault();Screens._sendIdentity()">
         <p class="t-title">Pièce d'identité</p>
@@ -239,7 +222,7 @@
     YCBackend.uploadIdentity(file, type).then(function (res) {
       if (btn) btn.disabled = false;
       if (!res || res.ok === false) return UI.showError("id-error", (res && res.message) || "Envoi impossible.");
-      UI.toast("Document envoyé. KYA CORPORATION va le vérifier.", "success");
+      UI.toast("Document envoyé. La console KYA va le relire.", "success");
       App.replace("verifyAccount");
     });
   };
@@ -285,37 +268,28 @@
     Shell.render(container, { title: "Historique des connexions", back: true, body, nav: false, showNav: true });
   };
   Screens.report = function (container) {
-    const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5 space-y-3">${UI.select("rp-type", "Objet du signalement", ["Comportement d'un chauffeur", "Problème de livraison", "Vendeur ou produit", "Transaction suspecte", "Connexion inhabituelle", "Autre"], "Problème de livraison")}${UI.select("rp-ref", "Activité concernée", ["Aucune"].concat(ACState.activities.slice(0, 6).map((a) => a.title)), "Aucune")}<label class="block"><span class="label">Description</span><textarea id="rp-desc" class="textarea" placeholder="Décrivez ce qui s'est passé…"></textarea></label></div>
-      ${UI.primaryButton("Envoyer le signalement", "Screens._sendReport()", { size: "lg", icon: "send" })}<p class="t-small text-ink-3 text-center">KYA CORPORATION lit le signalement. En cas d'urgence, utilisez le bouton SOS.</p></div>`;
+    const body = `<div class="max-w-narrow mx-auto w-full space-y-4"><div class="card p-5 space-y-3">${UI.select("rp-type", "Objet du signalement", ["Comportement d'un chauffeur", "Problème de livraison", "Vendeur ou produit", "Transaction suspecte", "Connexion inhabituelle", "Autre"], "Problème de livraison")}${UI.select("rp-ref", "Activité concernée", ["Aucune"].concat(ACState.activities.slice(0, 6).map((a) => a.title)), "Aucune")}<label class="block"><span class="label">Description</span><textarea id="rp-desc" class="textarea" placeholder="Décrivez ce qui s'est passé…"></textarea></label><div class="rounded-xl border border-dashed border-line p-4 text-center t-small text-ink-2">${icon("attach_file", "text-[22px] text-ink-3")}<p>Les pièces jointes ne sont pas encore ouvertes.</p></div></div>
+      ${UI.primaryButton("Envoyer le signalement", "Screens._sendReport()", { size: "lg", icon: "send" })}<p class="t-small text-ink-3 text-center">Le signalement reste sur cet appareil. L'envoi à l'équipe n'est pas encore ouvert. En cas d'urgence, utilisez le bouton SOS.</p></div>`;
     Shell.render(container, { title: "Signalement", back: true, body, nav: false, showNav: true });
   };
-  Screens._sendReport = () => {
-    const d = document.getElementById("rp-desc").value.trim();
-    const type = ((document.getElementById("rp-type") || {}).value || "Signalement");
-    if (d.length < 10) { UI.toast("Décrivez le problème en quelques mots.", "error"); return; }
-    const done = () => { UI.toast("Signalement envoyé à KYA CORPORATION.", "success"); App.back(); };
-    if (!window.YCBackend || !YCBackend.isLive || !YCBackend.isLive() || !YCBackend.openSupport) { done(); return; }
-    YCBackend.openSupport().then(function (id) {
-      if (!id || !YCBackend.sendSupport) { done(); return; }
-      return YCBackend.sendSupport(id, type + " — " + d, false).then(done, done);
-    }, done);
-  };
+  Screens._sendReport = () => { const d = document.getElementById("rp-desc").value.trim(); if (d.length < 10) { UI.toast("Décrivez le problème en quelques mots.", "error"); return; } UI.toast("Signalement noté sur cet appareil. L'envoi à l'équipe n'est pas encore ouvert.", "info"); App.back(); };
 
   // Langues
   Screens.languages = function (container) {
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
-      <div class="space-y-2.5">${I18N.LANGS.map((l) => { const on = I18N.lang === l.id; return `<button type="button" onclick="UI.setLang('${l.id}')" class="w-full card p-4 flex items-center gap-3 text-left ${on ? "ring-2 ring-gold" : ""}"><span class="menu-icon font-extrabold text-[13px]">${l.id.toUpperCase()}</span><span class="flex-1 min-w-0"><span class="t-title">${l.label}</span><span class="block t-small text-ink-2">${l.native}</span></span>${on ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`; }).join("")}</div></div>`;
+      <div class="space-y-2.5">${I18N.LANGS.map((l) => { const on = I18N.lang === l.id; return `<button type="button" onclick="UI.setLang('${l.id}')" class="w-full card p-4 flex items-center gap-3 text-left ${on ? "ring-2 ring-gold" : ""}"><span class="menu-icon font-extrabold text-[13px]">${l.id.toUpperCase()}</span><span class="flex-1 min-w-0"><span class="t-title flex items-center gap-2">${l.label}${l.partial ? UI.badge("Partiel · démo", "warn") : ""}</span><span class="block t-small text-ink-2">${l.native} · interface traduite à ${l.coverage} %</span></span>${on ? icon("check_circle", "text-gold", true) : icon("radio_button_unchecked", "text-ink-3")}</button>`; }).join("")}</div>
+      <div class="card p-5"><p class="t-title">Autres langues</p><p class="t-small text-ink-2 mt-1">Yoruba, éwé, twi, haoussa, lingala : pas encore.</p><div class="flex flex-wrap gap-2 mt-3">${["Yoruba", "Éwé", "Twi", "Haoussa", "Bambara", "Lingala"].map((l) => `<span class="chip">${l} · bientôt</span>`).join("")}</div>${UI.secondaryButton("Proposer une langue ou contribuer", "UI.toast('Démo : cette proposition reste sur cet appareil. Elle n\\'est pas envoyée.','info')", { icon: "translate", cls: "mt-4" })}</div></div>`;
     Shell.render(container, { title: "Langues", subtitle: "Français · English", back: true, body, nav: false, showNav: true });
   };
 
   // Aide
   Screens.help = function (container) {
-    const faq = [["Comment payer une course ?", "Youss Wallet, carte, paiement mobile ou espèces, au moment de confirmer. Le prix vient de l'itinéraire."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Un paiement par Youss Wallet ajoute des points, dans la limite du montant."], ["Youss Wallet ?", "Le solde est celui de votre compte YOUSS CONNECT."], ["Un compte pour tout ?", "Le même compte sert au transport, aux commandes, aux billets, au marché et au portefeuille."]];
-    const actions = [["chat", "Chat avec l'assistance", "Écrire à KYA", "App.nav('helpChat')"], ["call", "Appeler", "KYA CORPORATION", "App.nav('helpChat')"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]];
+    const faq = [["Comment payer une course ?", "Youss Wallet ou espèces, au moment de confirmer. Le prix vient de l'itinéraire. La carte et le paiement mobile ne sont pas encore encaissés."], ["Où sont mes billets ?", "Profil, puis Mes billets. Le QR s'affiche aussi sur la fiche de l'événement."], ["Youss Bonus ?", "Un paiement par Youss Wallet ajoute des points, dans la limite du montant."], ["Le wallet est-il réel ?", "Le solde est celui du compte. La recharge n'est pas encore ouverte : elle attend un prestataire de paiement."], ["Vendre sur l'app ?", "La vente n'est pas proposée dans le compte personnel. Cette version montre l'achat, le transport et le portefeuille."]];
+    const actions = [["chat", "Chat avec l'assistance", "Écrire à KYA", "App.nav('helpChat')"], ["call", "Appeler", "Pas encore ouvert", "UI.toast('L\\'appel d\\'assistance n\\'est pas encore ouvert.','info')"], ["sos", "Urgence SOS", "Alerte immédiate", "App.nav('sos')"]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">${actions.map((x) => `<button type="button" onclick="${x[3]}" class="card card-press p-4 text-left"><span class="text-gold">${icon(x[0], "text-[26px]")}</span><p class="t-title mt-2">${x[1]}</p><p class="t-small text-ink-2">${x[2]}</p></button>`).join("")}</div>
       <section><p class="t-caption text-ink-3 mb-2">Questions fréquentes</p><div class="card divide-y divide-line">${faq.map((q, i) => `<details class="group"><summary class="flex items-center justify-between gap-3 p-4 cursor-pointer list-none t-title">${q[0]}${icon("expand_more", "text-ink-3 transition-transform group-open:rotate-180")}</summary><p class="px-4 pb-4 t-body text-ink-2">${q[1]}</p></details>`).join("")}</div></section>
-      <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT</p><p class="t-small text-ink-2 mt-1">KYA CORPORATION. Transport, commandes, billets et portefeuille, à Cotonou, Dakar, Lomé et Accra.</p><div class="flex flex-wrap gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "App.nav('terms')", { variant: "outline", block: false, size: "sm" })}${UI.button("Confidentialité", "App.nav('privacy')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
+      <div class="card p-5"><p class="t-caption">À propos</p><p class="t-title mt-1">YOUSS CONNECT</p><p class="t-small text-ink-2 mt-1">KYA CORPORATION. Les prix, chauffeurs et événements affichés sont des exemples. Aucun partenaire officiel.</p><div class="flex flex-wrap gap-2 mt-3">${UI.button("Présentation", "App.nav('about')", { variant: "outline", block: false, size: "sm" })}${UI.button("Conditions d'utilisation", "App.nav('terms')", { variant: "outline", block: false, size: "sm" })}${UI.button("Confidentialité", "App.nav('privacy')", { variant: "outline", block: false, size: "sm" })}</div></div></div>`;
     Shell.render(container, { title: I18N.t("help"), subtitle: "FAQ et contact", back: true, body, nav: false, showNav: true });
   };
   let helpPoll = null;
@@ -325,8 +299,8 @@
       const box = document.getElementById("help-chat");
       if (!box) return;
       box.innerHTML = rows.length ? rows.map(function (m) {
-        return `<div class="max-w-[85%] ${m.from_staff ? "" : "ml-auto"}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-surface-low" : "bg-inverse text-inverse-ink"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "" : "text-right"}">${m.from_staff ? "Assistance" : "Vous"}</p></div>`;
-      }).join("") : `<p class="t-small text-ink-2">Écrivez votre message. KYA CORPORATION répond ici.</p>`;
+        return `<div class="max-w-[85%] ${m.from_staff ? "" : "ml-auto"}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-surface-low" : "bg-ink text-white"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "" : "text-right"}">${m.from_staff ? "Assistance" : "Vous"}</p></div>`;
+      }).join("") : `<p class="t-small text-ink-2">Écrivez votre message. La console KYA répond ici.</p>`;
       box.scrollTop = box.scrollHeight;
     });
   }
@@ -348,7 +322,6 @@
       paintHelp(threadId);
       if (helpPoll) clearInterval(helpPoll);
       helpPoll = setInterval(function () {
-        if (document.hidden) return;
         if (!App.current || App.current.id !== "helpChat") { clearInterval(helpPoll); helpPoll = null; return; }
         paintHelp(threadId);
       }, 4000);
@@ -377,8 +350,9 @@
         <button type="button" onclick="App.nav('notificationPrefs')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("notifications")}</span><div class="flex-1"><p class="t-title">Préférences de notifications</p></div>${icon("chevron_right", "text-ink-3")}</button>
         <div class="flex items-center gap-3 p-4"><span class="menu-icon">${icon("my_location")}</span><div class="flex-1"><p class="t-title">Localisation</p><p class="t-small text-ink-2">Pendant l'utilisation de l'application</p></div>${UI.toggle(ACState.prefs.location !== false, "Screens._togglePrefFlag('location')", "Localisation")}</div>
         <div class="flex items-center gap-3 p-4"><span class="menu-icon">${icon("analytics")}</span><div class="flex-1"><p class="t-title">Recommandations personnalisées</p><p class="t-small text-ink-2">Basées sur vos habitudes</p></div>${UI.toggle(ACState.prefs.recs !== false, "Screens._togglePrefFlag('recs')", "Recommandations")}</div></div></section>
-      <section><p class="t-caption text-ink-3 mb-2">Cet appareil</p><div class="card divide-y divide-line">
-        <button type="button" onclick="Screens._resetDemo()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon !bg-danger-soft !text-danger">${icon("restart_alt")}</span><div class="flex-1"><p class="t-title text-danger">Effacer les données de cet appareil</p><p class="t-small text-ink-2">Le compte YOUSS CONNECT reste ouvert. Seul cet appareil est vidé.</p></div></button></div></section>
+      <section><p class="t-caption text-ink-3 mb-2">${ACState.session.remote ? "Cet appareil" : "Démonstration"}</p><div class="card divide-y divide-line">
+        ${ACState.session.remote ? "" : `<button type="button" onclick="Demo.openMenu()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("play_circle")}</span><div class="flex-1"><p class="t-title">${I18N.t("demo_tour")}</p><p class="t-small text-ink-2">Transport, restaurant, événement, commerce, culture</p></div>${icon("chevron_right", "text-ink-3")}</button>`}
+        <button type="button" onclick="Screens._resetDemo()" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon !bg-danger-soft !text-danger">${icon("restart_alt")}</span><div class="flex-1"><p class="t-title text-danger">${ACState.session.remote ? "Effacer les données de cet appareil" : "Réinitialiser la démo"}</p><p class="t-small text-ink-2">${ACState.session.remote ? "Le compte YOUSS CONNECT reste ouvert. Seul cet appareil est vidé." : "Solde, panier, billets, activités et notifications d'origine"}</p></div></button></div></section>
       <section><p class="t-caption text-ink-3 mb-2">Informations légales</p><div class="card divide-y divide-line">
         <button type="button" onclick="App.nav('terms')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("gavel")}</span><div class="flex-1"><p class="t-title">Conditions d'utilisation</p></div>${icon("chevron_right", "text-ink-3")}</button>
         <button type="button" onclick="App.nav('privacy')" class="w-full flex items-center gap-3 p-4 text-left"><span class="menu-icon">${icon("privacy_tip")}</span><div class="flex-1"><p class="t-title">Politique de confidentialité</p></div>${icon("chevron_right", "text-ink-3")}</button>
@@ -387,5 +361,5 @@
     Shell.render(container, { title: I18N.t("settings"), back: true, body, nav: false, showNav: true });
   };
   Screens._togglePrefFlag = (k) => { ACState.prefs[k] = ACState.prefs[k] === false; ACStore.emit(); };
-  Screens._resetDemo = () => UI.confirm({ title: "Effacer cet appareil ?", body: "Les données affichées sur cet appareil seront effacées. Le compte YOUSS CONNECT reste ouvert.", okLabel: "Effacer", danger: true, icon: "restart_alt", onOk: "ACStore.reset();if(window.YCBackend)YCBackend.signOut();App.resetTo('login')" });
+  Screens._resetDemo = () => UI.confirm({ title: ACState.session.remote ? "Effacer cet appareil ?" : "Réinitialiser la démo ?", body: ACState.session.remote ? "Les données affichées sur cet appareil seront effacées. Le compte et le solde restent sur YOUSS CONNECT." : "Toutes les données de démonstration reviendront à leur état d'origine.", okLabel: "Effacer", danger: true, icon: "restart_alt", onOk: ACState.session.remote ? "ACStore.reset();if(window.YCBackend)YCBackend.signOut();App.resetTo('login')" : "ACStore.reset();ACState.session.authenticated=true;ACState.session.onboardingSeen=true;ACStore.emit();UI.toast('Démo réinitialisée.','success');App.resetTo('home')" });
 })();

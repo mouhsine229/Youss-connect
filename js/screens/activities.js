@@ -48,7 +48,7 @@
       market: [["replay", "Racheter", "App.nav('market')"], ["flag", "Signaler un problème", "App.nav('report')"]],
       livraison: [["replay", "Nouvelle livraison", "App.nav('delivery')"], ["flag", "Signaler un problème", "App.nav('report')"]],
       evenement: [["qr_code_2", "Voir mes billets", "App.nav('myTickets')"], ["directions_car", "Transport vers le lieu", "App.nav('transport')"]],
-      reservation: [["call", "Contacter l'établissement", "Screens._placeCall()"], ["cancel", "Annuler la réservation", "Screens._cancelActivity(" + JSON.stringify(a.id) + ")"]],
+      reservation: [["call", "Contacter l'établissement", "UI.toast('L\\'appel n\\'est pas encore ouvert.','info')"], ["cancel", "Annuler la réservation", "Screens._cancelActivity(" + JSON.stringify(a.id) + ")"]],
       wallet: [["account_balance_wallet", "Voir le Wallet", "App.nav('wallet')"], ["flag", "Signaler", "App.nav('report')"]]
     }[a.service] || [["home", "Accueil", "App.resetTo('home')"]];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -69,13 +69,13 @@
       }
     } });
   };
-  Screens._cancelActivity = (id) => UI.confirm({ title: "Annuler la réservation ?", body: "La réservation sera annulée.", okLabel: "Annuler la réservation", danger: true, icon: "event_busy", onOk: "Screens._markActivityCancelled(" + JSON.stringify(id) + ")" });
+  Screens._cancelActivity = (id) => UI.confirm({ title: "Annuler la réservation ?", body: "Elle sera marquée annulée sur cet appareil. L'établissement n'est pas prévenu.", okLabel: "Annuler la réservation", danger: true, icon: "event_busy", onOk: "Screens._markActivityCancelled(" + JSON.stringify(id) + ")" });
   Screens._markActivityCancelled = function (id) {
     const a = ACState.activities.find((x) => x.id === id);
     if (!a) return;
     a.status = "Annulé";
     ACStore.emit();
-    UI.toast("Réservation annulée.", "info");
+    UI.toast("Réservation marquée annulée sur cet appareil.", "info");
   };
   Screens._activityReceipt = function (id, mode) {
     const a = ACState.activities.find((x) => x.id === id);

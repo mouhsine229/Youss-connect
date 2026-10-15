@@ -316,13 +316,5 @@
   document.addEventListener("yc:navigate", destroyAll);
   window.addEventListener("resize", () => instances.forEach((i) => i.invalidate()));
 
-  function rememberHere(cb) {
-    if (window.YCHere && (YCHere.ok || YCHere.settled)) { if (cb) cb(window.YCHere); return; }
-    locate(function (pos) {
-      window.YCHere = pos || {};
-      window.YCHere.settled = true;
-      if (cb) cb(window.YCHere);
-    });
-  }
-  window.YCMap = { create, destroyAll, fetchRoute, straightRoute, geocode, localPlaces, resolveTyped, locate, rememberHere, bearingDeg, destinationPoint, haversineKm, fmtKm, fmtEta, clockIn, URBAN_SPEED_KMH };
+  window.YCMap = { create, destroyAll, fetchRoute, straightRoute, geocode, localPlaces, resolveTyped, locate, bearingDeg, destinationPoint, haversineKm, fmtKm, fmtEta, clockIn, URBAN_SPEED_KMH };
 })();

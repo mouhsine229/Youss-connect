@@ -79,7 +79,7 @@
         ${UI.img(e.img, e.name, "absolute inset-0 w-full h-full object-cover", { eager: true })}
         <div class="absolute inset-0 gradient-up"></div>
         <div class="relative z-10 flex flex-col justify-end min-h-[16rem] px-5 pt-16 pb-5 text-white lg:min-h-[22rem] lg:px-8 lg:pb-8">
-          <span class="badge bg-white/95 text-[#0A0A0A] mb-2 w-max">${esc(e.cat)}</span>
+          <span class="badge bg-white/95 text-ink mb-2 w-max">${esc(e.cat)}</span>
           <h2 class="t-h1 lg:t-display max-w-[760px]">${esc(e.name)}</h2>
         </div>
         <button type="button" onclick="Screens._shareEvent('${e.id}')" class="absolute top-4 right-4 z-10 icon-btn" aria-label="Partager">${icon("share")}</button>
@@ -93,7 +93,7 @@
           </div>
           <div><h3 class="t-h3 mb-2">À propos</h3><p class="t-body text-ink-2 leading-relaxed">${e.body}</p></div>
           <div><h3 class="t-h3 mb-2">Programme</h3><div class="card divide-y divide-line">${e.program.map((p) => `<div class="p-3.5 flex gap-3 t-body"><span class="font-bold text-gold-deep dark:text-gold w-14 flex-shrink-0">${p.split(" ")[0]}</span><span>${p.split(" ").slice(1).join(" ")}</span></div>`).join("")}</div></div>
-          <div class="card p-4 flex items-center gap-3">${UI.avatar({ name: e.organizer }, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Organisateur</p><p class="t-title truncate">${esc(e.organizer)}</p></div><button type="button" onclick="App.nav('helpChat')" class="btn btn-sm btn-outline shrink-0">Contacter</button></div>
+          <div class="card p-4 flex items-center gap-3">${UI.avatar({ name: e.organizer }, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Organisateur</p><p class="t-title truncate">${esc(e.organizer)}</p></div><button type="button" onclick="UI.toast('Le message n\\'est pas encore ouvert.','info')" class="btn btn-sm btn-outline shrink-0">Contacter</button></div>
           <div class="card overflow-hidden"><div id="ev-map" class="h-48 lg:h-56 bg-surface-low"></div><div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="flex-1"><p class="t-title">${e.place}</p><p class="t-small text-ink-2">Transport, restaurants et hébergements à proximité.</p></div>${UI.button("Y aller en transport", `Screens._goRide(${UI.js(e.place)},${e.lat},${e.lng})`, { variant: "dark", block: false, icon: "directions_car" })}</div></div>
           ${nearbyRest.length ? `<div>${UI.sectionTitle("Dîner avant ou après", "Voir tout", "App.nav('restaurants')")}<div class="grid sm:grid-cols-2 gap-3">${nearbyRest.map((r) => UI.restaurantCard(r)).join("")}</div></div>` : ""}
           <div class="lg:hidden">${ticketPanel}</div>
@@ -103,20 +103,14 @@
     Shell.render(container, { title: e.name, subtitle: YCData.fmtDate(e.date) + " · " + e.city, back: true, body, nav: false, showNav: true, onMount: () => { const m = YCMap.create("ev-map", { interactive: false, zoomControl: false, lat: e.lat, lng: e.lng, zoom: 14 }); if (m) m.addPoi([e.lat, e.lng], "confirmation_number", "<b>" + esc(e.place) + "</b>"); } });
   };
   Screens._pickTicket = (id, eid) => { sel.ticket = id; App.replace("eventDetail", { id: eid }, { keepScroll: true }); };
-  Screens._ticketQty = (d, eid) => {
-    const e = YCData.event(eid);
-    const t = e && e.tickets.find((x) => x.id === sel.ticket);
-    const max = t ? Math.min(10, Math.max(1, t.left || 1)) : 10;
-    sel.qty = Math.min(max, Math.max(1, sel.qty + d));
-    App.replace("eventDetail", { id: eid }, { keepScroll: true });
-  };
+  Screens._ticketQty = (d, eid) => { sel.qty = Math.min(10, Math.max(1, sel.qty + d)); App.replace("eventDetail", { id: eid }, { keepScroll: true }); };
   Screens._buyTicket = function (eid) {
     const e = YCData.event(eid);
     if (!e || !sel.ticket) { UI.toast("Choisissez un billet.", "error"); return; }
     App.nav("eventCheckout", { id: eid });
   };
   Screens._ticketPreset = (eid, tid, qty) => { sel.ticket = tid; sel.qty = qty || 1; };
-  Screens._shareEvent = (id) => { const e = YCData.event(id); if (!e) return; const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + ". Vu sur YOUSS CONNECT."; if (navigator.share) navigator.share({ title: e.name, text }).catch(function () {}); else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { UI.toast("Lien copié.", "success"); }).catch(function () { UI.toast("Partage indisponible sur cet appareil.", "info"); }); else UI.toast("Partage indisponible sur cet appareil.", "info"); };
+  Screens._shareEvent = (id) => { const e = YCData.event(id); const text = e.name + " · " + YCData.fmtDate(e.date) + " · " + e.place + ". Vu sur YOUSS CONNECT."; if (navigator.share) navigator.share({ title: e.name, text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => UI.toast("Lien copié.", "success")); };
 
   // Achat
   Screens.eventCheckout = function (container, params) {
@@ -130,13 +124,13 @@
       <div class="space-y-4">
         <div class="card p-4 flex items-center gap-4"><span class="w-20 h-20 rounded-xl overflow-hidden bg-card-high flex-shrink-0">${UI.img(e.img, e.name)}</span><div class="min-w-0"><p class="t-title truncate">${e.name}</p><p class="t-small text-ink-2">${YCData.fmtDate(e.date)} · ${e.time} · ${e.place}</p><p class="t-small font-semibold mt-1">${t.label} × ${sel.qty}</p></div></div>
         <div class="card p-4 space-y-3"><p class="t-caption text-ink-3">Participant</p>${UI.field("tk-holder", "Nom sur le billet", { value: sel.holder, icon: "person" })}${UI.field("tk-email", "E-mail de réception", { value: ACState.user.email, type: "email", icon: "mail" })}</div>
-        <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.filter((m) => m.type !== "cash").map((m) => `<button type="button" onclick="Screens._tkMethod('${m.type}','${e.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${sel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${sel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>
+        <div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.filter((m) => m.type !== "cash").map((m) => `<button type="button" onclick="Screens._tkMethod('${m.type}','${e.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${sel.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${sel.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}<div class="pt-1">${Screens.cardAddButton()}</div></div>
       </div>
       <aside class="lg:sticky lg:top-24 self-start"><div class="card-dark p-5"><p class="t-caption text-gold">Récapitulatif</p>${UI.row(t.label + " × " + sel.qty, ACStore.fmtFCFA(total))}${UI.row("Frais de service", "Offerts")}<div class="divider my-2 opacity-30"></div><div class="flex items-center justify-between"><span class="t-title">Total</span><span class="t-h2">${ACStore.fmtFCFA(total + fee)}</span></div><p class="t-small mt-2 opacity-80">+${Math.round(total / 100)} points Youss Bonus</p></div></aside></div>
       <div class="sticky bottom-0 z-30 -mx-4 sm:-mx-5 lg:-mx-10 px-4 sm:px-5 lg:px-10 py-3 bg-surface/95 backdrop-blur border-t border-line">${UI.primaryButton("Payer " + ACStore.fmtFCFA(total), "Screens._payEvent('" + e.id + "')", { size: "lg", icon: "lock", id: "yc-pay-event" })}</div>`;
     Shell.render(container, { title: "Récapitulatif", subtitle: "Billetterie", back: true, body, nav: false, showNav: true });
   };
-  Screens._tkMethod = (m, eid) => { sel.method = m; sel.holder = (document.getElementById("tk-holder") || {}).value || sel.holder; if (m === "card" && Screens.needCard("card")) return; App.replace("eventCheckout", { id: eid }); };
+  Screens._tkMethod = (m, eid) => { sel.method = m; sel.holder = (document.getElementById("tk-holder") || {}).value || sel.holder; App.replace("eventCheckout", { id: eid }); };
   function makeTicket(e, t, qty, holder) {
     const tk = { id: ACStore.uid("tkt"), number: "YC-" + e.id.toUpperCase() + "-" + Math.floor(100000 + Math.random() * 899999), eventId: e.id, event: e.name, place: e.place, city: e.city, date: e.date, time: e.time, category: t.label, qty, total: t.price * qty, holder, img: e.img, lat: e.lat, lng: e.lng, createdAt: Date.now() };
     ACState.tickets.unshift(tk);
@@ -146,7 +140,6 @@
     const e = YCData.event(eid);
     const t = e && e.tickets.find((x) => x.id === sel.ticket);
     if (!e || !t) { UI.toast("Ce billet n'est plus disponible.", "error"); return; }
-    if (sel.qty > (t.left || 0)) { UI.toast("Plus assez de places pour cette quantité.", "error"); return; }
     sel.holder = (document.getElementById("tk-holder") || {}).value || sel.holder || ACState.user.fullName;
     const total = t.price * sel.qty;
     if (Screens.needCard(sel.method)) return;

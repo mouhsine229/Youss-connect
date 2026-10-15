@@ -1,12 +1,10 @@
 {
-  "id": "youss-connect-app",
   "name": "YOUSS CONNECT",
   "short_name": "YOUSS CONNECT",
   "description": "Transport, livraison, restos, sorties et achats. Portée par KYA CORPORATION.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "browser"],
   "orientation": "any",
   "background_color": "#FAFAFA",
   "theme_color": "#FAFAFA",

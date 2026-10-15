@@ -24,14 +24,9 @@
     /* Formats QR / liens profonds : culture/<id>, site=<id> */
     let m = h.match(/^culture\/([a-z0-9_-]+)$/i);
     if (m) return { id: "cultureDetail", params: { id: m[1] } };
-    m = h.match(/^site=([a-z0-9_-]+)$/i);
-    if (m) return { id: "cultureDetail", params: { id: m[1] } };
     const [path, query] = h.split("?");
     const params = {};
     new URLSearchParams(query || "").forEach((v, k) => { params[k] = v; });
-    if (params.site && (path === "" || path === "culture" || path === "site")) {
-      return { id: "cultureDetail", params: { id: params.site } };
-    }
     if (path === "kya-ops" || path === "ops") return { id: (window.YCGate && YCGate.ops && YCGate.ops()) ? "opsHome" : "opsLogin", params };
     if (path === "pro/rejoindre") return { id: "proJoin", params };
     if (path === "pro") return { id: (window.YCGate && YCGate.pro && YCGate.pro()) ? "proHome" : "proLogin", params };
@@ -45,32 +40,23 @@
     const kept = opts.keepScroll && prevMain ? prevMain.scrollTop : 0;
     const prevId = current && current.id;
     let fn = window.Screens && window.Screens[id];
-    function flag(key) {
-      try { return sessionStorage.getItem(key) === "1"; } catch (e) { return false; }
+    if (!fn) {
+      console.error("Unknown screen:", id);
+      container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(id)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
+      if (window.I18N && I18N.apply) I18N.apply(document.body);
+      return;
     }
-    const requested = id;
     const opsScreen = isOpsScreen(id);
     const proScreen = isKitchenScreen(id);
-    if (id === "otp" && !ACState.session.authenticated && !flag("yc-otp-pending")) {
-      id = "login"; params = {};
-    } else if (id === "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops()) && !flag("yc-ops-pending")) {
-      id = "opsLogin"; params = {};
-    } else if (opsScreen && id !== "opsLogin" && id !== "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops())) {
+    if (opsScreen && id !== "opsLogin" && id !== "opsOtp" && !(window.YCGate && YCGate.ops && YCGate.ops())) {
       id = "opsLogin"; params = {};
     } else if (proScreen && id !== "proJoin" && id !== "proLogin" && !(window.YCGate && YCGate.pro && YCGate.pro())) {
       id = "proLogin"; params = {};
     } else if (!opsScreen && !proScreen && !AUTH_FREE[id] && !ACState.session.authenticated) {
-      sessionStorage.setItem("yc-after-login", encode(requested, params));
+      sessionStorage.setItem("yc-after-login", encode(id, params));
       id = ACState.session.onboardingSeen ? "login" : "onboarding"; params = {};
     }
-    fn = window.Screens && window.Screens[id];
-    if (!fn) {
-      console.error("Unknown screen:", requested);
-      current = { id: "notFound", params: { id: requested } };
-      container.innerHTML = `<div class="min-h-dvh flex items-center justify-center p-8 text-center"><div><p class="t-h2 mb-2">Écran introuvable</p><p class="t-body text-ink-2 mb-4">${UI.esc(requested)}</p>${UI.primaryButton("Retour à l'accueil", "App.resetTo('home')", { block: false })}</div></div>`;
-      if (window.I18N && I18N.apply) I18N.apply(document.body);
-      return;
-    }
+    if (window.Screens && window.Screens[id]) fn = window.Screens[id];
     if (prevId && prevId !== id) {
       if (window.UI && UI.closeSheet) UI.closeSheet();
       if (window.YCScanner && YCScanner.stop && (prevId === "walletQrPay" || prevId === "culturalScanner")) YCScanner.stop();
@@ -107,7 +93,7 @@
 
   function nav(id, params) {
     const hash = encode(id, params);
-    if (current && encode(current.id, current.params) !== hash) stack.push(encode(current.id, current.params));
+    if (current) stack.push(encode(current.id, current.params));
     if (location.hash === hash) { show(id, params); return; }
     ignoreNextHash = true;
     location.hash = hash;
@@ -159,8 +145,7 @@
   const NO_RERENDER = { splash: 1, transportInRide: 1, deliveryTracking: 1, culturalScanner: 1, scannerAnalyzing: 1, walletQrPay: 1, transport: 1 };
   ACStore.subscribe(function () {
     if (!current || NO_RERENDER[current.id]) return;
-    const ae = document.activeElement;
-    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.type !== "file") return;
+    if (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
     show(current.id, current.params);
   });
 

@@ -16,13 +16,13 @@
   function list() {
     const q = YCData.norm(f.q).trim(), words = q ? q.split(/\s+/) : [];
     let out = YCData.PRODUCTS.filter((p) => {
-      const seller = YCData.seller(p.seller) || {};
       if (f.scope !== "all") {
-        if (!seller.city || YCData.countryCodeOfCity(seller.city) !== ACState.user.countryCode) return false;
+        const seller = YCData.seller(p.seller);
+        if (!seller || YCData.countryCodeOfCity(seller.city) !== ACState.user.countryCode) return false;
       }
       if (f.cat !== "Tout" && p.cat !== f.cat && !(f.cat === "Artisanat" && ["Maison", "Produits locaux", "Accessoires"].indexOf(p.cat) >= 0)) return false;
       if (!words.length) return true;
-      const hay = YCData.norm([p.name, p.cat, seller.name, seller.city, p.desc].join(" "));
+      const hay = YCData.norm([p.name, p.cat, YCData.seller(p.seller).name, YCData.seller(p.seller).city, p.desc].join(" "));
       return words.every((w) => hay.includes(w));
     });
     if (f.sort === "prix-asc") out = out.slice().sort((a, b) => a.price - b.price);
@@ -70,7 +70,7 @@
   Screens.productDetail = function (container, params) {
     const p = YCData.product(params.id);
     if (!p) { App.resetTo("market"); return; }
-    const s = YCData.seller(p.seller) || { id: p.seller, name: "Vendeur", city: "", rating: 0, reviews: 0, verified: false, since: "", desc: "" };
+    const s = YCData.seller(p.seller);
     const fav = ACState.favorites.indexOf(p.id) >= 0;
     const similar = YCData.PRODUCTS.filter((x) => x.id !== p.id && (x.cat === p.cat || x.seller === p.seller)).slice(0, 4);
     const positions = ["center", "20% 30%", "80% 70%"];
@@ -83,7 +83,7 @@
             <button type="button" onclick="Screens._toggleFavorite('${p.id}')" class="absolute top-4 right-4 icon-btn" aria-label="Favori">${icon("favorite", fav ? "text-danger" : "", fav)}</button>
             <style>#pd-main{object-position:${positions[gal.idx]}}</style>
           </div>
-          <div class="grid grid-cols-4 gap-2">${positions.map((pos, i) => `<button type="button" onclick="Screens._pdGal(${i},'${p.id}')" class="ratio-1-1 rounded-xl overflow-hidden border-2 ${gal.idx === i ? "border-gold" : "border-transparent"}"><img src="${p.img}" alt="" class="img-cover" style="object-position:${pos}"/></button>`).join("")}</div>
+          <div class="grid grid-cols-4 gap-2">${positions.map((pos, i) => `<button type="button" onclick="Screens._pdGal(${i},'${p.id}')" class="ratio-1-1 rounded-xl overflow-hidden border-2 ${gal.idx === i ? "border-gold" : "border-transparent"}"><img src="${p.img}" alt="" class="img-cover" style="object-position:${pos}"/></button>`).join("")}<button type="button" onclick="UI.toast('Démo : pas de vidéo produit.','info')" class="ratio-1-1 rounded-xl bg-inverse text-inverse-ink flex flex-col items-center justify-center t-caption">${icon("play_circle", "text-[24px]")}Vidéo</button></div>
         </div>
         <div class="space-y-5">
           <div><span class="badge badge-neutral">${p.cat}</span><h2 class="t-h1 mt-2">${p.name}</h2>
@@ -108,20 +108,14 @@
   Screens._marketAdd = function (id) {
     const p = YCData.product(id); if (!p || p.stock === 0) return;
     const ex = ACState.cart.market.find((i) => i.id === id);
-    if (ex) {
-      if (ex.qty >= p.stock) { UI.toast("Stock maximum atteint.", "info"); return; }
-      ex.qty++;
-    } else ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller });
+    if (ex) ex.qty++; else ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller });
     ACStore.quietly(function () { ACStore.emit(); }); UI.toast(p.name + " ajouté au panier Market.", "success");
     App.replace(App.current.id, App.current.params, { keepScroll: true });
   };
   Screens._marketSeed = (ids) => { ACState.cart.market = ids.map((id) => { const p = YCData.product(id); return { id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller }; }); ACStore.emit(); };
   Screens._marketQty = function (id, d) {
     const it = ACState.cart.market.find((i) => i.id === id); if (!it) return;
-    const p = YCData.product(id);
-    const next = it.qty + d;
-    if (p && next > p.stock) { UI.toast("Stock maximum atteint.", "info"); return; }
-    it.qty = next; if (it.qty <= 0) ACState.cart.market = ACState.cart.market.filter((i) => i.id !== id);
+    it.qty += d; if (it.qty <= 0) ACState.cart.market = ACState.cart.market.filter((i) => i.id !== id);
     ACStore.quietly(function () { ACStore.emit(); }); App.replace(App.current.id, App.current.params, { keepScroll: true });
   };
   Screens._buyNow = (id) => { if (!ACState.cart.market.find((i) => i.id === id)) { const p = YCData.product(id); ACState.cart.market.push({ id, name: p.name, price: p.price, qty: 1, img: p.img, seller: p.seller }); ACStore.emit(); } App.nav("checkoutMarket", { step: 0 }); };
@@ -129,7 +123,7 @@
   Screens.sellerProfile = function (container, params) {
     const s = YCData.seller(params.id) || YCData.SELLERS.s1;
     const prods = YCData.productsBy(s.id);
-    const body = `<div class="card p-5 lg:p-6 flex flex-col sm:flex-row sm:items-center gap-4">${UI.avatar({ name: s.name }, "w-20 h-20 text-2xl")}<div class="flex-1"><h2 class="t-h1 flex items-center gap-2">${s.name}${s.verified ? icon("verified", "text-gold", true) : ""}</h2><p class="t-body text-ink-2 mt-1">${s.desc}</p><div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 t-small"><span>${UI.rating(s.rating, s.reviews + " avis")}</span><span>${icon("location_on", "text-[15px]")} ${s.city}</span><span>${icon("storefront", "text-[15px]")} ${prods.length} produits</span><span>Depuis ${s.since}</span></div></div><div class="flex gap-2">${UI.button("Contacter", "App.nav('helpChat')", { variant: "outline", block: false, icon: "chat" })}${UI.button("Suivre", "UI.toast('Vendeur suivi.','success')", { variant: "dark", block: false, icon: "add" })}</div></div>
+    const body = `<div class="card p-5 lg:p-6 flex flex-col sm:flex-row sm:items-center gap-4">${UI.avatar({ name: s.name }, "w-20 h-20 text-2xl")}<div class="flex-1"><h2 class="t-h1 flex items-center gap-2">${s.name}${s.verified ? icon("verified", "text-gold", true) : ""}</h2><p class="t-body text-ink-2 mt-1">${s.desc}</p><div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 t-small"><span>${UI.rating(s.rating, s.reviews + " avis")}</span><span>${icon("location_on", "text-[15px]")} ${s.city}</span><span>${icon("storefront", "text-[15px]")} ${prods.length} produits</span><span>Depuis ${s.since}</span></div></div><div class="flex gap-2">${UI.button("Contacter", "UI.toast('Le message n\\'est pas encore ouvert.','info')", { variant: "outline", block: false, icon: "chat" })}${UI.button("Suivre", "UI.toast('Le suivi des vendeurs n\\'est pas encore ouvert.','info')", { variant: "dark", block: false, icon: "add" })}</div></div>
       <section>${UI.sectionTitle("Produits de " + s.name)}<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">${prods.map(UI.productCard).join("")}</div></section>
       <section class="card p-5 flex flex-col sm:flex-row items-center gap-4"><span class="w-12 h-12 rounded-full bg-gold-soft text-gold-deep flex items-center justify-center">${icon("business_center", "text-[24px]")}</span><div class="flex-1"><p class="t-title">Vous êtes commerçant, artisan ou entrepreneur ?</p><p class="t-small text-ink-2">Ouvrez votre boutique sur Youss Market avec Youss Business.</p></div>${UI.button("Découvrir Youss Business", "App.nav('business')", { variant: "primary", block: false })}</section>
       ${marketCartBar()}`;
@@ -142,7 +136,7 @@
     const sellers = {}; items.forEach((i) => { (sellers[i.seller] = sellers[i.seller] || []).push(i); });
     const body = !items.length ? UI.emptyState({ icon: "shopping_cart", title: "Panier vide", body: "Ajoutez des produits Youss Market pour continuer.", actionLabel: "Voir Youss Market", actionOnclick: "App.resetTo('market')" }) : `
       <div class="grid lg:grid-cols-[1fr_380px] gap-6"><div class="space-y-4">
-        ${Object.keys(sellers).map((sid) => { const sl = YCData.seller(sid) || { name: "Vendeur", city: "" }; return `<div class="card"><div class="p-3 border-b border-line flex items-center gap-2 t-small font-semibold">${icon("storefront", "text-[18px] text-gold")}${esc(sl.name)} <span class="text-ink-3 font-normal">· ${esc(sl.city)}</span></div><div class="divide-y divide-line">${sellers[sid].map((i) => `<div class="p-3 flex items-center gap-3"><span class="w-16 h-16 rounded-xl overflow-hidden bg-card-high flex-shrink-0">${UI.img(i.img, i.name)}</span><span class="flex-1 min-w-0"><span class="block t-title truncate">${esc(i.name)}</span><span class="block t-small text-ink-2">${ACStore.fmtFCFA(i.price)} l'unité</span></span><span class="t-title font-bold hidden sm:block">${ACStore.fmtFCFA(i.price * i.qty)}</span>${UI.qtyControl(i.qty, `Screens._marketQty('${i.id}',-1)`, `Screens._marketQty('${i.id}',1)`, true)}</div>`).join("")}</div></div>`; }).join("")}
+        ${Object.keys(sellers).map((sid) => `<div class="card"><div class="p-3 border-b border-line flex items-center gap-2 t-small font-semibold">${icon("storefront", "text-[18px] text-gold")}${YCData.seller(sid).name} <span class="text-ink-3 font-normal">· ${YCData.seller(sid).city}</span></div><div class="divide-y divide-line">${sellers[sid].map((i) => `<div class="p-3 flex items-center gap-3"><span class="w-16 h-16 rounded-xl overflow-hidden bg-card-high flex-shrink-0">${UI.img(i.img, i.name)}</span><span class="flex-1 min-w-0"><span class="block t-title truncate">${esc(i.name)}</span><span class="block t-small text-ink-2">${ACStore.fmtFCFA(i.price)} l'unité</span></span><span class="t-title font-bold hidden sm:block">${ACStore.fmtFCFA(i.price * i.qty)}</span>${UI.qtyControl(i.qty, `Screens._marketQty('${i.id}',-1)`, `Screens._marketQty('${i.id}',1)`, true)}</div>`).join("")}</div></div>`).join("")}
         <button type="button" onclick="App.nav('market')" class="t-small font-bold text-gold-deep dark:text-gold">${icon("add", "text-[16px]")} Continuer mes achats</button></div>
       <aside class="space-y-4 lg:sticky lg:top-24 self-start"><div class="card p-5">${UI.row("Sous-total (" + ACStore.marketCount() + " art.)", ACStore.fmtFCFA(sub))}${UI.row("Livraison", "dès 1 000 FCFA")}<div class="divider my-2"></div>${UI.row("Total estimé", ACStore.fmtFCFA(sub + 1000), true)}<p class="t-small text-ink-3 mt-2">+${Math.round(sub / 100)} points Youss Bonus</p></div>${UI.primaryButton("Passer la commande", "App.nav('checkoutMarket',{step:0})", { size: "lg", iconRight: "arrow_forward" })}</aside></div>`;
     Shell.render(container, { title: "Panier Market", subtitle: items.length ? ACStore.marketCount() + " article(s)" : "", back: true, body, nav: false, showNav: true });
@@ -164,7 +158,7 @@
     let html = "";
     if (co.step === 0) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Adresse de livraison</p>${ACState.addresses.map((a) => `<button type="button" onclick="Screens._mcAddress('${a.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.address === a.id ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(a.icon || "place")}</span><span class="flex-1 min-w-0"><span class="block t-title">${esc(a.label)}</span><span class="block t-small text-ink-2 truncate">${esc(a.detail)}</span></span>${co.address === a.id ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}<button type="button" onclick="App.nav('addAddress',{back:'checkoutMarket'})" class="w-full flex items-center gap-3 rounded-xl border border-dashed border-line p-3 text-left text-ink-2"><span class="menu-icon">${icon("add")}</span><span class="t-title">Nouvelle adresse</span></button></div>${nav(null, 1)}`;
     else if (co.step === 1) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Mode de livraison</p>${SHIPPING.map((s) => `<button type="button" onclick="Screens._mcShip('${s.id}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.shipping === s.id ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(s.icon)}</span><span class="flex-1"><span class="block t-title">${s.label}</span><span class="block t-small text-ink-2">${s.sub}</span></span><span class="t-title font-bold">${s.price ? ACStore.fmtFCFA(s.price) : "Gratuit"}</span></button>`).join("")}</div>${nav(0, 2)}`;
-    else if (co.step === 2) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._mcMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${co.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}</div>${nav(1, 3)}`;
+    else if (co.step === 2) html = `<div class="card p-4 space-y-2"><p class="t-caption text-ink-3 mb-1">Paiement</p>${ACState.paymentMethods.map((m) => `<button type="button" onclick="Screens._mcMethod('${m.type}')" class="w-full flex items-center gap-3 rounded-xl border p-3 text-left ${co.method === m.type ? "border-gold bg-gold/10" : "border-line"}"><span class="menu-icon">${icon(m.icon)}</span><span class="flex-1"><span class="block t-title">${m.label}${m.type === "wallet" ? ` <span class="t-small text-ink-2 font-normal">· ${ACStore.fmtFCFA(ACState.wallet.balance)}</span>` : ""}</span><span class="block t-small text-ink-2">${m.sub}</span></span>${co.method === m.type ? icon("check_circle", "text-gold", true) : ""}</button>`).join("")}${Screens.cardAddButton()}</div>${nav(1, 3)}`;
     else html = `<div class="card p-4 space-y-3">
         <div class="flex items-center gap-3"><span class="menu-icon">${icon("location_on")}</span><div class="flex-1 min-w-0"><p class="t-caption text-ink-3">Livraison</p><p class="t-title truncate">${esc(addr ? addr.label + " · " + addr.detail : "")}</p></div><button type="button" onclick="Screens._mcStep(0)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
         <div class="flex items-center gap-3"><span class="menu-icon">${icon(ship.icon)}</span><div class="flex-1"><p class="t-caption text-ink-3">Mode</p><p class="t-title">${ship.label} · ${ship.eta}</p></div><button type="button" onclick="Screens._mcStep(1)" class="t-small font-bold text-gold-deep dark:text-gold">Modifier</button></div>
@@ -176,23 +170,20 @@
   Screens._mcStep = (s) => { co.step = s; App.replace("checkoutMarket", { step: s }); };
   Screens._mcAddress = (id) => { co.address = id; App.replace("checkoutMarket", { step: 0 }); };
   Screens._mcShip = (id) => { co.shipping = id; App.replace("checkoutMarket", { step: 1 }); };
-  Screens._mcMethod = (t) => { co.method = t; if (t === "card" && Screens.needCard("card")) return; App.replace("checkoutMarket", { step: 2 }); };
+  Screens._mcMethod = (t) => { co.method = t; App.replace("checkoutMarket", { step: 2 }); };
   Screens._payMarket = function (tot) {
     if (!ACState.cart.market.length) { UI.toast("Le panier est vide.", "error"); return; }
-    if (!(tot > 0)) { UI.toast("Montant invalide.", "error"); return; }
-    if (co.method === "wallet" && tot > ACState.wallet.balance) { App.nav("paymentFailed", { retry: "checkoutMarket", amount: tot, reason: "insufficient_balance" }); return; }
     if (Screens.needCard(co.method)) return;
     Screens.requirePay("Achat Youss Market", function () { Screens._payMarketNow(tot); });
   };
   Screens._payMarketNow = function (tot) {
     const items = ACState.cart.market.slice(), ship = SHIPPING.find((s) => s.id === co.shipping), addr = ACState.addresses.find((a) => a.id === co.address);
     if (!items.length || !ship) { UI.toast("Commande incomplète.", "error"); return; }
-    const sellerNames = Array.from(new Set(items.map((i) => (YCData.seller(i.seller) || { name: "Vendeur" }).name))).join(", ");
+    const sellerNames = Array.from(new Set(items.map((i) => YCData.seller(i.seller).name))).join(", ");
     ACStore.whenPaid(ACStore.pay({ amount: tot, label: "Achat Youss Market · " + sellerNames, service: "market", pointsEarned: Math.round(tot / 100), method: co.method, activity: false }), function (res) {
-      const first = YCData.seller(items[0].seller) || { name: "Vendeur", city: ACState.user.city };
+      const first = YCData.seller(items[0].seller);
       const from = YCData.restaurantsIn(ACState.user.city)[0] || YCData.cityOf(ACState.user.city);
-      const pickup = co.shipping === "pickup";
-      const order = ACStore.createOrder({ type: "market", title: "Youss Market · " + sellerNames, img: items[0].img, items, total: tot, address: pickup ? "Retrait chez " + first.name + " · " + first.city : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: ship.eta, shipping: ship.label, fulfillment: pickup ? "pickup" : "delivery", from: { lat: from.lat, lng: from.lng }, to: pickup ? null : (addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null), courier: pickup ? null : YCData.courierFor(ACState.user.city) });
+      const order = ACStore.createOrder({ type: "market", title: "Youss Market · " + sellerNames, img: items[0].img, items, total: tot, address: co.shipping === "pickup" ? "Retrait chez " + first.name + " · " + first.city : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: ship.eta, shipping: ship.label, from: { lat: from.lat, lng: from.lng }, to: addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null, courier: YCData.courierFor(ACState.user.city) });
       ACStore.addActivity({ service: "market", title: "Achat Youss Market · " + items.map((i) => i.name).join(", "), amount: tot, status: "En cours", icon: "storefront", orderId: order.id, detail: { items: items.map((i) => i.name + " × " + i.qty), seller: sellerNames, shipping: ship.label } });
       items.forEach((i) => { const p = YCData.product(i.id); if (p) p.stock = Math.max(0, p.stock - i.qty); });
       ACStore.addNotification("Commande confirmée", "Youss Market · " + order.number + " · livraison " + ship.label.toLowerCase() + " (" + ship.eta + ").", "market", "orderTracking?id=" + order.id);

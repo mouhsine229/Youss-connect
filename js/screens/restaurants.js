@@ -4,7 +4,7 @@
   window.Screens = window.Screens || {};
   const { icon, esc, go } = UI;
 
-  const filters = { q: "", cat: "Tout", sort: "distance", allCities: false };
+  const filters = { q: "", cat: "Tout", sort: "pertinence", allCities: false };
   const CATS = ["Tout"].concat(YCData.RESTAURANT_CATS);
 
   function list() {
@@ -22,10 +22,9 @@
       const hay = YCData.norm([r.name, r.cat, r.area, r.city, r.tags.join(" "), r.menu.map((m) => m.name).join(" ")].join(" "));
       return words.every((w) => hay.includes(w));
     });
-    const km = (r) => { const d = YCData.liveKm(r); return d == null ? 999 : d; };
     if (filters.sort === "note") out = out.slice().sort((a, b) => b.rating - a.rating);
-    else if (filters.sort === "prix") out = out.slice().sort((a, b) => a.avg - b.avg);
-    else out = out.slice().sort((a, b) => km(a) - km(b));
+    if (filters.sort === "distance") out = out.slice().sort((a, b) => a.km - b.km);
+    if (filters.sort === "prix") out = out.slice().sort((a, b) => a.avg - b.avg);
     return out;
   }
   function isOpen(r) { const h = new Date().getHours(); return h >= r.open[0] && h < r.open[1]; }
@@ -47,13 +46,8 @@
       </div>
       <div class="hscroll">${CATS.map((c) => UI.chip(c, `Screens._rsCat('${c}')`, filters.cat === c)).join("")}</div>
       <div id="rs-list"></div>`;
-    Shell.render(container, { title: "Restaurants", subtitle: (window.YCHere && YCHere.ok ? "Autour de vous" : (filters.allCities ? "Quatre villes" : ACState.user.city)) + " · livraison", back: "App.nav('home')", body, nav: false, showNav: true, right: cartButton() });
+    Shell.render(container, { title: "Restaurants", subtitle: (filters.allCities ? "Quatre villes" : ACState.user.city) + " · livraison", back: "App.nav('home')", body, nav: false, showNav: true, right: cartButton() });
     renderList();
-    if (!(window.YCHere && YCHere.settled) && window.YCMap && YCMap.rememberHere) {
-      YCMap.rememberHere(function (pos) {
-        if (pos && pos.ok && window.App && App.current && App.current.id === "restaurants") Screens.restaurants(container, params);
-      });
-    }
     if (window.YCKitchen) YCKitchen.loadCatalog().then(function () { if (window.App && App.current && App.current.id === "restaurants") renderList(); });
   };
   function renderList() {
@@ -70,9 +64,9 @@
     return `<button type="button" onclick="${go("restaurantDetail", { id: r.id })}" class="card card-press overflow-hidden text-left">
       <div class="relative ratio-16-10 bg-card-high overflow-hidden">${UI.img(r.img, r.name)}
         <span class="absolute top-2.5 left-2.5 badge ${isKitchenPaused(r.id) ? "badge-warn" : open ? "badge-success" : "badge-neutral"}">${isKitchenPaused(r.id) ? "En pause" : open ? "Ouvert" : "Fermé"} · ${esc(r.time)}</span>
-        ${live ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-[#0A0A0A]">${icon("star", "text-gold text-[14px]", true)}${r.rating} <span class="text-ink-3 font-normal">(${r.reviews})</span></span>`}
+        ${live ? `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">Compte restaurant</span>` : `<span class="absolute top-2.5 right-2.5 badge bg-white/95 text-ink">${icon("star", "text-gold text-[14px]", true)}${r.rating} <span class="text-ink-3 font-normal">(${r.reviews})</span></span>`}
       </div>
-      <div class="p-4"><div class="flex items-start justify-between gap-2"><h3 class="t-h3 truncate">${esc(r.name)}</h3><span class="t-small text-ink-2 whitespace-nowrap mt-1">${YCData.fmtKm(YCData.liveKm(r))}</span></div>
+      <div class="p-4"><div class="flex items-start justify-between gap-2"><h3 class="t-h3 truncate">${esc(r.name)}</h3>${live ? "" : `<span class="t-small text-ink-2 whitespace-nowrap mt-1">${r.km} km</span>`}</div>
         <p class="t-small text-ink-2 mt-0.5">${esc(r.cat)} · ${esc(r.area)}, ${esc(r.city)}</p>
         <div class="flex items-center gap-3 mt-2 t-small"><span class="font-semibold">~${ACStore.fmtFCFA(r.avg)}</span><span class="text-ink-3">·</span><span class="text-ink-2">Livraison ${ACStore.fmtFCFA(r.fee)}</span></div>
         <div class="flex flex-wrap gap-1.5 mt-2.5">${(r.tags || []).map((tg) => `<span class="badge badge-neutral">${esc(tg)}</span>`).join("")}</div></div>
@@ -117,7 +111,7 @@
     const reviewsHtml = r.partnerId ? `<div class="card p-5"><p class="t-title">Pas encore d'avis</p><p class="t-small text-ink-2 mt-1">Les avis de ce restaurant s'afficheront ici lorsqu'ils seront enregistrés.</p></div>` : `<div class="card p-5 flex flex-col sm:flex-row sm:items-center gap-5"><div class="text-center sm:text-left"><p class="t-display">${r.rating}</p>${UI.stars(r.rating)}<p class="t-small text-ink-2 mt-1">${r.reviews} avis</p></div>
         <div class="flex-1 space-y-1.5">${[5, 4, 3, 2, 1].map((n) => `<div class="flex items-center gap-2 t-small"><span class="w-3">${n}</span>${icon("star", "text-[12px] text-gold", true)}<div class="flex-1 h-2 rounded-full bg-card-high overflow-hidden"><div class="h-full bg-gold" style="width:${n === 5 ? 68 : n === 4 ? 22 : n === 3 ? 7 : n === 2 ? 2 : 1}%"></div></div></div>`).join("")}</div></div>
       <div class="space-y-3 mt-4">${r.comments.map((c) => `<div class="card p-4"><div class="flex items-center gap-3">${UI.avatar({ name: c.name }, "w-9 h-9")}<div class="flex-1"><p class="t-title">${c.name}</p><p class="t-small text-ink-3">${c.date}</p></div>${UI.stars(c.rating)}</div><p class="t-body text-ink-2 mt-3">${c.text}</p></div>`).join("")}
-        <button type="button" onclick="UI.toast('Merci, votre avis a été envoyé.','success')" class="btn btn-outline">${icon("rate_review")}Laisser un avis</button></div>`;
+        <button type="button" onclick="UI.toast('Les avis ne sont pas encore enregistrés.','info')" class="btn btn-outline">${icon("rate_review")}Laisser un avis</button></div>`;
     const infoHtml = `<div class="card overflow-hidden"><div id="rs-map" class="h-48 lg:h-64 bg-surface-low"></div>
         <div class="p-4 space-y-2">${UI.row("Adresse", esc(r.area) + ", " + esc(r.city))}${UI.row("Horaires", esc(r.hours) + " · " + (paused ? '<span class="text-danger font-semibold">en pause</span>' : open ? '<span class="text-success font-semibold">ouvert</span>' : '<span class="text-danger font-semibold">fermé</span>'))}${UI.row("Livraison", ACStore.fmtFCFA(r.fee) + " · " + esc(r.time))}${UI.row("Prix moyen", ACStore.fmtFCFA(r.avg) + " / personne")}${UI.row("Paiement", r.partnerId ? "Youss Wallet ou espèces" : "Youss Wallet, espèces, mobile")}
           <div class="grid sm:grid-cols-2 gap-2 pt-2">${UI.button("Y aller en transport", `Screens._transportPreset({toLatLng:{name:${UI.js(r.name)},lat:${r.lat},lng:${r.lng}}});App.nav('transport')`, { variant: "dark", icon: "directions_car" })}${UI.button("Réserver une table", `Screens._bookTable('${r.id}')`, { variant: "outline", icon: "event_seat" })}</div></div></div>`;
@@ -166,6 +160,7 @@
   Screens._bookConfirm = (id) => {
     const r = YCData.restaurant(id);
     if (!r) return;
+    if (r.partnerId) { UI.closeSheet(); UI.toast("La réservation de table n'est pas encore envoyée au restaurant.", "info"); return; }
     const when = document.getElementById("bk-day").value + " " + document.getElementById("bk-time").value, pers = document.getElementById("bk-pers").value;
     UI.closeSheet();
     ACStore.addActivity({ service: "reservation", title: "Réservation · " + r.name + " (" + pers + " pers.)", amount: null, status: "À venir", icon: "event_seat", detail: { when, restaurant: r.name } });
@@ -267,6 +262,7 @@
     const total = sub + fee + (r.partnerId ? 0 : 200);
     if (r.partnerId) {
       if (!window.YCBackend || !YCBackend.isLive()) { UI.toast("Connectez-vous pour commander dans ce restaurant.", "info"); return; }
+      if (co.method !== "cash" && co.method !== "wallet") { UI.toast("La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces.", "info"); return; }
       Screens.requirePay("Commande · " + r.name, function () { Screens._payPartnerNow(fee); });
       return;
     }
@@ -291,7 +287,7 @@
           if (body.points != null && body.points !== "") ACState.rewards.points = Number(body.points);
           ACStore.addTransaction({ label: "Commande " + r.name, amount: -Number(body.total), type: "debit", service: "restaurant", method: "wallet" });
         }
-        order = ACStore.createOrder({ type: "restaurant", title: r.name, img: r.img, items: items, total: Number(body.total), number: body.number, address: co.mode === "pickup" ? "À emporter · " + r.name : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: r.time, fulfillment: co.mode === "pickup" ? "pickup" : "delivery", from: { lat: r.lat, lng: r.lng }, to: co.mode === "pickup" ? null : (addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null), note: ACState.cart.note, restaurantId: r.id, partnerOrderId: body.id, kitchenStatus: "Nouvelle", courier: null });
+        order = ACStore.createOrder({ type: "restaurant", title: r.name, img: r.img, items: items, total: Number(body.total), number: body.number, address: co.mode === "pickup" ? "À emporter · " + r.name : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: r.time, from: { lat: r.lat, lng: r.lng }, to: addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null, note: ACState.cart.note, restaurantId: r.id, partnerOrderId: body.id, kitchenStatus: "Nouvelle", courier: null });
         ACStore.addActivity({ service: "restaurant", title: "Commande " + r.name, amount: Number(body.total), status: "En cours", icon: "restaurant", orderId: order.id, detail: { items: items.map((i) => i.name + " × " + i.qty), address: order.address } });
         ACStore.addNotification("Commande envoyée à la cuisine", r.name + " a reçu " + order.number + ".", "restaurant", "orderTracking?id=" + order.id);
         ACState.cart.items = []; ACState.cart.restaurant = null; ACState.cart.note = ""; co.step = 0;
@@ -306,7 +302,7 @@
     const items = ACState.cart.items.slice();
     const addr = ACState.addresses.find((a) => a.id === co.address);
     ACStore.whenPaid(ACStore.pay({ amount: total, label: "Commande " + r.name, service: "restaurant", pointsEarned: Math.round(total / 100), method: co.method, activity: false }), function (res) {
-      const order = ACStore.createOrder({ type: "restaurant", title: r.name, img: r.img, items, total, address: co.mode === "pickup" ? "À emporter · " + r.name : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: r.time, fulfillment: co.mode === "pickup" ? "pickup" : "delivery", from: { lat: r.lat, lng: r.lng }, to: co.mode === "pickup" ? null : (addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null), note: ACState.cart.note, restaurantId: r.id, courier: co.mode === "pickup" ? null : YCData.courierFor(r.city) });
+      const order = ACStore.createOrder({ type: "restaurant", title: r.name, img: r.img, items, total, address: co.mode === "pickup" ? "À emporter · " + r.name : (addr ? addr.label + " · " + addr.detail : ""), method: co.method, eta: r.time, from: { lat: r.lat, lng: r.lng }, to: addr && addr.lat ? { lat: addr.lat, lng: addr.lng } : null, note: ACState.cart.note, restaurantId: r.id, courier: YCData.courierFor(r.city) });
       ACStore.addActivity({ service: "restaurant", title: "Commande " + r.name, amount: total, status: "En cours", icon: "restaurant", orderId: order.id, detail: { items: items.map((i) => i.name + " × " + i.qty), address: order.address } });
       ACStore.addNotification("Commande confirmée", r.name + " a reçu votre commande " + order.number + ". Préparation en cours.", "restaurant", "orderTracking?id=" + order.id);
       ACState.cart.items = []; ACState.cart.restaurant = null; ACState.cart.note = ""; co.step = 0;

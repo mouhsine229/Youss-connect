@@ -2,11 +2,6 @@
 (function () {
   "use strict";
   window.Screens = window.Screens || {};
-  Screens._placeCall = function (phone) {
-    const n = String(phone || "").replace(/[^\d+]/g, "");
-    if (n.length >= 8) { window.location.href = "tel:" + n; return; }
-    App.nav("helpChat");
-  };
   const { icon, esc } = UI;
   const IMG = YCData.IMG;
 
@@ -21,16 +16,14 @@
   // Splash
   Screens.splash = function (container) {
     container.innerHTML = `
-      <div id="yc-splash" class="splash bg-white text-center px-6 relative overflow-hidden select-none">
+      <div id="yc-splash" class="splash min-h-dvh bg-white flex flex-col items-center justify-center text-center px-6 py-8 relative overflow-hidden select-none">
         <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gold/10 blur-3xl"></div>
         <div class="absolute -bottom-40 -left-24 w-[28rem] h-[28rem] rounded-full bg-gold/10 blur-3xl"></div>
-        <div class="splash-main relative flex flex-col items-center">
-          <img src="./assets/youss-logo-full.png" alt="YOUSS CONNECT" class="splash-logo h-auto object-contain animate-pop" width="280" height="248"/>
-          <p class="mt-5 t-caption text-[#0A0A0A]/60 tracking-[0.22em] sm:tracking-[0.3em] animate-fade-in" style="animation-delay:.3s">Portée par KYA CORPORATION</p>
-          <p class="mt-3 t-body lg:text-[17px] text-[#0A0A0A]/80 max-w-[320px] leading-relaxed animate-fade-in" style="animation-delay:.45s">Se déplacer, commander, sortir et payer. Quatre villes.</p>
-          <div class="mt-8 w-40 h-1 rounded-full bg-[#0A0A0A]/10 overflow-hidden"><div id="yc-splash-bar" class="h-full bg-gold w-0 transition-[width] duration-[1600ms] ease-out"></div></div>
-        </div>
-        <p class="relative t-caption text-[#0A0A0A]/40">Cotonou · Dakar · Lomé · Accra</p>
+        <img src="./assets/youss-logo-full.png" alt="YOUSS CONNECT" class="splash-logo h-auto object-contain animate-pop" width="280" height="248"/>
+        <p class="mt-5 t-caption text-[#0A0A0A]/60 tracking-[0.22em] sm:tracking-[0.3em] animate-fade-in" style="animation-delay:.3s">Portée par KYA CORPORATION</p>
+        <p class="mt-3 t-body lg:text-[17px] text-[#0A0A0A]/80 max-w-[320px] leading-relaxed animate-fade-in" style="animation-delay:.45s">Se déplacer, commander, sortir et payer. Quatre villes.</p>
+        <div class="mt-8 w-40 h-1 rounded-full bg-[#0A0A0A]/10 overflow-hidden"><div id="yc-splash-bar" class="h-full bg-gold w-0 transition-[width] duration-[1600ms] ease-out"></div></div>
+        <p class="mt-8 t-caption text-[#0A0A0A]/40">Cotonou · Dakar · Lomé · Accra</p>
       </div>`;
     requestAnimationFrame(() => { const b = document.getElementById("yc-splash-bar"); if (b) b.style.width = "100%"; });
     setTimeout(Screens._leaveSplash, 1900);
@@ -74,10 +67,10 @@
           <div class="flex items-center gap-1.5 mt-5">${dots}</div>
           <div class="onb-actions">
             ${i > 0 ? `<button type="button" onclick="App.replace('onboarding',{i:${i - 1}})" class="onb-back" aria-label="${I18N.t("back")}">${icon("arrow_back")}</button>` : ""}
-            <button type="button" onclick="${last ? "Screens._finishOnboarding('login')" : `App.replace('onboarding',{i:${i + 1}})`}" class="onb-next btn btn-lg btn-primary">${last ? I18N.t("start") : I18N.t("next")}${icon("arrow_forward", "text-[20px]")}</button>
+            <button type="button" onclick="${last ? "Screens._finishOnboarding('login')" : `App.replace('onboarding',{i:${i + 1}})`}" class="onb-next">${last ? I18N.t("start") : I18N.t("next")}${icon("arrow_forward", "text-[20px]")}</button>
           </div>
           ${last ? `<button type="button" onclick="Screens._finishOnboarding('login')" class="mt-3 t-small text-white/70 hover:text-white text-left">J'ai déjà un compte · <span class="font-bold text-gold">Se connecter</span></button>` : ""}
-          <p class="pt-4 t-caption text-white/35">Portée par KYA CORPORATION</p>
+          <p class="mt-auto pt-4 t-caption text-white/35">Portée par KYA CORPORATION</p>
         </div>
       </div>`;
   };
@@ -103,13 +96,13 @@
         </div>
         <p class="relative t-caption text-white/40">YOUSS CONNECT · KYA CORPORATION</p>
       </aside>
-      <main class="auth-pane">
-        <header class="flex items-center justify-between px-5 lg:px-12 h-16 shrink-0">
+      <main class="min-h-dvh flex flex-col">
+        <header class="flex items-center justify-between px-5 lg:px-12 h-16">
           ${opts.back ? `<button type="button" onclick="${opts.back}" class="icon-btn" aria-label="${I18N.t("back")}">${icon("arrow_back")}</button>` : `<span></span>`}
           <button type="button" onclick="App.nav('about')" class="t-small font-semibold text-ink-2 hover:text-ink">${I18N.t("nav_about")}</button>
         </header>
-        <div class="auth-scroll">
-          <div class="w-full max-w-[440px] mx-auto">${formHtml}</div>
+        <div class="flex-1 flex items-start lg:items-center justify-center px-5 pb-10 lg:px-12">
+          <div class="w-full max-w-[440px]">${formHtml}</div>
         </div>
       </main>
     </div>`;
@@ -164,45 +157,19 @@
 
   // Mot de passe oublié
   Screens.forgotPassword = function (container) {
-    const form = `${brand(I18N.t("forgot"), "Un code à 6 chiffres est envoyé à l'e-mail du compte.")}
-      <form onsubmit="event.preventDefault();Screens._doForgot()" class="space-y-4" novalidate>
-        ${UI.field("fp-email", "E-mail", { type: "email", placeholder: "vous@exemple.com", autocomplete: "username" })}
-        ${UI.error("fp-error")}
-        <button type="submit" class="btn btn-lg btn-primary btn-block">Recevoir le code${icon("arrow_forward", "text-[20px]")}</button>
-        <button type="button" onclick="App.nav('login')" class="w-full t-small text-center text-ink-2">Retour à la <span class="font-bold text-gold-deep dark:text-gold">${I18N.t("login")}</span></button>
-      </form>`;
+    const form = `${brand(I18N.t("forgot"), "L'envoi d'un code par SMS ou par e-mail n'est pas encore ouvert. Une fois connecté, le mot de passe se change dans Sécurité.")}
+      <div class="space-y-4">
+        ${UI.primaryButton("Retour à la connexion", "App.nav('login')", { size: "lg", icon: "arrow_back" })}
+      </div>`;
     container.innerHTML = authFrame(form, { back: "App.back()" });
-  };
-  Screens._doForgot = function () {
-    const email = document.getElementById("fp-email").value.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return UI.showError("fp-error", "Indiquez l'e-mail du compte.");
-    if (!window.YCBackend || !YCBackend.configured() || !YCBackend.isReady()) return UI.showError("fp-error", "Le compte est momentanément indisponible. Réessayez.");
-    const btn = document.querySelector("form .btn-primary");
-    if (btn) btn.disabled = true;
-    YCBackend.requestReset(email).then(function (res) {
-      if (btn) btn.disabled = false;
-      if (!res || res.ok === false) return UI.showError("fp-error", (res && res.message) || "Envoi impossible.");
-      sessionStorage.setItem("yc-otp-pending", "1");
-      sessionStorage.setItem("yc-otp-mode", "reset");
-      sessionStorage.setItem("yc-otp-email", email.toLowerCase());
-      App.nav("otp");
-    });
   };
 
   // Inscription
   Screens.signup = function (container, params) {
     const code = (params && params.country) || ACState.user.countryCode || "BJ";
     const c = YCData.countryOf(code);
-    const form = `${brand(I18N.t("signup"), "Un code de confirmation est envoyé à votre e-mail avant l'ouverture du compte.")}
+    const form = `${brand(I18N.t("signup"), "Un compte unique pour tous les services, dans 4 pays.")}
       <form onsubmit="event.preventDefault();Screens._doSignup()" class="space-y-4" novalidate>
-        <div class="flex items-center gap-4">
-          <span id="su-avatar" class="w-16 h-16 rounded-full bg-surface-low text-ink-3 flex items-center justify-center overflow-hidden shrink-0">${icon("person", "text-[28px]")}</span>
-          <div class="min-w-0">
-            <p class="t-title">Photo de profil</p>
-            <p class="t-small text-ink-2">Facultatif. Sans photo, aucune image n'est ajoutée.</p>
-            <label class="btn btn-sm btn-outline mt-2 cursor-pointer">Choisir une photo<input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="Screens._signupPhoto(this)"/></label>
-          </div>
-        </div>
         <div class="grid grid-cols-2 gap-3">${UI.field("su-first", "Prénom", { placeholder: "Alassane", autocomplete: "given-name" })}${UI.field("su-last", "Nom", { placeholder: "Koffi", autocomplete: "family-name" })}</div>
         ${phoneField("su-phone", "")}
         ${UI.field("su-email", "E-mail", { type: "email", placeholder: "vous@exemple.com", autocomplete: "email" })}
@@ -210,7 +177,7 @@
           ${UI.select("su-country", "Pays", YCData.COUNTRIES.map((x) => ({ value: x.code, label: x.flag + " " + x.name })), c.code, "Screens._syncCities()")}
           ${UI.select("su-city", "Ville", c.cities, c.cities[0])}
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.field("su-pass", I18N.t("password"), { type: "password", placeholder: "10 caractères min.", autocomplete: "new-password" })}${UI.field("su-pass2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.field("su-pass", I18N.t("password"), { type: "password", placeholder: "8 caractères min.", autocomplete: "new-password" })}${UI.field("su-pass2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}</div>
         <div id="su-strength" class="h-1 rounded-full bg-line overflow-hidden"><div class="h-full w-0 bg-gold transition-all"></div></div>
         ${UI.error("su-error")}
         <label class="flex items-start gap-2 t-small text-ink-2"><input id="su-terms" type="checkbox" class="form-checkbox mt-0.5 rounded border-line text-gold focus:ring-gold/40"/><span>J'accepte les <button type="button" class="font-bold underline text-gold-deep dark:text-gold" onclick="event.preventDefault();event.stopPropagation();App.nav('terms')">conditions d'utilisation</button> et la <button type="button" class="font-bold underline text-gold-deep dark:text-gold" onclick="event.preventDefault();event.stopPropagation();App.nav('privacy')">politique de confidentialité</button>.</span></label>
@@ -220,35 +187,9 @@
     container.innerHTML = authFrame(form, { back: "App.back()" });
     const pass = document.getElementById("su-pass");
     if (pass) pass.addEventListener("input", function () {
-      const v = this.value; let s = 0; if (v.length >= 10) s++; if (/[A-Za-z]/.test(v) && /\d/.test(v)) s++; if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++; if (/[^\w]/.test(v)) s++;
+      const v = this.value; let s = 0; if (v.length >= 8) s++; if (/[A-Z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^\w]/.test(v)) s++;
       const bar = document.querySelector("#su-strength > div"); if (bar) { bar.style.width = (s * 25) + "%"; bar.className = "h-full transition-all " + (s < 2 ? "bg-danger" : s < 4 ? "bg-warn" : "bg-success"); }
     });
-  };
-  let signupPhoto = "";
-  Screens._signupPhoto = function (input) {
-    const f = input.files && input.files[0];
-    input.value = "";
-    if (!f) return;
-    if (!/^image\/(jpeg|png|webp)$/i.test(f.type) || f.size > 6000000) { UI.showError("su-error", "Choisissez une photo JPG, PNG ou WebP."); return; }
-    const reader = new FileReader();
-    reader.onload = function () {
-      const img = new Image();
-      img.onload = function () {
-        const max = 480;
-        const scale = Math.min(1, max / Math.max(img.width, img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        signupPhoto = canvas.toDataURL("image/jpeg", 0.72);
-        const box = document.getElementById("su-avatar");
-        if (box) box.innerHTML = `<img src="${signupPhoto}" alt="" class="w-full h-full object-cover"/>`;
-      };
-      img.src = String(reader.result || "");
-    };
-    reader.readAsDataURL(f);
   };
   Screens._syncCities = function () {
     const code = document.getElementById("su-country").value;
@@ -264,103 +205,26 @@
     if (!first || !last) return UI.showError("su-error", "Indiquez votre prénom et votre nom.");
     if (!p.ok) return UI.showError("su-error", "Indiquez un numéro de téléphone valide.");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return UI.showError("su-error", "Indiquez une adresse e-mail. Elle sert à ouvrir le compte.");
-    if (pass.length < 10 || !/[A-Za-z]/.test(pass) || !/\d/.test(pass)) return UI.showError("su-error", "Le mot de passe doit contenir au moins 10 caractères, avec une lettre et un chiffre.");
+    if (pass.length < 8) return UI.showError("su-error", "Le mot de passe doit contenir au moins 8 caractères.");
     if (pass !== pass2) return UI.showError("su-error", "Les mots de passe ne correspondent pas.");
     if (!document.getElementById("su-terms").checked) return UI.showError("su-error", "Veuillez accepter les conditions d'utilisation.");
     if (!window.YCBackend || !YCBackend.configured() || !YCBackend.isReady()) return UI.showError("su-error", "Le compte est momentanément indisponible. Réessayez.");
     const c = YCData.countryOf(document.getElementById("su-country").value);
     const btn = document.querySelector("#su-error") ? document.querySelector("form .btn-primary") : null;
     if (btn) btn.disabled = true;
-    YCBackend.requestSignup({ email: email, password: pass, fullName: first + " " + last, phone: p.phone, city: document.getElementById("su-city").value, country: c.name }).then(function (res) {
+    YCBackend.signUp({ email: email, password: pass, fullName: first + " " + last, phone: p.phone, city: document.getElementById("su-city").value, country: c.name }).then(function (res) {
       if (btn) btn.disabled = false;
-      if (!res || res.ok === false) return UI.showError("su-error", (res && res.message) || "Envoi impossible.");
-      const photo = signupPhoto;
-      signupPhoto = "";
-      try { sessionStorage.setItem("yc-signup-photo", photo || ""); } catch (e) {}
-      sessionStorage.setItem("yc-otp-pending", "1");
-      sessionStorage.setItem("yc-otp-mode", "signup");
-      sessionStorage.setItem("yc-otp-email", email.toLowerCase());
-      App.nav("otp");
+      if (res && res.error) return UI.showError("su-error", YCBackend.explain(res.error));
+      finishAuth("home", "signup");
     });
   };
 
   Screens.otp = function (container) {
-    let mode = "signup";
-    let email = "";
-    try {
-      mode = sessionStorage.getItem("yc-otp-mode") || "signup";
-      email = sessionStorage.getItem("yc-otp-email") || "";
-    } catch (e) {}
-    if (!email) {
-      container.innerHTML = authFrame(`${brand(I18N.t("otp"), "Aucun code en attente.")}${UI.primaryButton("Retour à la connexion", "App.resetTo('login')", { size: "lg" })}`, { back: "App.back()" });
-      return;
-    }
-    const resetFields = mode === "reset" ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${UI.field("otp-pass", "Nouveau mot de passe", { type: "password", placeholder: "10 caractères min.", autocomplete: "new-password" })}${UI.field("otp-pass2", "Confirmation", { type: "password", placeholder: "••••••••", autocomplete: "new-password" })}</div>` : "";
-    const form = `${brand(I18N.t("otp"), mode === "reset" ? "Saisissez le code reçu et choisissez un nouveau mot de passe." : "Saisissez le code à 6 chiffres envoyé à " + esc(email) + ".")}
-      <form onsubmit="event.preventDefault();Screens._doOtp()" class="space-y-4" novalidate>
-        <label class="block"><span class="label">Code</span><input id="otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" class="input text-center tracking-[0.3em] text-2xl font-bold" placeholder="000000"/></label>
-        ${resetFields}
-        ${UI.error("otp-error")}
-        <button type="submit" class="btn btn-lg btn-primary btn-block">Confirmer${icon("arrow_forward", "text-[20px]")}</button>
-        <button type="button" onclick="Screens._resendOtp()" class="w-full t-small text-center text-ink-2">Renvoyer le code</button>
-      </form>`;
+    const form = `${brand(I18N.t("otp"), "Le code par SMS n'est pas encore ouvert. Le compte s'ouvre avec l'e-mail et le mot de passe.")}
+      ${UI.primaryButton("Aller à la connexion", "App.resetTo('login')", { size: "lg", iconRight: "arrow_forward" })}`;
     container.innerHTML = authFrame(form, { back: "App.back()" });
   };
-  function clearOtpPending() {
-    try {
-      sessionStorage.removeItem("yc-otp-pending");
-      sessionStorage.removeItem("yc-otp-mode");
-      sessionStorage.removeItem("yc-otp-email");
-    } catch (e) {}
-  }
-  Screens._doOtp = function () {
-    const email = sessionStorage.getItem("yc-otp-email") || "";
-    const mode = sessionStorage.getItem("yc-otp-mode") || "signup";
-    const code = (document.getElementById("otp-code").value || "").replace(/\s/g, "");
-    if (!/^\d{6}$/.test(code)) return UI.showError("otp-error", "Indiquez le code à 6 chiffres.");
-    if (!window.YCBackend || !YCBackend.isReady()) return UI.showError("otp-error", "Vérification impossible. Réessayez.");
-    const btn = document.querySelector("form .btn-primary");
-    if (btn) btn.disabled = true;
-    const doneBtn = function () { if (btn) btn.disabled = false; };
-    if (mode === "reset") {
-      const pass = document.getElementById("otp-pass").value;
-      const pass2 = document.getElementById("otp-pass2").value;
-      if (pass.length < 10 || !/[A-Za-z]/.test(pass) || !/\d/.test(pass)) { doneBtn(); return UI.showError("otp-error", "Le mot de passe doit contenir au moins 10 caractères, avec une lettre et un chiffre."); }
-      if (pass !== pass2) { doneBtn(); return UI.showError("otp-error", "Les mots de passe ne correspondent pas."); }
-      YCBackend.confirmReset(email, code, pass).then(function (res) {
-        doneBtn();
-        if (!res || res.ok === false) return UI.showError("otp-error", (res && res.message) || "Code incorrect.");
-        clearOtpPending();
-        UI.toast("Mot de passe mis à jour.", "success");
-        App.resetTo("login");
-      });
-      return;
-    }
-    YCBackend.confirmSignup(email, code).then(function (res) {
-      doneBtn();
-      if (!res || (res.ok === false && res.error)) return UI.showError("otp-error", (res && (res.message || (res.error && res.error.message))) || "Code incorrect.");
-      if (res.error) return UI.showError("otp-error", YCBackend.explain(res.error));
-      if (res.ok === false) return UI.showError("otp-error", res.message || "Code incorrect.");
-      let photo = "";
-      try { photo = sessionStorage.getItem("yc-signup-photo") || ""; sessionStorage.removeItem("yc-signup-photo"); } catch (e) {}
-      clearOtpPending();
-      ACState.user.avatar = photo || "";
-      if (photo && window.YCBackend && YCBackend.isLive()) YCBackend.saveProfile(ACState.user);
-      if (res.signedIn === false) { UI.toast("Compte créé. Connectez-vous.", "success"); App.resetTo("login"); return; }
-      finishAuth("home", "signup");
-    });
-  };
-  Screens._resendOtp = function () {
-    const email = sessionStorage.getItem("yc-otp-email") || "";
-    const mode = sessionStorage.getItem("yc-otp-mode") || "signup";
-    if (!email || !window.YCBackend) return;
-    YCBackend.resendEmailOtp(email, mode).then(function (res) {
-      if (!res || res.ok === false) return UI.showError("otp-error", (res && res.message) || "Renvoi impossible.");
-      UI.toast(mode === "reset" ? "Si le compte existe, un nouveau code a été envoyé." : "Un nouveau code a été envoyé.", "success");
-    });
-  };
   function finishAuth(next, mode) {
-    if (mode === "signup" && !ACState.user.avatar) ACState.user.avatar = "";
     ACState.session.authenticated = true; ACState.session.onboardingSeen = true;
     ACStore.emit();
     UI.toast("Bienvenue " + ACState.user.name + " !", "success");
@@ -383,7 +247,7 @@
       { icon: "confirmation_number", t: "Événements", d: "Billetterie numérique avec QR Code." },
       { icon: "storefront", t: "Youss Market", d: "Marketplace de produits locaux et artisanat." },
       { icon: "account_balance", t: "Culture & Tourisme", d: "Destinations, monuments, scanner culturel." },
-      { icon: "account_balance_wallet", t: "Youss Wallet", d: "Envoi, QR Pay et recharge." },
+      { icon: "account_balance_wallet", t: "Youss Wallet", d: "Portefeuille conceptuel : envoi, QR Pay, recharge." },
       { icon: "workspace_premium", t: "Youss Bonus", d: "Points et récompenses sur tous les services." },
       { icon: "business_center", t: "Youss Business", d: "Espace professionnel : produits, commandes, statistiques." }
     ];
@@ -408,7 +272,7 @@
       <section>${UI.sectionTitle("Quatre villes")}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${YCData.DESTINATIONS.map((c) => UI.destinationCard(c, true)).join("")}</div>
       </section>
-      <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Se déplacer, commander, sortir et payer. Quatre villes.</p><p class="t-small text-ink-3 mt-3">Transport, livraison, restaurants, événements, Youss Market, culture, Wallet et Bonus. Cotonou, Dakar, Lomé et Accra.</p></section>`;
+      <section class="card p-6 lg:p-8 text-center"><p class="t-caption text-ink-3 mb-2">Portée par KYA CORPORATION</p><p class="t-h2">Se déplacer, commander, sortir et payer. Quatre villes.</p><p class="t-small text-ink-3 mt-3">Les prix, chauffeurs et événements affichés sont des exemples pour Cotonou, Dakar, Lomé et Accra. Aucune banque, aucun opérateur ni aucune entreprise n'est présenté comme partenaire officiel.</p></section>`;
     if (!ACState.session.authenticated) {
       container.innerHTML = `<div class="min-h-dvh"><header class="sticky top-0 z-30 bg-surface/90 backdrop-blur border-b border-line"><div class="max-w-content mx-auto px-5 lg:px-10 h-16 flex items-center justify-between"><button type="button" onclick="App.back()" class="icon-btn" aria-label="Retour">${icon("arrow_back")}</button><span class="font-extrabold tracking-tight">YOUSS CONNECT</span>${UI.primaryButton(I18N.t("login"), "App.nav('login')", { block: false, size: "sm" })}</div></header><main class="max-w-content mx-auto px-5 lg:px-10 py-6 lg:py-10 space-y-8">${body}</main></div>`;
       return;
@@ -424,20 +288,20 @@
   Screens.terms = function (container) {
     legalScreen(container, L("Conditions d'utilisation", "Terms of use"), [
       [L("Éditeur", "Publisher"), L("YOUSS CONNECT est éditée par KYA CORPORATION. Le service couvre Cotonou, Dakar, Lomé et Accra.", "YOUSS CONNECT is published by KYA CORPORATION. The service covers Cotonou, Dakar, Lomé and Accra.")],
-      [L("Compte", "Account"), L("L'inscription demande un nom, un téléphone, un e-mail et un mot de passe d'au moins 10 caractères, avec une lettre et un chiffre. Une photo de profil peut être ajoutée. Le compte est enregistré pour YOUSS CONNECT.", "Sign-up asks for a name, a phone number, an email and a password of at least 10 characters, with a letter and a digit. A profile photo can be added. The account is stored for YOUSS CONNECT.")],
-      [L("Services", "Services"), L("YOUSS CONNECT réunit le transport, la livraison, les restaurants, les événements, Youss Market, la culture et le tourisme, Youss Wallet et Youss Bonus à Cotonou, Dakar, Lomé et Accra.", "YOUSS CONNECT brings together rides, delivery, restaurants, events, Youss Market, culture and tourism, Youss Wallet and Youss Bonus in Cotonou, Dakar, Lomé and Accra.")],
-      [L("Paiements", "Payments"), L("Youss Wallet débite le solde du compte. La carte, le paiement mobile et les espèces sont proposés selon le service. Le code PIN est celui que vous choisissez. Le numéro complet de carte et le cryptogramme ne sont pas enregistrés.", "Youss Wallet debits the account balance. Card, mobile payment and cash are offered according to the service. The PIN is the one you choose. The full card number and security code are not stored.")],
+      [L("Compte", "Account"), L("L'inscription demande un nom, un téléphone, un e-mail et un mot de passe d'au moins 8 caractères. Le compte est enregistré pour YOUSS CONNECT. Le code SMS n'est pas encore ouvert.", "Sign-up asks for a name, a phone number, an email and a password of at least 8 characters. The account is stored for YOUSS CONNECT. SMS codes are not open yet.")],
+      [L("Services", "Services"), L("Les restaurants, produits, événements, chauffeurs et prix montrés dans les quatre villes sont des exemples. Aucun partenaire n'est présenté comme officiel.", "Restaurants, products, events, drivers and prices shown in the four cities are examples. No partner is presented as official.")],
+      [L("Paiements", "Payments"), L("Youss Wallet débite le solde du compte. La recharge, la carte et le paiement mobile ne sont pas encaissés tant qu'un prestataire n'est pas branché. Les espèces se règlent à la livraison ou au chauffeur. Le code PIN est celui que vous choisissez. Le numéro complet de carte et le cryptogramme ne sont pas enregistrés.", "Youss Wallet debits the account balance. Top-up, card and mobile payment are not collected until a provider is connected. Cash is paid on delivery or to the driver. The PIN is the one you choose. The full card number and security code are not stored.")],
       [L("Utilisation acceptable", "Acceptable use"), L("N'utilisez pas l'application pour usurper une identité, harceler quelqu'un ou tenter d'accéder au compte d'une autre personne. Les essais de code sont limités.", "Do not use the app to impersonate someone, harass anyone, or try to access another person's account. Code attempts are limited.")],
-      [L("Responsabilité", "Liability"), L("YOUSS CONNECT est éditée par KYA CORPORATION. Les courses, commandes, billets et paiements suivent les informations affichées au moment de la confirmation.", "YOUSS CONNECT is published by KYA CORPORATION. Rides, orders, tickets and payments follow the information shown at confirmation.")]
+      [L("Responsabilité", "Liability"), L("YOUSS CONNECT est fournie en l'état. Elle ne constitue pas encore une offre de paiement bancaire, de transport opéré ou de billetterie partenaire.", "YOUSS CONNECT is provided as is. It is not yet an offer of bank payment, operated transport or partner ticketing.")]
     ]);
   };
   Screens.privacy = function (container) {
     legalScreen(container, L("Politique de confidentialité", "Privacy policy"), [
       [L("Responsable", "Controller"), L("KYA CORPORATION est responsable du traitement décrit ici. Cette politique concerne YOUSS CONNECT.", "KYA CORPORATION is responsible for the processing described here. This policy covers YOUSS CONNECT.")],
       [L("Données", "Data"), L("Le profil (nom, téléphone, e-mail, ville, pays) et le solde du portefeuille sont enregistrés sur le compte YOUSS CONNECT. Les préférences d'affichage restent sur cet appareil.", "The profile (name, phone, email, city, country) and the wallet balance are stored on the YOUSS CONNECT account. Display preferences stay on this device.")],
-      [L("Carte bancaire", "Bank card"), L("Si vous enregistrez une carte, seuls la marque, le titulaire, la date d'expiration et les 4 derniers chiffres sont conservés. Le numéro complet et le cryptogramme sont effacés dès la validation.", "If you save a card, only the brand, holder, expiry and last 4 digits are kept. The full number and security code are cleared as soon as you confirm.")],
+      [L("Carte bancaire", "Bank card"), L("Si vous enregistrez une carte, seuls la marque, le titulaire, la date d'expiration et les 4 derniers chiffres sont conservés. Le numéro complet et le cryptogramme sont effacés dès la validation. L'encaissement par carte n'est pas encore ouvert.", "If you save a card, only the brand, holder, expiry and last 4 digits are kept. The full number and security code are cleared as soon as you confirm. Card collection is not open yet.")],
       [L("Biométrie", "Biometrics"), L("Sur iPhone, Face ID peut confirmer un paiement. Sur Android, c'est l'empreinte. YOUSS CONNECT enregistre seulement la clé de l'appareil, jamais une image du visage ou du doigt. Le code PIN reste le secours.", "On iPhone, Face ID can confirm a payment. On Android, the fingerprint does. YOUSS CONNECT stores only the device key, never an image of the face or finger. The PIN stays as backup.")],
-      [L("Pièce d'identité", "Identity document"), L("Si vous envoyez une pièce, elle est conservée de façon privée le temps de la relecture par KYA CORPORATION. Le compte est marqué vérifié lorsqu'elle est acceptée.", "If you send an identity document, it is kept privately while KYA CORPORATION reviews it. The account is marked verified when it is accepted.")],
+      [L("Pièce d'identité", "Identity document"), L("Si vous envoyez une pièce, elle est conservée de façon privée le temps de la relecture dans la console KYA. Le compte n'est pas marqué vérifié tant qu'elle n'est pas acceptée.", "If you send an identity document, it is kept privately until the KYA console reviews it. The account is not marked verified until it is accepted.")],
       [L("Partage", "Sharing"), L("Les données du compte ne sont pas vendues. Elles sont conservées pour faire fonctionner YOUSS CONNECT.", "Account data is not sold. It is kept to operate YOUSS CONNECT.")],
       [L("Vos choix", "Your choices"), L("Vous pouvez retirer une carte, changer de ville, changer votre mot de passe et effacer les données locales de l'application depuis les paramètres. Effacer l'appareil ne supprime pas le compte.", "You can remove a card, change city, change your password and erase the app's local data from settings. Clearing the device does not delete the account.")],
       [L("Contact", "Contact"), L("Pour une question sur ces informations, écrivez à KYA CORPORATION depuis le centre d'aide de l'application.", "For a question about this notice, write to KYA CORPORATION from the app's help center.")]

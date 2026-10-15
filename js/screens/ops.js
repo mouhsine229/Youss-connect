@@ -8,8 +8,7 @@
     { id: "opsUsers", label: "Utilisateurs", icon: "group" },
     { id: "opsIdentity", label: "Pièces d'identité", icon: "badge" },
     { id: "opsSupport", label: "Assistance", icon: "support_agent" },
-    { id: "opsRestaurants", label: "Restaurants", icon: "restaurant" },
-    { id: "opsEvents", label: "Événements", icon: "confirmation_number" }
+    { id: "opsRestaurants", label: "Restaurants", icon: "restaurant" }
   ];
   const DOC = { cni: "Carte d'identité", passeport: "Passeport", permis: "Permis de conduire" };
   const ST = { pending: "En revue", approved: "Acceptée", rejected: "Refusée" };
@@ -51,19 +50,18 @@
       </div>`;
   }
   function still(id) { return !!(window.App && App.current && App.current.id === id); }
-  function enter(active, title, draw, watch) {
-    const id = watch || active;
+  function enter(active, title, draw) {
     const api = db();
     if (!api || !window.YCBackend || !YCBackend.isLive()) { gateSet(false); App.replace("opsLogin"); return; }
     layout(active, title, `<p class="t-body text-ink-2">Chargement…</p>`);
     YCBackend.claimConsole().then(function (res) {
-      if (!still(id)) return;
+      if (!still(active)) return;
       if (!res || !res.ok) { gateSet(false); App.replace("opsLogin"); return; }
       draw(api);
     });
   }
   function claimMessage(status) {
-    if (status === "denied") return "Ce compte n'ouvre pas la console. Utilisez le compte de KYA CORPORATION.";
+    if (status === "denied") return "La console a déjà un accès. Entrez avec ce compte-là.";
     return "Accès console impossible pour le moment.";
   }
   function afterClaim(res) {
@@ -110,22 +108,16 @@
       Promise.all([
         api.from("profiles").select("id", { count: "exact", head: true }),
         api.from("identity_documents").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        api.from("support_threads").select("id", { count: "exact", head: true }).eq("status", "open"),
-        api.from("staff_events").select("action,subject,created_at").order("created_at", { ascending: false }).limit(8)
+        api.from("support_threads").select("id", { count: "exact", head: true }).eq("status", "open")
       ]).then(function (rows) {
         if (!still("opsHome")) return;
-        const n = rows.slice(0, 3).map(function (r) { return r && typeof r.count === "number" ? r.count : 0; });
-        const labels = { identity_approved: "Pièce acceptée", identity_rejected: "Pièce refusée", restaurant_created: "Restaurant créé", restaurant_reset: "Mot de passe cuisine renouvelé" };
-        const journal = ((rows[3] && rows[3].data) || []).map(function (ev) {
-          return `<div class="p-4"><p class="t-title">${esc(labels[ev.action] || "Action")}</p><p class="t-small text-ink-2">${esc(ev.subject || "")}</p><p class="t-small text-ink-3">${esc(when(ev.created_at))}</p></div>`;
-        }).join("");
+        const n = rows.map(function (r) { return r && typeof r.count === "number" ? r.count : 0; });
         layout("opsHome", "Vue d'ensemble", `<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <button type="button" onclick="App.nav('opsUsers')" class="card p-5 text-left"><p class="t-caption text-ink-3">Comptes</p><p class="t-h2 mt-1">${n[0]}</p></button>
           <button type="button" onclick="App.nav('opsIdentity')" class="card p-5 text-left"><p class="t-caption text-ink-3">Pièces en revue</p><p class="t-h2 mt-1">${n[1]}</p></button>
           <button type="button" onclick="App.nav('opsSupport')" class="card p-5 text-left"><p class="t-caption text-ink-3">Assistances ouvertes</p><p class="t-h2 mt-1">${n[2]}</p></button>
           <button type="button" onclick="App.nav('opsRestaurants')" class="card p-5 text-left"><p class="t-caption text-ink-3">Restaurants</p><p class="t-title mt-2">Créer un compte cuisine</p></button>
-        </div><div class="card p-5"><p class="t-body text-ink-2">Les restaurants se créent ici. Chaque compte reçoit un identifiant et un mot de passe, à remettre en PDF. Les événements se créent dans l'onglet Événements.</p></div>
-        <section><h2 class="t-h3 mb-3">Journal de la console</h2>${journal ? `<div class="card divide-y divide-line">${journal}</div>` : `<div class="card p-5"><p class="t-body text-ink-2">Aucune action enregistrée.</p></div>`}</section>`);
+        </div><div class="card p-5"><p class="t-body text-ink-2">Les restaurants se créent ici. Chaque compte reçoit un identifiant et un mot de passe, à remettre en PDF. Les événements, chauffeurs et prix restent des exemples.</p></div>`);
       });
     });
   };
@@ -181,7 +173,6 @@
     const note = ((document.getElementById("ops-note-" + id) || {}).value || "").trim().slice(0, 300);
     api.from("identity_documents").update({ status: status, note: note, reviewed_at: new Date().toISOString() }).eq("id", id).then(function (res) {
       if (res.error) { UI.toast("Mise à jour impossible.", "error"); return; }
-      if (window.YCBackend && YCBackend.staffNote) YCBackend.staffNote(status === "approved" ? "identity_approved" : "identity_rejected", id);
       UI.toast(status === "approved" ? "Document accepté." : "Document refusé.", "success");
       App.replace("opsIdentity");
     });
@@ -193,7 +184,7 @@
       if (!box) return;
       const rows = res.data || [];
       box.innerHTML = rows.length ? rows.map(function (m) {
-        return `<div class="max-w-[85%] ${m.from_staff ? "ml-auto" : ""}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-inverse text-inverse-ink" : "bg-surface-low"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "text-right" : ""}">${m.from_staff ? "Console" : "Compte"} · ${esc(when(m.created_at))}</p></div>`;
+        return `<div class="max-w-[85%] ${m.from_staff ? "ml-auto" : ""}"><div class="rounded-2xl px-3 py-2 ${m.from_staff ? "bg-ink text-white" : "bg-surface-low"}"><p class="t-body whitespace-pre-wrap">${esc(m.body)}</p></div><p class="t-caption text-ink-3 mt-1 ${m.from_staff ? "text-right" : ""}">${m.from_staff ? "Console" : "Compte"} · ${esc(when(m.created_at))}</p></div>`;
       }).join("") : `<p class="t-small text-ink-2">Aucun message.</p>`;
       box.scrollTop = box.scrollHeight;
     });
@@ -216,7 +207,6 @@
           paintThread(api, openThread);
           if (opsPoll) clearInterval(opsPoll);
           opsPoll = setInterval(function () {
-            if (document.hidden) return;
             if (!App.current || App.current.id !== "opsSupport" || !openThread) { clearInterval(opsPoll); opsPoll = null; return; }
             const live = db();
             if (live) paintThread(live, openThread);
@@ -321,7 +311,6 @@
     YCBackend.callFunction("partner-account", body).then(function (res) {
       if (!res || !res.ok) { UI.showError("opr-err", (res && res.message) || "Création impossible."); return; }
       issued = { placeId: res.placeId, loginId: res.loginId, password: res.password, name: res.name, city: res.city, area: res.area || "" };
-      if (window.YCBackend && YCBackend.staffNote) YCBackend.staffNote("restaurant_created", res.name || res.loginId || "");
       if (window.YCKitchen) YCKitchen.loadCatalog();
       UI.toast("Compte créé. Téléchargez la fiche avant de quitter.", "success");
       App.replace("opsRestaurants");
@@ -332,7 +321,6 @@
     YCBackend.callFunction("partner-account", { action: "reset", placeId: placeId }).then(function (res) {
       if (!res || !res.ok) { UI.toast((res && res.message) || "Nouveau mot de passe impossible.", "error"); return; }
       issued = { placeId: res.placeId, loginId: res.loginId, password: res.password, name: res.name, city: res.city, area: res.area || "" };
-      if (window.YCBackend && YCBackend.staffNote) YCBackend.staffNote("restaurant_reset", res.name || res.loginId || "");
       UI.toast("Nouveau mot de passe créé. Téléchargez la fiche.", "success");
       App.replace("opsRestaurants");
     });
@@ -343,144 +331,13 @@
   };
   function later(container, id, title) {
     if (!gateOn()) { App.replace("opsLogin"); return; }
-    layout(id, title, `<div class="card p-5"><p class="t-body text-ink-2">Utilisez les onglets affichés pour gérer les comptes, les restaurants et les événements.</p></div>`);
+    layout(id, title, `<div class="card p-5"><p class="t-body text-ink-2">Les événements, tarifs et retraits affichés dans l'application restent des exemples. Les restaurants se créent dans l'onglet Restaurants.</p></div>`);
   }
   Screens.opsMerchants = function (c) { later(c, "opsMerchants", "Prestataires"); };
+  Screens.opsEvents = function (c) { later(c, "opsEvents", "Événements"); };
+  Screens.opsEventNew = function (c) { later(c, "opsEvents", "Événements"); };
   Screens.opsCulture = function (c) { later(c, "opsCulture", "Culture"); };
   Screens.opsWallet = function (c) { later(c, "opsWallet", "Wallet"); };
   Screens.opsCities = function (c) { later(c, "opsCities", "Villes et tarifs"); };
   Screens.opsSettings = function (c) { later(c, "opsSettings", "Sécurité"); };
-
-  let eventDraft = null;
-  const eventIndex = {};
-  function eventCities() {
-    const out = [];
-    (YCData.COUNTRIES || []).forEach(function (c) {
-      (c.cities || []).forEach(function (name) { out.push({ name: name, country: c.name }); });
-    });
-    return out;
-  }
-  function countryOfCity(name) {
-    const hit = eventCities().filter(function (c) { return c.name === name; })[0];
-    return hit ? hit.country : "";
-  }
-  function slugEvent(name) {
-    let raw = String(name || "event").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    if (raw.length < 2) raw = "event";
-    return ("ev-" + raw).slice(0, 34) + "-" + String(Date.now()).slice(-4);
-  }
-  function blankEvent() {
-    const city = (ACState.user && ACState.user.city) || "Cotonou";
-    const hub = YCData.cityOf(city);
-    return { id: "", name: "", cat: "Festivals", city: hub.name, country: hub.country, place: "", date: "", time: "18:00", organizer: "", body: "", lat: hub.lat, lng: hub.lng, hidden: false, tickets: [{ label: "Entrée", price: 5000, left: 100 }], program: [], image_url: "" };
-  }
-  function rememberEvent(item) { if (item && item.id) eventIndex[item.id] = item; }
-  function fieldVal(id) { return ((document.getElementById(id) || {}).value || "").trim(); }
-  function eventForm(draft) {
-    const t1 = (draft.tickets && draft.tickets[0]) || { label: "Entrée", price: 0, left: 0 };
-    const t2 = (draft.tickets && draft.tickets[1]) || { label: "", price: "", left: "" };
-    const cities = eventCities();
-    const cats = (YCData.EVENT_CATS || ["Festivals"]).map(function (c) { return `<option value="${esc(c)}"${c === draft.cat ? " selected" : ""}>${esc(c)}</option>`; }).join("");
-    const cityOpts = cities.map(function (c) { return `<option value="${esc(c.name)}"${c.name === draft.city ? " selected" : ""}>${esc(c.name)}</option>`; }).join("");
-    return `<form class="card p-5 space-y-3" onsubmit="event.preventDefault();Screens._opsSaveEvent()">
-      ${UI.field("oe-name", "Nom", { value: draft.name || "", maxlength: "120" })}
-      <div class="grid sm:grid-cols-2 gap-3"><label class="block"><span class="label">Catégorie</span><select id="oe-cat" class="input">${cats}</select></label><label class="block"><span class="label">Ville</span><select id="oe-city" class="input">${cityOpts}</select></label></div>
-      ${UI.field("oe-place", "Lieu", { value: draft.place || "", maxlength: "160" })}
-      <div class="grid sm:grid-cols-2 gap-3">${UI.field("oe-date", "Date", { type: "date", value: draft.date || "" })}${UI.field("oe-time", "Heure", { type: "time", value: (draft.time || "18:00").slice(0, 5) })}</div>
-      ${UI.field("oe-org", "Organisateur", { value: draft.organizer || "", maxlength: "120" })}
-      <label class="block"><span class="label">Présentation</span><textarea id="oe-body" class="textarea" maxlength="1200">${esc(draft.body || "")}</textarea></label>
-      <label class="block"><span class="label">Programme, une ligne par moment</span><textarea id="oe-program" class="textarea" maxlength="800">${esc((draft.program || []).join("\n"))}</textarea></label>
-      <div class="grid sm:grid-cols-3 gap-3">${UI.field("oe-t1", "Billet", { value: t1.label || "Entrée", maxlength: "40" })}${UI.field("oe-p1", "Prix (FCFA)", { type: "number", value: t1.price != null ? String(t1.price) : "" })}${UI.field("oe-l1", "Places", { type: "number", value: t1.left != null ? String(t1.left) : "" })}</div>
-      <div class="grid sm:grid-cols-3 gap-3">${UI.field("oe-t2", "Deuxième billet, facultatif", { value: t2.label || "", maxlength: "40" })}${UI.field("oe-p2", "Prix (FCFA)", { type: "number", value: t2.price != null && t2.price !== "" ? String(t2.price) : "" })}${UI.field("oe-l2", "Places", { type: "number", value: t2.left != null && t2.left !== "" ? String(t2.left) : "" })}</div>
-      <div class="grid sm:grid-cols-2 gap-3">${UI.field("oe-lat", "Latitude", { value: draft.lat != null ? String(draft.lat) : "" })}${UI.field("oe-lng", "Longitude", { value: draft.lng != null ? String(draft.lng) : "" })}</div>
-      <label class="flex items-center gap-2 t-body"><input id="oe-hidden" type="checkbox"${draft.hidden ? " checked" : ""}/> Masquer dans l'application</label>
-      ${UI.error("oe-err")}
-      <div class="flex flex-col sm:flex-row gap-2"><button type="submit" class="btn btn-primary flex-1">Enregistrer</button><button type="button" class="btn btn-secondary" onclick="App.nav('opsEvents')">Annuler</button></div>
-    </form>`;
-  }
-  Screens.opsEvents = function () {
-    enter("opsEvents", "Événements", function (api) {
-      api.from("catalog_events").select("id,name,city,country,place,cat,starts_on,starts_at,body,organizer,image_url,lat,lng,tickets,program,hidden").order("starts_on", { ascending: true }).then(function (res) {
-        if (!still("opsEvents")) return;
-        if (res.error) { layout("opsEvents", "Événements", `<div class="card p-5"><p class="t-body text-ink-2">La liste n'a pas pu être chargée.</p></div>`); return; }
-        const saved = {};
-        (res.data || []).forEach(function (row) { saved[row.id] = row; });
-        const items = [];
-        Object.keys(saved).forEach(function (id) {
-          const row = saved[id];
-          const item = { id: row.id, name: row.name, cat: row.cat, city: row.city, country: row.country, place: row.place, date: String(row.starts_on || "").slice(0, 10), time: row.starts_at || "18:00", organizer: row.organizer || "", body: row.body || "", lat: row.lat, lng: row.lng, hidden: !!row.hidden, tickets: Array.isArray(row.tickets) ? row.tickets : [], program: Array.isArray(row.program) ? row.program : [], image_url: row.image_url || "" };
-          rememberEvent(item);
-          items.push(item);
-        });
-        (YCData.EVENTS || []).forEach(function (e) {
-          if (saved[e.id]) return;
-          const item = { id: e.id, name: e.name, cat: e.cat, city: e.city, country: e.country, place: e.place, date: e.date, time: e.time, organizer: e.organizer || "", body: e.body || "", lat: e.lat, lng: e.lng, hidden: false, tickets: e.tickets || [], program: e.program || [], image_url: e.img || "" };
-          rememberEvent(item);
-          items.push(item);
-        });
-        const rows = items.map(function (e) {
-          return `<div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3"><div class="min-w-0 flex-1"><p class="t-title truncate">${esc(e.name)}</p><p class="t-small text-ink-2">${esc(e.city)} · ${esc(e.date)} · ${esc(e.cat)}${e.hidden ? " · masqué" : ""}</p></div><button type="button" class="btn btn-sm btn-secondary" onclick="Screens._opsEventOpen(${esc(JSON.stringify(e.id))})">Modifier</button></div>`;
-        }).join("");
-        layout("opsEvents", "Événements", `<div class="flex justify-end"><button type="button" class="btn btn-primary" onclick="Screens._opsEventCreate()">Ajouter un événement</button></div>${rows ? `<div class="card divide-y divide-line">${rows}</div>` : `<div class="card p-5"><p class="t-body text-ink-2">Aucun événement pour le moment.</p></div>`}`);
-      });
-    });
-  };
-  Screens.opsEventNew = function () { Screens._opsEventCreate(); };
-  Screens._opsEventCreate = function () { eventDraft = blankEvent(); App.nav("opsEventForm"); };
-  Screens._opsEventOpen = function (id) {
-    const item = eventIndex[id];
-    if (!item) { App.nav("opsEvents"); return; }
-    eventDraft = JSON.parse(JSON.stringify(item));
-    App.nav("opsEventForm");
-  };
-  Screens.opsEventForm = function () {
-    if (!eventDraft) { App.replace("opsEvents"); return; }
-    const title = eventDraft.id ? "Modifier l'événement" : "Nouvel événement";
-    enter("opsEvents", title, function () {
-      if (!still("opsEventForm") || !eventDraft) return;
-      layout("opsEvents", title, eventForm(eventDraft));
-    }, "opsEventForm");
-  };
-  Screens._opsSaveEvent = function () {
-    const api = db();
-    if (!api || !eventDraft) return;
-    const name = fieldVal("oe-name");
-    const id = eventDraft.id || slugEvent(name);
-    if (!/^[A-Za-z0-9_-]{2,40}$/.test(id)) { UI.showError("oe-err", "Identifiant invalide."); return; }
-    const city = fieldVal("oe-city") || eventDraft.city || "Cotonou";
-    const hub = YCData.cityOf(city);
-    const date = fieldVal("oe-date");
-    if (name.length < 2 || !date) { UI.showError("oe-err", "Indiquez le nom et la date."); return; }
-    const tickets = [{ id: "t1", label: fieldVal("oe-t1") || "Entrée", price: parseInt(fieldVal("oe-p1"), 10) || 0, left: parseInt(fieldVal("oe-l1"), 10) || 0 }];
-    const second = fieldVal("oe-t2");
-    if (second) tickets.push({ id: "t2", label: second, price: parseInt(fieldVal("oe-p2"), 10) || 0, left: parseInt(fieldVal("oe-l2"), 10) || 0 });
-    const lat = parseFloat(fieldVal("oe-lat"));
-    const lng = parseFloat(fieldVal("oe-lng"));
-    const row = {
-      id: id,
-      name: name,
-      city: city,
-      country: countryOfCity(city) || eventDraft.country || hub.country || "",
-      place: fieldVal("oe-place"),
-      cat: fieldVal("oe-cat") || "Festivals",
-      starts_on: date,
-      starts_at: (fieldVal("oe-time") || "18:00").slice(0, 5),
-      body: fieldVal("oe-body"),
-      organizer: fieldVal("oe-org"),
-      image_url: eventDraft.image_url || "",
-      lat: isFinite(lat) ? lat : hub.lat,
-      lng: isFinite(lng) ? lng : hub.lng,
-      tickets: tickets,
-      program: fieldVal("oe-program").split("\n").map(function (s) { return s.trim(); }).filter(Boolean),
-      hidden: !!(document.getElementById("oe-hidden") && document.getElementById("oe-hidden").checked),
-      updated_at: new Date().toISOString()
-    };
-    api.from("catalog_events").upsert(row).then(function (res) {
-      if (res.error) { UI.showError("oe-err", "Enregistrement impossible."); return; }
-      if (window.YCBackend && YCBackend.loadEvents) YCBackend.loadEvents();
-      eventDraft = null;
-      UI.toast("Événement enregistré.", "success");
-      App.nav("opsEvents");
-    });
-  };
 })();

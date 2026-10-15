@@ -17,7 +17,7 @@ npm run dev
 
 Si vous touchez à `src/styles.css`, `tailwind.config.js` ou aux classes utilisées dans `js/**`, relancez `npm run build:css` (ou laissez `npm run watch:css` tourner).
 
-Pour entrer : créez un compte avec un e-mail et un mot de passe d'au moins 10 caractères, ou connectez-vous avec un compte déjà créé. Un code de confirmation est envoyé à l'e-mail. Le code PIN se choisit au premier paiement.
+Pour entrer : créez un compte avec un e-mail et un mot de passe d'au moins 8 caractères, ou connectez-vous avec un compte déjà créé. Le code PIN se choisit au premier paiement.
 
 ## Déploiement
 
@@ -26,10 +26,10 @@ Site : https://mouhsine229.github.io/Youss-connect/
 
 GitHub Pages sert la branche `gh-pages`. Le workflow `.github/workflows/gh-pages.yml` y recopie `main` à chaque push, comptez une ou deux minutes puis rechargez sans cache. Le `.nojekyll` évite que Jekyll ne touche aux fichiers.
 
-Deux espaces internes ne sont pas dans le menu client. Ils s'ouvrent avec un compte vérifié côté serveur, pas avec un lien public :
+Deux espaces internes ne sont pas dans le menu client :
 
-- la console KYA, réservée au personnel enregistré ;
-- la cuisine d'un restaurant, avec l'identifiant et le mot de passe créés depuis cette console.
+- la console KYA : https://mouhsine229.github.io/Youss-connect/#/kya-ops
+- la cuisine d'un restaurant, par lien d'invitation : https://mouhsine229.github.io/Youss-connect/#/pro/rejoindre?t=YC-PRO-MAMAN
 
 ## Comment c'est organisé
 

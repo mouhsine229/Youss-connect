@@ -22,13 +22,8 @@
     // Divers
     lang_title: "Langue", lang_done: "Langue : Français", settings: "Paramètres", notifications: "Notifications", security: "Sécurité", help: "Aide", logout: "Déconnexion",
     theme: "Thème", theme_light: "Clair", theme_dark: "Sombre", demo_tour: "Parcours de démo", next_steps: "Et ensuite",
-    pwa_install_title: "Installer YOUSS CONNECT", pwa_install_body: "Installez l'application officielle sur votre appareil : lancement plein écran, icône YOUSS CONNECT et accès même avec une connexion limitée.",
-    pwa_install_ios_body: "Sur iPhone ou iPad : touchez Partager, puis « Sur l'écran d'accueil ». YOUSS CONNECT s'ouvrira comme une application, sans barre du navigateur.",
-    pwa_install_action: "Installer", pwa_install_later: "Plus tard", pwa_install_ios_ok: "J'ai compris",
-    pwa_install_progress: "YOUSS CONNECT est en cours d'installation.", pwa_install_done: "YOUSS CONNECT est installée.",
-    pwa_install_unavailable: "L'installation n'est pas proposée par ce navigateur pour le moment.", pwa_install_menu: "Installer l'application",
     empty_results: "Aucun résultat", empty_results_body: "Changez le mot-clé ou la catégorie.",
-    conceptual: ""
+    conceptual: "Fonction de démonstration. Son lancement réel dépendra des agréments obtenus dans chaque pays."
   };
 
   const EN = {
@@ -43,13 +38,8 @@
     wallet: "Youss Wallet", balance: "Available balance", send: "Send", receive: "Receive", topup: "Top up", withdraw: "Withdraw", qrpay: "QR Pay", recent: "Recent transactions",
     lang_title: "Language", lang_done: "Language: English", settings: "Settings", notifications: "Notifications", security: "Security", help: "Help", logout: "Log out",
     theme: "Theme", theme_light: "Light", theme_dark: "Dark", demo_tour: "Demo walkthroughs", next_steps: "What's next",
-    pwa_install_title: "Install YOUSS CONNECT", pwa_install_body: "Install the official app on your device: full-screen launch, YOUSS CONNECT icon, and access even with a limited connection.",
-    pwa_install_ios_body: "On iPhone or iPad: tap Share, then \"Add to Home Screen\". YOUSS CONNECT opens as an app without the browser bar.",
-    pwa_install_action: "Install", pwa_install_later: "Not now", pwa_install_ios_ok: "Got it",
-    pwa_install_progress: "YOUSS CONNECT is installing.", pwa_install_done: "YOUSS CONNECT is installed.",
-    pwa_install_unavailable: "Install is not available in this browser right now.", pwa_install_menu: "Install the app",
     empty_results: "No results", empty_results_body: "Try another keyword or category.",
-    conceptual: ""
+    conceptual: "Demo feature. Going live depends on the licences granted in each country."
   };
 
   const PACKS = { fr: FR, en: EN };
@@ -177,7 +167,7 @@
 
   function skipEl(el) {
     if (!el || el.nodeType !== 1) return false;
-    if (el.tagName === "SCRIPT" || el.tagName === "STYLE" || el.tagName === "NOSCRIPT" || el.tagName === "TEXTAREA" || el.tagName === "CODE" || el.tagName === "OPTION") return true;
+    if (el.tagName === "SCRIPT" || el.tagName === "STYLE" || el.tagName === "NOSCRIPT" || el.tagName === "TEXTAREA" || el.tagName === "CODE") return true;
     if (el.dataset && el.dataset.i18nSkip === "1") return true;
     if (el.classList && (el.classList.contains("ms") || el.classList.contains("material-symbols-outlined"))) return true;
     return false;
@@ -337,7 +327,7 @@
     "Démo : cette proposition reste sur cet appareil. Elle n'est pas envoyée.": "Demo: this suggestion stays on this device. It is not sent.",
     "Démo : l'import du logo n'est pas branché.": "Demo: logo upload is not connected.",
     "Démo : pas de vidéo produit.": "Demo: no product video.",
-    "Aperçu du lieu.": "Preview of the place.",
+    "Démo : aucune vidéo n'est lue. L'aperçu montre la photo du lieu.": "Demo: no video is played. The preview shows the place photo.",
     "Voiture ou moto": "Car or motorcycle",
     "Colis et repas": "Parcels and meals",
     "Menu et livraison": "Menu and delivery",
@@ -370,8 +360,8 @@
     "La note n'est pas encore enregistrée.": "Ratings are not saved yet.",
     "Le suivi des vendeurs n'est pas encore ouvert.": "Following a seller is not open yet.",
     "Les pièces jointes ne sont pas encore ouvertes.": "Attachments are not open yet.",
-    "Ajoutez une photo du produit.": "Add a product photo.",
-    "Produit enregistré.": "Product saved.",
+    "Les photos ne sont pas encore enregistrées.": "Photos are not saved yet.",
+    "Produit enregistré sur cet appareil. Il n'apparaît pas encore dans Youss Market.": "Product saved on this device. It does not appear in Youss Market yet.",
     "Enregistrer le produit": "Save the product",
     "Événement ou lieu": "Event or place",
     "Produit ou vendeur": "Product or seller",
@@ -386,7 +376,7 @@
     "Sur cet appareil": "On this device",
     "Elle sera marquée annulée sur cet appareil. L'établissement n'est pas prévenu.": "It will be marked cancelled on this device. The venue is not notified.",
     "Réservation marquée annulée sur cet appareil.": "Reservation marked cancelled on this device.",
-    "Les réservations restent dans cet espace.": "Bookings stay in this space.",
+    "L'agenda du téléphone n'est pas encore relié.": "The phone calendar is not connected yet.",
     "Télécharger le rapport": "Download the report",
     "Rapport enregistré sur cet appareil.": "Report saved on this device.",
     "Exemple sur cet appareil. Ces chiffres ne viennent pas des ventes YOUSS CONNECT.": "Example on this device. These figures do not come from YOUSS CONNECT sales.",
@@ -403,9 +393,9 @@
     "Saisissez votre code PIN.": "Enter your PIN.",
     "Code PIN incorrect.": "Incorrect PIN.",
     "Code PIN enregistré.": "PIN saved.",
-    "Le rechargement n'a pas abouti.": "The top-up did not go through.",
-    "Le retrait n'a pas abouti.": "The withdrawal did not go through.",
-    "Choisissez Youss Wallet, la carte, le paiement mobile ou les espèces.": "Card and mobile payment are not collected yet. Choose Youss Wallet or cash.",
+    "La recharge ouvre avec un prestataire de paiement. Le solde ne change pas avant.": "Top-up opens with a payment provider. The balance does not change before that.",
+    "Le retrait ouvre avec un prestataire de paiement. Le solde ne change pas avant.": "Withdrawal opens with a payment provider. The balance does not change before that.",
+    "La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces.": "Card and mobile payment are not collected yet. Choose Youss Wallet or cash.",
     "Mot de passe mis à jour.": "Password updated.",
     "Quatre villes": "Four cities",
     "Envoyez une carte, un passeport ou un permis.": "Send an identity card, a passport or a driving licence.",
@@ -445,7 +435,7 @@
     "J'ai mes identifiants": "I have my login details",
     "Je n'ai pas encore de compte": "I don't have an account yet",
     "La cuisine s'ouvre avec un compte": "The kitchen opens with an account",
-    "KYA CORPORATION crée le compte, puis remet l'identifiant et le mot de passe au restaurant.": "KYA CORPORATION creates the account, then gives the login ID and password to the restaurant.",
+    "KYA crée le compte dans la console, puis remet l'identifiant et le mot de passe au restaurant. Il n'y a pas de code public.": "KYA creates the account in the console, then gives the login ID and password to the restaurant. There is no public code.",
     "Utilisez l'identifiant et le mot de passe remis par KYA. Le compte client YOUSS CONNECT reste séparé.": "Use the login ID and password given by KYA. The YOUSS CONNECT customer account stays separate.",
     "Identifiant ou mot de passe incorrect.": "Incorrect login ID or password.",
     "Restaurant en pause. Les clients ne commandent plus.": "Restaurant paused. Customers can no longer order.",
@@ -458,7 +448,7 @@
     "Plat retiré de la carte.": "Dish removed from the menu.",
     "Horaires enregistrés.": "Hours saved.",
     "Encaissé enregistré": "Recorded takings",
-    "Les montants des commandes livrées sont enregistrés ici.": "Amounts from delivered orders are recorded here.",
+    "Le versement vers le restaurant s'ouvrira avec le prestataire de paiement. Rien n'est transféré pour le moment.": "Payout to the restaurant will open with the payment provider. Nothing is transferred yet.",
     "Nouveau mot de passe": "New password",
     "Télécharger la fiche PDF": "Download the PDF sheet",
     "Compte restaurant": "Restaurant account",
@@ -467,10 +457,10 @@
     "La réservation de table n'est pas encore envoyée au restaurant.": "The table booking is not sent to the restaurant yet.",
     "Demande enregistrée": "Request saved",
     "Gozem, inDrive et WeDrive ne sont pas encore branchés. Aucun chauffeur n'est envoyé et aucun montant n'est débité.": "Gozem, inDrive and WeDrive are not connected yet. No driver is sent and no amount is charged.",
-    "La demande est enregistrée. Le suivi s'affiche dès qu'un livreur est attribué.": "No courier is connected yet. No amount is charged.",
+    "Aucun livreur n'est encore branché. Aucun montant n'est débité.": "No courier is connected yet. No amount is charged.",
     "Gozem, inDrive et WeDrive ne sont pas encore branchés. La demande est enregistrée et aucun montant n'est débité.": "Gozem, inDrive and WeDrive are not connected yet. The request is saved and no amount is charged.",
     "Enregistrer la demande": "Save the request",
-    "Le statut vient de la cuisine.": "The status comes from the kitchen. No courier is connected yet.",
+    "Le statut vient de la cuisine. Le coursier n'est pas encore branché.": "The status comes from the kitchen. No courier is connected yet.",
     "Cuisine du restaurant": "Restaurant kitchen",
     "Les restaurants se créent ici. Chaque compte reçoit un identifiant et un mot de passe, à remettre en PDF. Les événements, chauffeurs et prix restent des exemples.": "Restaurants are created here. Each account receives a login ID and a password, to hand over as a PDF. Events, drivers and prices stay examples.",
     "Créer un compte cuisine": "Create a kitchen account",
@@ -483,22 +473,7 @@
     "Les avis de ce restaurant s'afficheront ici lorsqu'ils seront enregistrés.": "Reviews for this restaurant will appear here once they are saved.",
     "Youss Wallet ou espèces": "Youss Wallet or cash",
     "Merci de nous rejoindre.": "Thank you for joining us.",
-    "Chargement du restaurant…": "Loading the restaurant…",
-    "Ce compte n'ouvre pas la console. Utilisez le compte de KYA CORPORATION.": "This account does not open the console. Use the KYA CORPORATION account.",
-    "Le mot de passe doit contenir au moins 10 caractères, avec une lettre et un chiffre.": "The password must contain at least 10 characters, with a letter and a digit.",
-    "Choisissez un code moins simple.": "Choose a less simple code.",
-    "Choisissez un code différent.": "Choose a different code.",
-    "Saisissez d'abord le code actuel.": "Enter the current code first.",
-    "Choisissez le nouveau code PIN.": "Choose the new PIN.",
-    "Trop de codes incorrects. Réessayez dans une heure.": "Too many incorrect codes. Try again in an hour.",
-    "Trop de comptes créés depuis ce réseau. Réessayez dans une heure.": "Too many accounts created from this network. Try again in an hour.",
-    "10 caractères min.": "10 characters min.",
-    "Journal de la console": "Console log",
-    "Aucune action enregistrée.": "No action recorded.",
-    "Pièce acceptée": "Document accepted",
-    "Pièce refusée": "Document rejected",
-    "Restaurant créé": "Restaurant created",
-    "Mot de passe cuisine renouvelé": "Kitchen password renewed"
+    "Chargement du restaurant…": "Loading the restaurant…"
   };
   const EXACT = { "Cuisine": "Kitchen" };
   function lockCore() { addPhrases(CORE); addPhrases(EXTRA); }

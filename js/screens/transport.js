@@ -12,7 +12,10 @@
     { id: "premium", label: "Premium", sub: "Berline climatisée · 4 places", icon: "airport_shuttle", mult: 1.55, etaMult: 0.95, avail: "8 min", seats: 4 }
   ];
   const OPERATORS = [
-    { id: "youss", label: "YOUSS Ride", sub: "Flotte YOUSS. Suivi et paiement dans l'app.", available: true }
+    { id: "youss", label: "YOUSS Ride", sub: "Flotte YOUSS. Suivi et paiement dans l'app.", available: true },
+    { id: "gozem", label: "Gozem", sub: "Partenariat en cours. Pas encore branché.", available: false },
+    { id: "wedrive", label: "WeDrive", sub: "Partenariat en cours. Pas encore branché.", available: false },
+    { id: "indrive", label: "inDrive", sub: "Partenariat en cours. Pas encore branché.", available: false }
   ];
 
   /* État du trajet (persisté légèrement dans ACState.trip) */
@@ -160,7 +163,7 @@
     bag[id] = Date.now();
     ACStore.emit();
     refreshPanel();
-    UI.toast("Vous serez prévenu.", "success");
+    UI.toast("Demande notée sur cet appareil. YOUSS Ride reste disponible.", "info");
   };
   function refreshPanel() {
     updateDistance();
@@ -180,7 +183,7 @@
       if (!o.available) {
         const asked = ACState.prefs.waitlist && ACState.prefs.waitlist[o.id];
         return `<div class="w-full rounded-2xl border border-line p-3 flex items-center justify-between gap-3 text-left">
-          <span class="min-w-0"><span class="block t-title">${o.label}</span><span class="block t-small text-ink-2">${o.sub}</span></span>
+          <span class="min-w-0"><span class="block t-title">${o.label}</span><span class="block t-small text-ink-2">Partenariat en cours. YOUSS Ride assure la course.</span></span>
           <button type="button" onclick="Screens._waitOperator('${o.id}')" class="btn btn-sm btn-outline flex-shrink-0">${asked ? "Noté" : "Me prévenir"}</button>
         </div>`;
       }
@@ -346,7 +349,7 @@
       m.drawRoute(coords); m.fit(coords, { paddingTopLeft: [30, 30], paddingBottomRight: [30, 30] });
     } });
   };
-  Screens._tripMethod = function (type) { trip.method = type; syncTrip(); if (type === "card" && Screens.needCard("card")) return; App.replace("transportConfirm"); };
+  Screens._tripMethod = function (type) { trip.method = type; syncTrip(); App.replace("transportConfirm"); };
   Screens._applyPromo = function () { const v = (document.getElementById("promo").value || "").trim().toUpperCase(); if (v === "YOUSS10") { trip.promo = Math.round(trip.price * 0.1 / 100) * 100; UI.toast("Code appliqué : -10 %", "success"); App.replace("transportConfirm"); } else UI.toast("Code promo inconnu (essayez YOUSS10).", "error"); };
 
   Screens._transportRequest = function () {
@@ -369,7 +372,7 @@
       const held = `<div class="flex-1 flex flex-col items-center justify-center text-center py-16 max-w-narrow mx-auto px-4">
         <div class="relative w-32 h-32 rounded-full bg-gold/10 flex items-center justify-center">${icon(vehicleOf().icon, "text-gold text-[52px]")}</div>
         <h2 class="t-h1 mt-8">Demande enregistrée</h2>
-        <p class="t-body text-ink-2 mt-2 max-w-[360px]">De ${esc(trip.from.name)} vers ${esc(trip.to.name)}. Un chauffeur YOUSS CONNECT prend la course.</p>
+        <p class="t-body text-ink-2 mt-2 max-w-[360px]">De ${esc(trip.from.name)} vers ${esc(trip.to.name)}. Gozem, inDrive et WeDrive ne sont pas encore branchés. Aucun chauffeur n'est envoyé et aucun montant n'est débité.</p>
         <button type="button" onclick="Screens._cancelSearch()" class="btn btn-outline mt-10">Annuler la demande</button>
       </div>`;
       Shell.render(container, { title: "Recherche", back: "App.nav('transportConfirm')", body: held, nav: false, hideSearch: true });
@@ -417,7 +420,7 @@
           <div class="rounded-xl bg-gold-soft p-3"><p class="t-caption text-gold-deep">Arrivée</p><p class="t-small font-bold mt-0.5 text-gold-deep" id="df-eta">${d.etaMin} min</p></div>
         </div>
         <div class="flex gap-2 w-full mt-4">
-          <button type="button" onclick="Screens._placeCall(${UI.js(d.phone || '')})" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}${I18N.t("call")}</button>
+          <button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="btn btn-outline flex-1">${icon("call", "text-[20px]")}${I18N.t("call")}</button>
           <button type="button" onclick="Screens._tripChat()" class="btn btn-outline flex-1">${icon("chat", "text-[20px]")}${I18N.t("message")}</button>
         </div>
       </div>
@@ -437,8 +440,10 @@
   Screens._tripChat = function () {
     const d = trip.driver || {};
     const canned = ["Je suis au point de départ", "J'arrive dans 2 minutes", "Pouvez-vous m'attendre ?", "Appelez-moi en arrivant"];
-    UI.openSheet(`<div class="flex items-center gap-3 mb-4">${UI.avatar(d, "w-11 h-11")}<div><p class="t-title">${esc(d.name || "Chauffeur")}</p><p class="t-small text-ink-2">YOUSS Ride</p></div></div>
-      <div id="chat-log" class="space-y-2 max-h-[260px] overflow-y-auto mb-3"></div>
+    UI.openSheet(`<div class="flex items-center gap-3 mb-4">${UI.avatar(d, "w-11 h-11")}<div><p class="t-title">${esc(d.name || "Chauffeur")}</p><p class="t-small text-ink-2">Sur cet appareil</p></div></div>
+      <div id="chat-log" class="space-y-2 max-h-[260px] overflow-y-auto mb-3">
+        <div class="max-w-[90%] rounded-2xl rounded-bl-md bg-surface-low p-3 t-small">Ce message reste sur cet appareil. Le chauffeur ne le reçoit pas.</div>
+      </div>
       <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">${canned.map((c) => `<button type="button" onclick="Screens._chatSend(${UI.js(c)})" class="chip">${c}</button>`).join("")}</div>
       <form onsubmit="event.preventDefault();Screens._chatSend(document.getElementById('chat-input').value)" class="flex gap-2 mt-2"><input id="chat-input" class="input flex-1" placeholder="Votre message…"/><button type="submit" class="btn btn-primary !w-12 !px-0" aria-label="Envoyer">${icon("send")}</button></form>`);
   };
@@ -463,7 +468,7 @@
           <div class="h-1.5 rounded-full bg-card-high overflow-hidden mt-3"><div id="ride-progress" class="h-full rounded-full bg-gold transition-[width] duration-200" style="width:0%"></div></div>
         </div>
         <div class="flex items-center gap-3">${UI.avatar(d, "w-12 h-12")}<div class="flex-1 min-w-0"><p class="t-title truncate">${esc(d.name)} · ★ ${d.rating}</p><p class="t-small text-ink-2 truncate">${esc(d.car)} · ${esc(d.plate)}</p></div>
-          <button type="button" onclick="Screens._placeCall(${UI.js(d.phone || '')})" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
+          <button type="button" onclick="UI.toast('L\\'appel n\\'est pas encore ouvert.','info')" class="icon-btn" aria-label="Appeler">${icon("call")}</button><button type="button" onclick="Screens._tripChat()" class="icon-btn" aria-label="Message">${icon("chat")}</button><button type="button" onclick="Screens._shareRide()" class="icon-btn" aria-label="Partager">${icon("share")}</button></div>
         <div class="flex items-center justify-between"><span class="t-body text-ink-2">Montant</span><span class="t-title font-extrabold">${ACStore.fmtFCFA(Math.max(FARE.min, trip.price - (trip.promo || 0)))}</span></div>
         <button type="button" id="finish-btn" onclick="Screens._transportFinish()" class="btn btn-lg btn-dark btn-block">Terminer la course</button>
       </div>`;
@@ -531,8 +536,7 @@
   Screens.transportEnd = function (container) {
     if (!trip.driver) { App.resetTo("transport"); return; }
     const d = trip.driver;
-    const fareCharged = Math.max(0, Math.max(FARE.min, trip.price) - (trip.promo || 0));
-    const total = fareCharged;
+    const total = Math.max(FARE.min, trip.price - (trip.promo || 0));
     const durationMin = Math.max(3, Math.round(etaSec(trip.km) / 60));
     const method = ACState.paymentMethods.find((m) => m.type === trip.method) || ACState.paymentMethods[0];
     const body = `<div class="max-w-narrow mx-auto w-full space-y-4">
@@ -563,13 +567,11 @@
     if (!trip.to) { UI.toast("La course est incomplète.", "error"); return; }
     if (Screens._preferCard) { trip.method = "card"; Screens._preferCard = false; }
     if (Screens.needCard(trip.method)) return;
-    const fareCharged = Math.max(0, Math.max(FARE.min, trip.price) - (trip.promo || 0));
-    const total = fareCharged + (trip.tip || 0);
+    const total = Math.max(FARE.min, trip.price - (trip.promo || 0)) + (trip.tip || 0);
     Screens.requirePay("Course · " + ACStore.fmtFCFA(total), function () { Screens._transportPayNow(); });
   };
   Screens._transportPayNow = function () {
-    const fareCharged = Math.max(0, Math.max(FARE.min, trip.price) - (trip.promo || 0));
-    const total = fareCharged + (trip.tip || 0);
+    const total = Math.max(FARE.min, trip.price - (trip.promo || 0)) + (trip.tip || 0);
     trip.comment = (document.getElementById("ride-comment") || {}).value || "";
     const dest = trip.to.name.split("(")[0].trim();
     ACStore.whenPaid(ACStore.pay({

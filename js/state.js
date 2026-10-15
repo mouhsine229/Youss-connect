@@ -29,11 +29,11 @@
       wallet: {
         balance: 248500, currency: "FCFA", cards: [],
         transactions: [
-          { id: "txn_seed1", label: "Rechargement du Wallet", amount: 25000, type: "credit", status: "success", date: "Hier à 09:12", ref: "YC-TX-84120", service: "wallet", at: Date.now() - 86400000 - 3600000 },
-          { id: "txn_seed2", label: "Course vers Haie Vive", amount: -2500, type: "debit", status: "success", date: "Hier à 14:20", ref: "YC-TX-84133", service: "transport", at: Date.now() - 86400000 },
-          { id: "txn_seed3", label: "Commande Chez Maman Bénin", amount: -8400, type: "debit", status: "success", date: "Hier à 20:15", ref: "YC-TX-84151", service: "restaurant", at: Date.now() - 80000000 },
-          { id: "txn_seed4", label: "Envoi à Fatou D.", amount: -10000, type: "debit", status: "pending", date: "Aujourd'hui à 08:40", ref: "YC-TX-84201", service: "wallet", at: Date.now() - 3600000 },
-          { id: "txn_seed5", label: "Paiement QR · Stand 42 Dantokpa", amount: -3500, type: "debit", status: "failed", date: "Lundi à 11:05", ref: "YC-TX-83990", service: "wallet", reason: "Code PIN incorrect (3 essais)", at: Date.now() - 3 * 86400000 }
+          { id: "txn_seed1", label: "Rechargement du Wallet", amount: 25000, type: "credit", status: "success", date: "Hier à 09:12", ref: "YC-TX-84120", service: "wallet" },
+          { id: "txn_seed2", label: "Course vers Haie Vive", amount: -2500, type: "debit", status: "success", date: "Hier à 14:20", ref: "YC-TX-84133", service: "transport" },
+          { id: "txn_seed3", label: "Commande Chez Maman Bénin", amount: -8400, type: "debit", status: "success", date: "Hier à 20:15", ref: "YC-TX-84151", service: "restaurant" },
+          { id: "txn_seed4", label: "Envoi à Fatou D.", amount: -10000, type: "debit", status: "pending", date: "Aujourd'hui à 08:40", ref: "YC-TX-84201", service: "wallet" },
+          { id: "txn_seed5", label: "Paiement QR · Stand 42 Dantokpa", amount: -3500, type: "debit", status: "failed", date: "Lundi à 11:05", ref: "YC-TX-83990", service: "wallet", reason: "Code PIN incorrect (3 essais)" }
         ]
       },
       rewards: {
@@ -51,7 +51,7 @@
       ],
       paymentMethods: [
         { id: "pm_wallet", type: "wallet", label: "Youss Wallet", sub: "Solde du compte", icon: "account_balance_wallet", isDefault: true },
-        { id: "pm_mobile", type: "mobile", label: "Paiement mobile", sub: "Sur votre numéro", icon: "smartphone" },
+        { id: "pm_mobile", type: "mobile", label: "Paiement mobile", sub: "Pas encore ouvert", icon: "smartphone" },
         { id: "pm_cash", type: "cash", label: "Espèces", sub: "À la livraison ou au chauffeur", icon: "payments" }
       ],
       activities: [
@@ -129,7 +129,6 @@
               if (official.cities.indexOf(out.user.city) < 0) out.user.city = official.cities[0];
             }
           }
-          if (out.prefs && out.prefs.pinHash) delete out.prefs.pinHash;
           if (!Array.isArray(out.wallet.cards)) out.wallet.cards = [];
           out.wallet.cards = out.wallet.cards.filter(function (c) { return c && c.last4 && !c.pan && !c.cvv; }).map(function (c) {
             return { id: String(c.id || ""), brand: String(c.brand || "Carte"), last4: String(c.last4).replace(/\D/g, "").slice(-4), exp: String(c.exp || ""), holder: String(c.holder || "") };
@@ -146,11 +145,7 @@
     function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
-      try {
-        var snapshot = JSON.parse(JSON.stringify(State));
-        if (snapshot.prefs) delete snapshot.prefs.pinHash;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-      } catch (e) { /* quota / privé */ }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(State)); } catch (e) { /* quota / privé */ }
       if (window.YCBackend && YCBackend.isLive() && YCBackend.saveLists) YCBackend.saveLists();
     }, 120);
   }
@@ -240,50 +235,27 @@
 
   // Paiement commun à tous les services.
   // opts: { amount, label, service, pointsEarned, method ('wallet'|'cash'|'mobile'), meta, activity:{...} }
-  let payLock = false;
   function pay(opts) {
     opts = opts || {};
     const amount = Math.round(Number(opts.amount) || 0);
-    if (!isFinite(amount) || amount < 0 || amount > 2000000) return { ok: false, reason: "invalid_amount", message: "Montant invalide." };
-    if (amount === 0) {
-      let activityId = null;
-      if (opts.activity !== false) {
-        const act = addActivity(Object.assign({ service: opts.service, title: opts.label, amount: 0, status: "Terminé", icon: iconForService(opts.service), method: opts.method || State.prefs.paymentMethod || "wallet" }, opts.activity || {}));
-        activityId = act && act.id;
-      }
-      return { ok: true, method: opts.method || State.prefs.paymentMethod || "wallet", tx: null, activityId: activityId };
-    }
-    if (payLock) return { ok: false, reason: "busy", message: "Paiement déjà en cours." };
+    if (!isFinite(amount) || amount <= 0 || amount > 2000000) return { ok: false, reason: "error" };
     const method = opts.method || State.prefs.paymentMethod || "wallet";
     const pointsEarned = opts.pointsEarned || 0;
-    function unlock() { payLock = false; }
-    payLock = true;
-    if (method === "wallet" && window.YCBackend && YCBackend.isLive()) {
-      const remote = YCBackend.pay(opts);
-      if (remote && typeof remote.then === "function") {
-        return Promise.resolve(remote).then(function (r) { unlock(); return r; }, function (e) { unlock(); throw e; });
-      }
-      unlock();
-      return remote;
-    }
+    if (method === "wallet" && window.YCBackend && YCBackend.isLive()) return YCBackend.pay(opts);
     if ((method === "card" || method === "mobile") && window.YCBackend && YCBackend.isLive()) {
-      unlock();
       return { ok: false, reason: "unavailable", message: "La carte et le paiement mobile ne sont pas encore encaissés. Choisissez Youss Wallet ou les espèces." };
     }
     if (typeof navigator !== "undefined" && navigator.onLine === false && method !== "cash") {
-      unlock();
       return { ok: false, reason: "offline" };
     }
     let tx = null;
-    let activityId = null;
     const card = method === "card" ? activeCard() : null;
     if (method === "wallet") {
-      if (amount > State.wallet.balance) { unlock(); return { ok: false, reason: "insufficient_balance" }; }
+      if (amount > State.wallet.balance) return { ok: false, reason: "insufficient_balance" };
       State.wallet.balance -= amount;
       tx = addTransaction({ label: opts.label, amount: -amount, type: "debit", service: opts.service, method: "wallet", meta: opts.meta || null });
       addNotification("Paiement confirmé", opts.label + " réglé via Youss Wallet (" + fmtFCFA(amount) + ").", "wallet", "wallet");
     } else if (method === "card" && !card) {
-      unlock();
       return { ok: false, reason: "error" };
     } else if (method === "mobile" || method === "card" || method === "cash") {
       const via = method === "card" && card ? " · " + card.brand + " " + card.last4 : method === "cash" ? " · espèces" : " (paiement mobile)";
@@ -294,15 +266,13 @@
       });
     }
     if (opts.activity !== false) {
-      const act = addActivity(Object.assign({ service: opts.service, title: opts.label, amount, status: "Terminé", icon: iconForService(opts.service), method }, opts.activity || {}));
-      activityId = act && act.id;
+      addActivity(Object.assign({ service: opts.service, title: opts.label, amount, status: "Terminé", icon: iconForService(opts.service), method }, opts.activity || {}));
     }
     if (pointsEarned > 0) {
       addRewardPoints(pointsEarned, opts.label);
       addNotification("Points Youss Bonus", "+" + pointsEarned + " points ajoutés à votre solde Youss Bonus.", "rewards", "rewards");
     }
-    unlock();
-    return { ok: true, method: method, tx: tx, activityId: activityId };
+    return { ok: true, method: method, tx: tx };
   }
   const payFromWallet = (opts) => pay(Object.assign({}, opts, { method: "wallet" }));
 
@@ -325,24 +295,12 @@
       { id: "delivering", label: "En livraison", icon: "near_me", after: 65 },
       { id: "delivered", label: "Livrée", icon: "home", after: 100 }
     ],
-    restaurant_pickup: [
-      { id: "confirmed", label: "Commande confirmée", icon: "check_circle", after: 0 },
-      { id: "preparing", label: "En préparation", icon: "skillet", after: 25 },
-      { id: "ready", label: "Prête à emporter", icon: "storefront", after: 70 },
-      { id: "delivered", label: "Récupérée", icon: "check_circle", after: 100 }
-    ],
     market: [
       { id: "confirmed", label: "Commande confirmée", icon: "check_circle", after: 0 },
       { id: "preparing", label: "Préparation par le vendeur", icon: "inventory_2", after: 20 },
       { id: "shipped", label: "Expédiée", icon: "local_shipping", after: 45 },
       { id: "delivering", label: "En livraison", icon: "near_me", after: 70 },
       { id: "delivered", label: "Livrée", icon: "home", after: 100 }
-    ],
-    market_pickup: [
-      { id: "confirmed", label: "Commande confirmée", icon: "check_circle", after: 0 },
-      { id: "preparing", label: "Préparation par le vendeur", icon: "inventory_2", after: 25 },
-      { id: "ready", label: "Prête au retrait", icon: "storefront", after: 70 },
-      { id: "delivered", label: "Récupérée", icon: "check_circle", after: 100 }
     ]
   };
   function createOrder(o) {
@@ -358,8 +316,7 @@
     return Math.min(100, Math.round((elapsed / (order.durationSec || 120)) * 100));
   }
   function orderStep(order) {
-    const pickup = order.fulfillment === "pickup" || (order.address && /à emporter|retrait/i.test(order.address || ""));
-    const steps = ORDER_STEPS[(order.type || "restaurant") + (pickup ? "_pickup" : "")] || ORDER_STEPS[order.type] || ORDER_STEPS.restaurant;
+    const steps = ORDER_STEPS[order.type] || ORDER_STEPS.restaurant;
     if (order.kitchenStatus === "Annulée") {
       return { idx: 0, steps: steps, progress: 0, current: { id: "cancelled", label: "Annulée", icon: "cancel", after: 0 }, done: false };
     }
@@ -402,9 +359,9 @@
     addNotification, addActivity, addRewardPoints, addTransaction, iconForService,
     pay, payFromWallet, creditWallet, whenPaid,
     createOrder, orderProgress, orderStep, ORDER_STEPS,
-    unread: () => (State.notifications || []).filter((n) => n && !n.read).length,
-    cartCount: () => ((State.cart && State.cart.items) || []).reduce((s, i) => s + (i.qty || 0), 0),
-    marketCount: () => ((State.cart && State.cart.market) || []).reduce((s, i) => s + (i.qty || 0), 0),
+    unread: () => State.notifications.filter((n) => !n.read).length,
+    cartCount: () => State.cart.items.reduce((s, i) => s + i.qty, 0),
+    marketCount: () => State.cart.market.reduce((s, i) => s + i.qty, 0),
     city: () => YCData.cityOf(State.user.city),
     setCity, setPlace
   };
